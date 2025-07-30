@@ -1,0 +1,29 @@
+[Data Source]
+DisplayName=ajayprofessional119@gmail.com
+Enabled=true
+Parent=2064b7e017f4f6e930c0a08068c3e4f74c6eb224
+
+[Mail Submission]
+SentFolder=folder://local/Sent
+TransportUid=e2fbbda83624771e2a21f1c9a93faee95984447d
+RepliesToOriginFolder=false
+UseSentFolder=true
+
+[Mail Composition]
+Bcc=
+Cc=
+DraftsFolder=folder://local/Drafts
+ReplyStyle=default
+SignImip=true
+TemplatesFolder=
+StartBottom=inconsistent
+TopSignature=inconsistent
+Language=
+
+[Mail Identity]
+Address=ajayprofessional119@gmail.com
+Aliases=
+Name=
+Organization=
+ReplyTo=
+SignatureUid=none

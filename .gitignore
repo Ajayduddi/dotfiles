@@ -1,0 +1,174 @@
+.config/chromium/
+.config/google-chrome/
+.config/firefox/
+.config/ssh/
+.config/gpg/
+.config/secrets/
+
+.local/share/chromium/
+.local/share/google-chrome/
+.local/share/firefox/
+.local/share/secrets/
+.local/share/keyrings/
+
+# Ignore any private or sensitive app folders you do not want to track
+.local/share/slack/
+.local/share/discord/
+.local/share/rclone/
+
+# Ignore application specific files that store secrets or private data
+.local/share/auth/
+.local/share/login/
+
+# Ignore directories with tokens or password files
+.local/share/credentials/
+.local/share/tokens/
+.local/share/authentication/
+
+# Additional ignores based on your system setup
+.private_config/
+# Additional security patterns - automatically added
+**/*password*
+**/*secret*
+**/*token*
+**/*key*
+**/*credential*
+**/*auth*
+**/Login\ Data*
+**/Cookies*
+**/Web\ Data*
+**/History*
+**/Bookmarks*
+**/*.pem
+**/*.key
+**/*.p12
+**/.ssh/
+**/.gnupg/
+**/.aws/
+**/.docker/config.json
+**/.netrc
+**/.pgpass
+**/.gitconfig
+**/.npmrc
+**/github-copilot/
+**/gcloud/
+**/kubectl/
+**/*session*
+**/*cache*
+**/*tmp*
+**/*temp*
+**/logs/
+
+# Temp directories for script logs and operations
+**/temp/
+**/tmp/
+**/.temp/
+/tmp/dotfiles-*
+${TMPDIR:-/tmp}/dotfiles-*
+/temp/dotfiles-*
+
+# Browser data that might contain sensitive information
+.config/*/Default/Login\ Data*
+.config/*/Default/Cookies*
+.config/*/Default/Web\ Data*
+.config/*/Default/History*
+.config/*/Default/Bookmarks*
+.config/*/Profile*/Login\ Data*
+.config/*/Profile*/Cookies*
+.config/*/Profile*/Web\ Data*
+.config/*/Profile*/History*
+.config/*/Profile*/Bookmarks*
+
+# Applications with built-in backup/sync - exclude to avoid conflicts
+.config/Code/
+.config/VSCodium/
+.config/JetBrains/
+.config/IntelliJIdea*/
+.config/PyCharm*/
+.config/WebStorm*/
+.config/PhpStorm*/
+.config/CLion*/
+.config/DataGrip*/
+.config/GoLand*/
+.config/RubyMine*/
+.config/Rider*/
+.config/sublime-text*/
+.config/discord/
+.config/slack/
+.config/Slack/
+.config/spotify/
+.config/Spotify/
+.config/steam/
+.config/Steam/
+.config/postman/
+.config/Postman/
+.config/insomnia/
+.config/MongoDB*/
+.config/docker/
+.config/Docker*/
+.config/beekeeper-studio/
+.config/github-copilot/
+.config/gsconnect/
+.config/libvirt/
+.config/kdeconnect/
+.config/keepassxc/
+.local/share/JetBrains/
+.local/share/code-*/
+.local/share/Steam/
+.local/share/discord/
+.local/share/Slack/
+.local/share/spotify/
+.local/share/applications/wine/
+
+# Enhanced security patterns - added by cleanup script
+# Private keys and certificates
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+
+# Sensitive configuration files
+**/private.pem
+**/passkey_enclave_state
+**/*password*
+**/*secret*
+**/*token*
+**/*credential*
+
+# Browser sensitive data
+**/*Login\ Data*
+**/*Cookies*
+**/*Web\ Data*
+**/*History*
+**/*Bookmarks*
+**/ZxcvbnData/**
+**/TrustTokenKeyCommitments/**
+
+# Application sensitive directories
+**/.config/gsconnect/private.pem
+**/.config/kdeconnect/privateKey.pem
+**/.config/beekeeper-studio/.key
+
+# GitHub Copilot sensitive files (contains OAuth tokens)
+**/.config/github-copilot/
+**/github-copilot.xml
+**/github-copilot.local.xml
+**/github-copilot/**
+
+# Embedded git repositories (ulauncher themes)
+.config/ulauncher/user-themes/eigen-dark/
+.config/ulauncher/user-themes/libadwaita-ulauncher/
+.config/ulauncher/user-themes/orchis-dark/
+
+# Temporary and problematic scripts
+**/[a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9].sh
+**/*temp*.sh
+**/*tmp*.sh
+**/*test*.sh
+
+# Log files with potential sensitive content
+**/renderer-auth.log
+**/auth*.log
+**/login*.log

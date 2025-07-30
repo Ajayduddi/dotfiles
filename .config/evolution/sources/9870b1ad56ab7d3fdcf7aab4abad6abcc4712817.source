@@ -1,0 +1,27 @@
+[Data Source]
+DisplayName=ajayduddi119@gmail.com
+Enabled=true
+Parent=ddc788abefb6b0304db62cd59118d1d90aa7fa77
+
+[Authentication]
+Host=smtp.gmail.com
+Method=XOAUTH2
+Port=465
+ProxyUid=system-proxy
+RememberPassword=true
+User=ajayduddi119@gmail.com
+CredentialName=
+IsExternal=false
+
+[Security]
+Method=ssl-on-alternate-port
+
+[Mail Transport]
+BackendName=smtp
+
+[Smtp Backend]
+ReencodeData=false
+DsnRetFull=false
+DsnNotifySuccess=true
+DsnNotifyFailure=true
+DsnNotifyDelay=true
