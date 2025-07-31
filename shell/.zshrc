@@ -59,6 +59,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+# Set up fzf key bindings and fuzzy completion
+source <(fzf --zsh)
+
 # Load enhanced history security settings
 if [ -f "$HOME/.dotfiles/shell/history_security.sh" ]; then
     source "$HOME/.dotfiles/shell/history_security.sh"

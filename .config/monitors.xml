@@ -31,9 +31,9 @@
       <monitor>
         <monitorspec>
           <connector>HDMI-1</connector>
-          <vendor>DZB</vendor>
+          <vendor>IWB</vendor>
           <product>PC Monitor</product>
-          <serial>J257M96B00FL</serial>
+          <serial>0x00000000</serial>
         </monitorspec>
         <mode>
           <width>1920</width>
@@ -61,7 +61,7 @@
     <logicalmonitor>
       <x>0</x>
       <y>0</y>
-      <scale>1.25</scale>
+      <scale>1</scale>
       <primary>yes</primary>
       <monitor>
         <monitorspec>
@@ -79,9 +79,9 @@
       <monitor>
         <monitorspec>
           <connector>HDMI-1</connector>
-          <vendor>DZW</vendor>
-          <product>SMART TV UHD </product>
-          <serial>0x00000001</serial>
+          <vendor>LNK</vendor>
+          <product>0x0001</product>
+          <serial>0x00031453</serial>
         </monitorspec>
         <mode>
           <width>1920</width>
@@ -104,41 +104,6 @@
           <vendor>RGT</vendor>
           <product>0x1352</product>
           <serial>0x01010101</serial>
-        </monitorspec>
-        <mode>
-          <width>1920</width>
-          <height>1080</height>
-          <rate>60.000</rate>
-        </mode>
-      </monitor>
-      <monitor>
-        <monitorspec>
-          <connector>eDP-1</connector>
-          <vendor>AUO</vendor>
-          <product>0x0ba2</product>
-          <serial>0x00000000</serial>
-        </monitorspec>
-        <mode>
-          <width>1920</width>
-          <height>1080</height>
-          <rate>59.963</rate>
-        </mode>
-      </monitor>
-    </logicalmonitor>
-  </configuration>
-  <configuration>
-    <layoutmode>logical</layoutmode>
-    <logicalmonitor>
-      <x>0</x>
-      <y>0</y>
-      <scale>1.25</scale>
-      <primary>yes</primary>
-      <monitor>
-        <monitorspec>
-          <connector>HDMI-1</connector>
-          <vendor>IWB</vendor>
-          <product>PC Monitor</product>
-          <serial>0x00000000</serial>
         </monitorspec>
         <mode>
           <width>1920</width>
@@ -201,7 +166,7 @@
     <logicalmonitor>
       <x>0</x>
       <y>0</y>
-      <scale>1</scale>
+      <scale>1.25</scale>
       <primary>yes</primary>
       <monitor>
         <monitorspec>
@@ -219,14 +184,84 @@
       <monitor>
         <monitorspec>
           <connector>HDMI-1</connector>
-          <vendor>LNK</vendor>
-          <product>0x0001</product>
-          <serial>0x00031453</serial>
+          <vendor>DZW</vendor>
+          <product>SMART TV UHD </product>
+          <serial>0x00000001</serial>
         </monitorspec>
         <mode>
           <width>1920</width>
           <height>1080</height>
           <rate>60.000</rate>
+        </mode>
+      </monitor>
+    </logicalmonitor>
+  </configuration>
+  <configuration>
+    <layoutmode>logical</layoutmode>
+    <logicalmonitor>
+      <x>0</x>
+      <y>0</y>
+      <scale>1</scale>
+      <primary>yes</primary>
+      <monitor>
+        <monitorspec>
+          <connector>HDMI-1</connector>
+          <vendor>RKS</vendor>
+          <product>T749-fHD720</product>
+          <serial>0x88888800</serial>
+        </monitorspec>
+        <mode>
+          <width>1920</width>
+          <height>1080</height>
+          <rate>60.000</rate>
+        </mode>
+      </monitor>
+      <monitor>
+        <monitorspec>
+          <connector>eDP-1</connector>
+          <vendor>AUO</vendor>
+          <product>0x0ba2</product>
+          <serial>0x00000000</serial>
+        </monitorspec>
+        <mode>
+          <width>1920</width>
+          <height>1080</height>
+          <rate>59.963</rate>
+        </mode>
+      </monitor>
+    </logicalmonitor>
+  </configuration>
+  <configuration>
+    <layoutmode>logical</layoutmode>
+    <logicalmonitor>
+      <x>0</x>
+      <y>0</y>
+      <scale>1.25</scale>
+      <primary>yes</primary>
+      <monitor>
+        <monitorspec>
+          <connector>HDMI-1</connector>
+          <vendor>DZB</vendor>
+          <product>PC Monitor</product>
+          <serial>J257M96B00FL</serial>
+        </monitorspec>
+        <mode>
+          <width>1920</width>
+          <height>1080</height>
+          <rate>60.000</rate>
+        </mode>
+      </monitor>
+      <monitor>
+        <monitorspec>
+          <connector>eDP-1</connector>
+          <vendor>AUO</vendor>
+          <product>0x0ba2</product>
+          <serial>0x00000000</serial>
+        </monitorspec>
+        <mode>
+          <width>1920</width>
+          <height>1080</height>
+          <rate>59.963</rate>
         </mode>
       </monitor>
     </logicalmonitor>
