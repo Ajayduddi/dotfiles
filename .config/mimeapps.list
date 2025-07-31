@@ -61,3 +61,4 @@ application/x-desktop=org.gnome.TextEditor.desktop;
 x-scheme-handler/http=userapp-Zen-XU3MA3.desktop;
 x-scheme-handler/https=userapp-Zen-XU3MA3.desktop;
 x-scheme-handler/chrome=userapp-Zen-XU3MA3.desktop;
+text/html=userapp-Zen-XU3MA3.desktop;

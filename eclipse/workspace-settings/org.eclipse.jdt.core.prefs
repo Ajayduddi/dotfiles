@@ -1,0 +1,12 @@
+eclipse.preferences.version=1
+org.eclipse.jdt.core.classpathVariable.ECLIPSE_HOME=/home/ajay/Downloads/spring-tools-for-eclipse-4.30.0.RELEASE-e4.35.0-linux.gtk.x86_64/sts-4.30.0.RELEASE/
+org.eclipse.jdt.core.classpathVariable.JRE_LIB=/home/ajay/Downloads/spring-tools-for-eclipse-4.30.0.RELEASE-e4.35.0-linux.gtk.x86_64/sts-4.30.0.RELEASE/plugins/org.eclipse.justj.openjdk.hotspot.jre.full.linux.x86_64_21.0.6.v20250130-0529/jre/lib/jrt-fs.jar
+org.eclipse.jdt.core.classpathVariable.JRE_SRC=/home/ajay/Downloads/spring-tools-for-eclipse-4.30.0.RELEASE-e4.35.0-linux.gtk.x86_64/sts-4.30.0.RELEASE/plugins/org.eclipse.justj.openjdk.hotspot.jre.full.linux.x86_64_21.0.6.v20250130-0529/jre/lib/src.zip
+org.eclipse.jdt.core.classpathVariable.JRE_SRCROOT=
+org.eclipse.jdt.core.classpathVariable.JUNIT_HOME=/home/ajay/Downloads/spring-tools-for-eclipse-4.30.0.RELEASE-e4.35.0-linux.gtk.x86_64/sts-4.30.0.RELEASE/plugins/org.junit_4.13.2.v20240929-1000.jar
+org.eclipse.jdt.core.classpathVariable.M2_REPO=/home/ajay/.m2/repository
+org.eclipse.jdt.core.codeComplete.visibilityCheck=enabled
+org.eclipse.jdt.core.compiler.doc.comment.support=disabled
+org.eclipse.jdt.core.compiler.taskCaseSensitive=enabled
+org.eclipse.jdt.core.compiler.taskPriorities=NORMAL,HIGH,NORMAL
+org.eclipse.jdt.core.compiler.taskTags=TODO,FIXME,XXX

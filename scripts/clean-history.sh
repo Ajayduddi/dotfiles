@@ -155,8 +155,10 @@ echo ""
 history_files=(
     "$HOME/.bash_history"
     "$HOME/.zsh_history"
+    "$HOME/.mysql_history"
     "$HOME/.dotfiles/shell/.bash_history" 
     "$HOME/.dotfiles/shell/.zsh_history"
+    "$HOME/.dotfiles/shell/.mysql_history"
 )
 
 files_found=()

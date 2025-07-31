@@ -58,22 +58,46 @@ cd ~/.dotfiles
 - **Editor Settings**: Optimized configurations for popular editors
 - **GNOME Extensions**: Curated productivity extensions
 
+### 🖥️ **System-Wide Configuration Management**
+- **Complete System Scanning**: Finds configurations anywhere in the system
+- **Development Server Configs**: Apache, Nginx, Tomcat, Jetty, MySQL, PostgreSQL
+- **Build Tool Configurations**: Maven, Gradle, NPM, Java, SBT settings
+- **DevOps Tool Configs**: Docker, Terraform, Ansible, Jenkins configurations
+- **Production-Ready Backup**: Comprehensive backup and restoration system
+
 ### 🛡️ **Enterprise Safety Features**
 - **Automatic Backups**: Original files preserved before modification
 - **Dry-run Mode**: Preview changes without applying them
 - **Comprehensive Logging**: Detailed logs of all operations
 - **Error Recovery**: Robust error handling and rollback capabilities
 - **Multi-layer Confirmations**: Prevents accidental destructive operations
+- **Security Filtering**: Automatic exclusion of sensitive data and credentials
+- **Enhanced Security**: Advanced security hardening and monitoring
+- **Sensitive Data Protection**: Encryption of sensitive files and secure environment variables
+- **Permission Hardening**: Automatic secure permission management
+- **Security Auditing**: Regular security checks and reporting
 
 ## 🔧 Core Scripts Overview
 
 | Script | Purpose | Safety Level | When to Use |
 |--------|---------|--------------|-------------|
 | **dotfiles-manager.sh** | **Unified Interface** | 🛡️ **High** | Primary entry point for all operations |
-| **setup-dotfiles.sh** | **Initial Setup** | 🛡️ **High** | First installation or major updates |
-| **backup-dotfiles.sh** | **Create Backups** | 🛡️ **Safe** | Regular maintenance and updates |
+| **setup-dotfiles.sh** | **Initial Setup + System Backup** | 🛡️ **High** | First installation or major updates |
+| **backup-dotfiles.sh** | **Complete Backup System** | 🛡️ **Safe** | Regular maintenance and updates |
 | **restore-dotfiles.sh** | **System Restore** | ⚠️ **Medium** | Restore from remote repository |
 | **reset-dotfiles.sh** | **Complete Uninstall** | 🚨 **Destructive** | Permanent removal |
+
+### 🛠️ System Configuration Scripts (in `scripts/` directory)
+
+| Script | Purpose | Safety Level | When to Use |
+|--------|---------|--------------|-------------|
+| **system-config-backup.sh** | **System-Wide Config Backup** | 🛡️ **High** | Backup server/development configs |
+| **restore-system-configs.sh** | **System Config Restoration** | ⚠️ **Medium** | Restore system configurations |
+| **security-hardening.sh** | **Security Hardening** | 🛡️ **High** | Apply comprehensive security improvements |
+| **security-monitor.sh** | **Security Monitoring** | 🛡️ **Safe** | Regular security checks and reporting |
+| **secure-permissions.sh** | **Permission Hardening** | 🛡️ **High** | Fix file and directory permissions |
+| **encrypt-sensitive.sh** | **Sensitive File Encryption** | 🛡️ **High** | Encrypt files containing sensitive data |
+| **clean-history.sh** | **History Sanitization** | 🛡️ **Safe** | Remove sensitive data from history |
 
 ## 📖 Detailed Usage Guide
 
@@ -242,13 +266,41 @@ cd ~/.dotfiles
 ```
 
 **What gets backed up**:
-- ✅ Shell configurations (`.bashrc`, `.zshrc`, etc.)
+
+#### 🏠 **User-Level Configurations**:
+- ✅ Shell configurations (`.bashrc`, `.zshrc`, histories)
 - ✅ Application settings (`.config` directory)
-- ✅ GNOME desktop settings
+- ✅ GNOME desktop settings (dconf export)
 - ✅ Themes, icons, and fonts
 - ✅ GNOME extensions
-- ✅ Package lists (DNF/APT/Pacman)
-- ❌ Sensitive files (automatically excluded)
+
+#### 🛠️ **Development Tool Configurations**:
+- ✅ **Maven** (`.m2/` - settings, wrapper, excludes repository cache)
+- ✅ **Java** (`.java/` - user preferences, fonts)
+- ✅ **NPM** (`.npm/` - configuration, excludes cache)
+- ✅ **Git** (`.gitconfig` - global configuration)
+- ✅ **Database tools** (`shell/.mysql_history`, `.pgpass`, `.mongorc.js`)
+- ✅ **Build tools** (`.gradle/gradle.properties`, `.sbt/`, `.ivy2/ivysettings.xml`)
+- ✅ **DevOps tools** (`.dockerconfig`, `.terraformrc`, `.ansible.cfg`)
+- ✅ **Editors** (`.vimrc`, `.tmux.conf`, `.screenrc`)
+
+#### 🚀 **Development Server Configurations**:
+- ✅ **Apache Tomcat** - Configuration directories (`conf/`)
+- ✅ **Jetty** - Auto-detects installations and configs
+- ✅ **Nginx** - Custom user configurations
+- ✅ **Eclipse** - Workspace settings
+
+#### 🖥️ **System-Wide Configurations**:
+- ✅ **Apache HTTP Server** - `/etc/httpd/` configurations
+- ✅ **MySQL/MariaDB** - `/etc/my.cnf.d/` database configs
+- ✅ **Development tools** - System-installed server configurations
+- ✅ **Custom services** - User-installed server configurations
+
+#### ❌ **Smart Exclusions (Security & Performance)**:
+- ❌ **Sensitive data**: SSH keys, passwords, tokens, browser data
+- ❌ **Large caches**: Maven repository, Gradle caches, NPM cache, node_modules
+- ❌ **IDE conflicts**: VSCode, JetBrains (have built-in sync)
+- ❌ **System noise**: Flatpak, snap, locale files, documentation
 
 ---
 
@@ -367,6 +419,151 @@ Type 'UNINSTALL' to confirm permanent removal: UNINSTALL
 
 ✅ UNINSTALL COMPLETED SUCCESSFULLY!
 ```
+
+---
+
+## 🖥️ System-Wide Configuration Management
+
+### **Complete System Scanning & Backup**
+
+The dotfiles system now includes **comprehensive system-wide configuration management** that scans your entire system for development, server, and production configurations.
+
+### 🔍 **What Gets Discovered & Backed Up**
+
+#### **📂 System Locations Scanned**:
+- `/etc` - System configuration files
+- `/opt` - Optional software installations
+- `/usr/local/etc` - Local system configurations
+- `/var/lib` - Service data and configurations
+- `/srv` - Service-specific data
+
+#### **🛠️ Software Patterns Detected**:
+- **Web Servers**: Apache, Nginx, Lighttpd
+- **Application Servers**: Tomcat, Jetty, WildFly, JBoss, GlassFish
+- **Databases**: MySQL, MariaDB, PostgreSQL, Redis, MongoDB
+- **Development Tools**: Maven, Gradle, Ant, SBT, Node.js, NPM
+- **DevOps Tools**: Docker, Kubernetes, Jenkins, GitLab, Nexus, Artifactory
+- **Monitoring**: Prometheus, Grafana, Elasticsearch, Logstash, Kibana
+- **Message Queues**: RabbitMQ, Kafka, ActiveMQ, Artemis
+- **Caching**: Memcached, Hazelcast, EhCache
+- **Security**: Keycloak, Vault, Consul
+
+### 🚀 **System Configuration Scripts**
+
+#### **`scripts/system-config-backup.sh`** - System-Wide Backup
+
+**Purpose**: Scans entire system for development and server configurations
+
+**Usage Examples**:
+```bash
+# Preview what would be backed up
+./scripts/system-config-backup.sh --backup --dry-run
+
+# Backup all system configurations
+./scripts/system-config-backup.sh --backup
+
+# Get help
+./scripts/system-config-backup.sh --help
+```
+
+**What it finds on your system**:
+- ✅ **Apache HTTP Server** (`/etc/httpd/`) - All configuration files
+- ✅ **MySQL/MariaDB** (`/etc/my.cnf.d/`) - Database configurations
+- ✅ **Development tools** - System-installed server configurations
+- ✅ **Custom services** - User-installed server configurations
+
+**Smart Filtering**:
+- ✅ **Includes**: Configuration files (`.conf`, `.xml`, `.yml`, `.properties`)
+- ❌ **Excludes**: Cache files, documentation, locale files, build artifacts
+
+#### **`scripts/restore-system-configs.sh`** - System Configuration Restoration
+
+**Purpose**: Restores system-wide configurations with proper permissions
+
+**Usage Examples**:
+```bash
+# Preview what would be restored
+./scripts/restore-system-configs.sh --dry-run
+
+# Restore all system configurations (requires sudo)
+./scripts/restore-system-configs.sh
+
+# Get help
+./scripts/restore-system-configs.sh --help
+```
+
+**Safety Features**:
+- 🛡️ **Backup before restore**: Existing configs backed up before replacement
+- 🛡️ **Sudo handling**: Automatic privilege escalation when needed
+- 🛡️ **Service restart guidance**: Instructions for restarting affected services
+- 🛡️ **Dry-run mode**: Preview all operations before execution
+
+### 📁 **Backup Structure**
+
+Your complete backup structure:
+```
+~/.dotfiles/
+├── .config/                    # User application configs
+├── .m2/                        # Maven configuration (no repository)
+├── .java/                      # Java user preferences
+├── .npm/                       # NPM configuration (no cache)
+├── servers/                    # Development servers
+│   ├── apache-tomcat-11.0.6/   # Tomcat configuration
+│   ├── jetty-*/                # Jetty configurations
+│   └── nginx/                  # Nginx configurations
+├── eclipse/                    # Eclipse workspace settings
+├── system-configs/             # System-wide configurations
+│   ├── etc/httpd/              # Apache HTTP server
+│   ├── etc/my.cnf.d/           # MySQL configuration
+│   └── opt/*/                  # Optional software configs
+└── scripts/                    # Utility and system scripts
+```
+
+### 🔄 **Complete Restoration Workflow**
+
+#### **For Fresh System Setup**:
+```bash
+# 1. Clone dotfiles repository
+git clone https://your-repo.git ~/.dotfiles
+cd ~/.dotfiles
+
+# 2. Restore user configurations
+./setup-dotfiles.sh
+
+# 3. Restore system configurations (requires sudo)
+./scripts/restore-system-configs.sh --dry-run  # Preview first
+./scripts/restore-system-configs.sh            # Actually restore
+
+# 4. Restart services
+sudo systemctl restart httpd nginx mysql postgresql redis
+
+# 5. Verify configurations
+sudo httpd -t                    # Test Apache config
+sudo nginx -t                   # Test Nginx config
+sudo systemctl status httpd     # Check service status
+```
+
+### 🎯 **Production-Ready Features**
+
+#### ✅ **Complete Coverage**:
+- **User configurations**: Personal settings and preferences
+- **Development environment**: All dev tools and their configurations
+- **Server configurations**: Production and development servers
+- **System services**: System-wide service configurations
+
+#### ✅ **Security & Safety**:
+- **Sensitive data exclusion**: Automatic filtering of credentials
+- **Backup before restore**: Existing configs backed up before replacement
+- **Dry-run mode**: Preview all operations before execution
+- **Sudo handling**: Automatic privilege escalation when needed
+
+#### ✅ **Cross-System Compatibility**:
+- **Fresh system setup**: Complete environment recreation
+- **Selective restoration**: Choose what to restore
+- **Service management**: Automatic service restart recommendations
+- **Error handling**: Graceful failure handling and reporting
+
+---
 
 ## 🛡️ Safety Features
 

@@ -1,0 +1,4 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Sat Apr 26 21:39:30 IST 2025
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1745683770633
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact io.takari.m2e.workspace\:org.eclipse.m2e.workspace.cli\:jar\:sources\:0.4.0 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org\: Temporary failure in name resolution

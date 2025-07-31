@@ -227,6 +227,9 @@ SENSITIVE_PATTERNS=(
     # Cache and temporary files
     "*/cache/*" "*/Cache/*" "*/tmp/*" "*/temp/*" "*/logs/*"
     "*session*" "*Session*"
+    # Development tool caches (large, non-essential files)
+    "*/.m2/repository/*" "*/.gradle/caches/*" "*/.npm/_cacache/*"
+    "*/.ivy2/cache/*" "*/.sbt/boot/*" "*/node_modules/*"
     # Applications with built-in sync (avoid conflicts)
     "*/Code/*" "*/VSCodium/*" "*/JetBrains/*" "*/IntelliJIdea*/*"
     "*/PyCharm*/*" "*/WebStorm*/*" "*/PhpStorm*/*" "*/CLion*/*"
@@ -435,6 +438,156 @@ move_and_symlink ".themes"
 move_and_symlink ".icons"
 move_and_symlink ".fonts"
 
+# Backup development tool configurations
+echo "🛠️ Backing up development tool configurations..."
+
+# Maven configuration (contains settings.xml, repositories, etc.)
+if [ -d "$HOME/.m2" ]; then
+    echo "📦 Backing up Maven configuration (.m2)..."
+    secure_backup_directory ".m2"
+fi
+
+# Java configuration (user preferences, fonts, etc.)
+if [ -d "$HOME/.java" ]; then
+    echo "☕ Backing up Java configuration (.java)..."
+    secure_backup_directory ".java"
+fi
+
+# NPM configuration and cache
+if [ -d "$HOME/.npm" ]; then
+    echo "📦 Backing up NPM configuration (.npm)..."
+    secure_backup_directory ".npm"
+fi
+
+# Supermaven AI coding assistant configuration
+if [ -d "$HOME/.supermaven" ]; then
+    echo "🤖 Backing up Supermaven configuration (.supermaven)..."
+    secure_backup_directory ".supermaven"
+fi
+
+# Backup important development configuration files
+echo "📝 Backing up development configuration files..."
+
+# Git global configuration
+if [ -f "$HOME/.gitconfig" ]; then
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 WOULD: Back up Git configuration (.gitconfig)"
+    else
+        echo "🔧 Backing up Git configuration (.gitconfig)..."
+        cp "$HOME/.gitconfig" "$DOTFILES_DIR/.gitconfig"
+    fi
+fi
+
+# MySQL history (if exists)
+if [ -f "$HOME/.mysql_history" ]; then
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 WOULD: Back up MySQL history (.mysql_history)"
+    else
+        echo "🗄️ Backing up MySQL history (.mysql_history)..."
+        cp "$HOME/.mysql_history" "$DOTFILES_DIR/shell/.mysql_history"
+    fi
+fi
+
+# Other common development configuration files
+for config_file in ".gradle/gradle.properties" ".sbt/1.0/global.sbt" ".ivy2/ivysettings.xml" ".dockerconfig" ".terraformrc" ".ansible.cfg" ".vimrc" ".tmux.conf" ".screenrc" ".curlrc" ".wgetrc"; do
+    if [ -f "$HOME/$config_file" ]; then
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Back up $config_file"
+        else
+            echo "🔧 Backing up $config_file..."
+            mkdir -p "$DOTFILES_DIR/$(dirname "$config_file")"
+            cp "$HOME/$config_file" "$DOTFILES_DIR/$config_file"
+        fi
+    fi
+done
+
+# Backup server/service configuration files (if they exist in home directory)
+echo "🖥️ Checking for server configuration files..."
+for server_config in ".my.cnf" ".pgpass" ".mongorc.js" ".rediscli_history" ".psql_history"; do
+    if [ -f "$HOME/$server_config" ]; then
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Back up server config $server_config"
+        else
+            echo "🗄️ Backing up server config $server_config..."
+            cp "$HOME/$server_config" "$DOTFILES_DIR/$server_config"
+        fi
+    fi
+done
+
+# Backup development server configurations (Tomcat, Jetty, etc.)
+echo "🚀 Checking for development server configurations..."
+
+# Check for Tomcat installations in common locations
+for tomcat_dir in "$HOME/Downloads/apache-tomcat-"* "$HOME/opt/tomcat"* "$HOME/tomcat"* "$HOME/servers/tomcat"*; do
+    if [ -d "$tomcat_dir/conf" ]; then
+        tomcat_name=$(basename "$tomcat_dir")
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Back up Tomcat configuration from $tomcat_name/conf"
+        else
+            echo "🐱 Backing up Tomcat configuration from $tomcat_name..."
+            mkdir -p "$DOTFILES_DIR/servers/$tomcat_name/conf"
+            cp -r "$tomcat_dir/conf/"* "$DOTFILES_DIR/servers/$tomcat_name/conf/" 2>/dev/null || true
+        fi
+    fi
+done
+
+# Check for Jetty installations
+for jetty_dir in "$HOME/Downloads/jetty-"* "$HOME/opt/jetty"* "$HOME/jetty"* "$HOME/servers/jetty"*; do
+    if [ -d "$jetty_dir" ] && [ -f "$jetty_dir/start.jar" ]; then
+        jetty_name=$(basename "$jetty_dir")
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Back up Jetty configuration from $jetty_name"
+        else
+            echo "🚀 Backing up Jetty configuration from $jetty_name..."
+            mkdir -p "$DOTFILES_DIR/servers/$jetty_name"
+            # Back up key Jetty config files
+            for config in "etc" "webapps" "start.ini" "jetty.xml"; do
+                if [ -e "$jetty_dir/$config" ]; then
+                    cp -r "$jetty_dir/$config" "$DOTFILES_DIR/servers/$jetty_name/" 2>/dev/null || true
+                fi
+            done
+        fi
+    fi
+done
+
+# Check for Nginx configurations (if user has custom configs)
+for nginx_dir in "$HOME/nginx" "$HOME/conf/nginx" "$HOME/.nginx"; do
+    if [ -d "$nginx_dir" ]; then
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Back up Nginx configuration from $(basename "$nginx_dir")"
+        else
+            echo "🌐 Backing up Nginx configuration..."
+            mkdir -p "$DOTFILES_DIR/servers/nginx"
+            cp -r "$nginx_dir/"* "$DOTFILES_DIR/servers/nginx/" 2>/dev/null || true
+        fi
+    fi
+done
+
+# Backup Eclipse workspace settings (if exists)
+if [ -d "$HOME/eclipse-workspace/.metadata/.plugins/org.eclipse.core.runtime/.settings" ]; then
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 WOULD: Back up Eclipse workspace settings"
+    else
+        echo "🌙 Backing up Eclipse workspace settings..."
+        mkdir -p "$DOTFILES_DIR/eclipse/workspace-settings"
+        cp -r "$HOME/eclipse-workspace/.metadata/.plugins/org.eclipse.core.runtime/.settings/"* "$DOTFILES_DIR/eclipse/workspace-settings/" 2>/dev/null || true
+    fi
+fi
+
+# System-wide configuration backup
+echo "🖥️ Scanning system for server and development configurations..."
+if [ -f "$DOTFILES_DIR/scripts/system-config-backup.sh" ]; then
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 WOULD: Run system-wide configuration backup"
+        "$DOTFILES_DIR/scripts/system-config-backup.sh" --backup --dry-run | grep -E "(✅|🔒|❌)" | head -10
+    else
+        echo "🔄 Running system-wide configuration backup..."
+        "$DOTFILES_DIR/scripts/system-config-backup.sh" --backup
+    fi
+else
+    echo "⚠️ System-wide backup script not found. Skipping system configurations."
+fi
+
 # Function to deduplicate history while preserving chronological order
 deduplicate_history() {
     local input_file="$1"
@@ -565,12 +718,12 @@ clean_history_file() {
 }
 
 # Backup shell configuration files (with security filtering)
-for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history; do
+for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history; do
     if [ -f "$HOME/$file" ]; then
         if [ "$DRY_RUN" = true ]; then
             echo "🔍 WOULD: Securely back up $file..."
             if [ ! -e "$DOTFILES_DIR/shell/$file" ]; then
-                if [[ "$file" == ".bash_history" || "$file" == ".zsh_history" ]]; then
+                if [[ "$file" == ".bash_history" || "$file" == ".zsh_history" || "$file" == ".mysql_history" ]]; then
                     echo "🔍 WOULD: Clean history file and save to $DOTFILES_DIR/shell/$file"
                 else
                     echo "🔍 WOULD: Copy config file to $DOTFILES_DIR/shell/$file (with security filtering)"
@@ -588,7 +741,7 @@ for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history; do
 
         if [ ! -e "$DOTFILES_DIR/shell/$file" ]; then
             # Create sanitized version of shell config
-            if [[ "$file" == ".bash_history" || "$file" == ".zsh_history" ]]; then
+            if [[ "$file" == ".bash_history" || "$file" == ".zsh_history" || "$file" == ".mysql_history" ]]; then
                 # For history files, use comprehensive cleaning
                 clean_history_file "$HOME/$file" "$DOTFILES_DIR/shell/$file"
             else

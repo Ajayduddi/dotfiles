@@ -1,0 +1,4 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Sat Apr 26 21:37:54 IST 2025
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1745683674363
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact net.bytebuddy\:byte-buddy\:jar\:sources\:1.15.11 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org

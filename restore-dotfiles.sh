@@ -94,7 +94,7 @@ ln -s "$DOTFILES_DIR/.local/share/gnome-shell/extensions" "$EXTENSIONS_DIR" || e
 
 # Restore Shell Configuration Files & Create Symlinks
 log "Restoring shell configuration files..."
-for file in .bashrc .zshrc .bash_history .bash_profile; do
+for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history; do
     if [ -f "$DOTFILES_DIR/shell/$file" ]; then
         if [ -e "$HOME/$file" ]; then
             mv "$HOME/$file" "$HOME/${file}_backup_$(date +%s)" && log "Renamed existing $file to backup."

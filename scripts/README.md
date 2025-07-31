@@ -1,8 +1,66 @@
 # 🛠️ Dotfiles Utility Scripts
 
-This directory contains utility and security scripts for managing your dotfiles repository. All scripts generate logs and reports in temporary directories for easy cleanup.
+This directory contains utility, security, and system configuration scripts for managing your dotfiles repository. All scripts generate logs and reports in temporary directories for easy cleanup.
 
 ## 📁 Scripts Overview
+
+### 🖥️ System Configuration Scripts
+
+#### `system-config-backup.sh`
+**Purpose**: System-wide configuration backup and discovery  
+**Usage**: `./scripts/system-config-backup.sh [--backup|--restore] [--dry-run]`  
+**Features**:
+- Scans entire system for development and server configurations
+- Detects Apache, Nginx, Tomcat, MySQL, PostgreSQL, and more
+- Smart filtering excludes cache files and documentation
+- Supports both backup and restoration modes
+- Automatic sudo handling for system files
+
+**Example**:
+```bash
+# Preview what would be backed up
+./scripts/system-config-backup.sh --backup --dry-run
+
+# Backup all system configurations
+./scripts/system-config-backup.sh --backup
+
+# Restore system configurations
+./scripts/system-config-backup.sh --restore
+```
+
+**What it discovers**:
+- ✅ **Web Servers**: Apache HTTP (`/etc/httpd/`), Nginx configurations
+- ✅ **Databases**: MySQL (`/etc/my.cnf.d/`), PostgreSQL, Redis, MongoDB
+- ✅ **Application Servers**: Tomcat, Jetty, WildFly, JBoss configurations
+- ✅ **Development Tools**: Maven, Gradle, Node.js system configurations
+- ✅ **DevOps Tools**: Docker, Kubernetes, Jenkins, GitLab configurations
+
+#### `restore-system-configs.sh`
+**Purpose**: Dedicated system configuration restoration tool  
+**Usage**: `./scripts/restore-system-configs.sh [--dry-run]`  
+**Features**:
+- Restores system configurations with proper permissions
+- Creates backups before overwriting existing files
+- Provides service restart guidance
+- Comprehensive error handling and reporting
+- Sudo privilege management
+
+**Example**:
+```bash
+# Preview what would be restored
+./scripts/restore-system-configs.sh --dry-run
+
+# Restore all system configurations (requires sudo)
+./scripts/restore-system-configs.sh
+```
+
+**Post-restoration guidance**:
+- Service restart commands
+- Configuration validation steps
+- Firewall configuration recommendations
+- Troubleshooting instructions
+
+---
 
 ### 🛡️ Security Scripts
 
@@ -196,10 +254,39 @@ All scripts support these common options:
 
 These utility scripts integrate with the main dotfiles scripts:
 
+### **System Configuration Integration**:
+- **`backup-dotfiles.sh`** → Automatically calls `system-config-backup.sh`
+- **`setup-dotfiles.sh`** → Automatically calls `system-config-backup.sh`
+- **`restore-dotfiles.sh`** → Can use `restore-system-configs.sh` for complete restoration
+
+### **Security Integration**:
 - **`backup-dotfiles.sh`** → Uses `clean-history.sh` patterns
 - **`setup-dotfiles.sh`** → Can call `run-security-audit.sh`
 - **`reset-dotfiles.sh`** → Uses security functions
 - **`reset-setup.sh`** → Uses security functions
+
+### **Complete Backup Workflow**:
+```bash
+# Main backup script automatically includes system configs
+./backup-dotfiles.sh                    # Backs up user + development + system configs
+
+# Or run system backup separately
+./scripts/system-config-backup.sh --backup --dry-run    # Preview system configs
+./scripts/system-config-backup.sh --backup              # Backup system configs
+```
+
+### **Complete Restoration Workflow**:
+```bash
+# 1. Restore user configurations
+./setup-dotfiles.sh
+
+# 2. Restore system configurations
+./scripts/restore-system-configs.sh --dry-run    # Preview
+./scripts/restore-system-configs.sh              # Restore
+
+# 3. Restart services
+sudo systemctl restart httpd nginx mysql
+```
 
 ---
 

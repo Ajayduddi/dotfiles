@@ -1,0 +1,4 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Mon Jun 16 08:17:05 IST 2025
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1750042025088
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact com.mysql\:mysql-connector-j\:jar\:sources\:9.3.0 from/to central (https\://repo.maven.apache.org/maven2)\: Certificate for <repo.maven.apache.org> doesn't match any of the subject alternative names\: []

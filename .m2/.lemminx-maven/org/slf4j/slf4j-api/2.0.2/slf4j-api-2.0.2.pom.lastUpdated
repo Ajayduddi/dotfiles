@@ -1,0 +1,4 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Fri Jun 06 14:35:55 IST 2025
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1749200755939
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact org.slf4j\:slf4j-api\:pom\:2.0.2 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org\: Temporary failure in name resolution

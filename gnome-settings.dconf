@@ -107,7 +107,7 @@ source-units='degree'
 target-currency=''
 target-units='radian'
 window-maximized=false
-window-size=(851, 916)
+window-size=(851, 957)
 word-size=64
 
 [org/gnome/calendar]
@@ -275,7 +275,7 @@ application-id='ulauncher.desktop'
 [org/gnome/desktop/notifications/application/userapp-zen-xu3ma3]
 application-id='userapp-Zen-XU3MA3.desktop'
 
-numlock-state=true
+numlock-state=false
 
 [org/gnome/desktop/peripherals/mouse]
 accel-profile='default'
@@ -322,7 +322,7 @@ show-sidebar=true
 sidebar-page='thumbnails'
 sidebar-size=148
 sizing-mode='automatic'
-window-ratio=(1.4302521008403362, 1.1365795724465557)
+window-ratio=(2.5892116182572615, 1.2156862745098038)
 zoom=0.76046007898315426
 
 [org/gnome/evolution-data-server]
@@ -387,7 +387,7 @@ show-delete-permanently=false
 
 [org/gnome/nautilus/window-state]
 initial-size=(851, 916)
-initial-size-file-chooser=(851, 864)
+initial-size-file-chooser=(851, 957)
 maximized=true
 
 [org/gnome/portal/filechooser/beekeeper-studio]
@@ -406,7 +406,7 @@ last-folder-path='/home/ajay/Downloads/HeidiSQL_12.10_64_Portable'
 last-folder-path='/run/media/ajay/New Volume/projects/MediLab_College/medilab'
 
 [org/gnome/portal/filechooser/google-chrome]
-last-folder-path='/home/ajay/zen.linux-x86_64/zen'
+last-folder-path='/home/ajay/Documents'
 
 [org/gnome/portal/filechooser/io.dbeaver.DBeaverCommunity]
 last-folder-path='/run/media/ajay/New Volume'
@@ -439,7 +439,7 @@ disable-user-extensions=false
 disabled-extensions=['window-list@gnome-shell-extensions.gcampax.github.com', 'just-perfection-desktop@just-perfection', 'dock-from-dash@fthx', 'dash-to-dock@micxgx.gmail.com', 'places-menu@gnome-shell-extensions.gcampax.github.com']
 enabled-extensions=['caffeine@patapon.info', 'user-theme@gnome-shell-extensions.gcampax.github.com', 'status-icons@gnome-shell-extensions.gcampax.github.com', 'background-logo@fedorahosted.org', 'ding@rastersoft.com', 'vertical-workspaces@G-dH.github.com', 'Vitals@CoreCoding.com', 'gsconnect@andyholmes.github.io', 'gtk4-ding@smedius.gitlab.com', 'advanced-alt-tab@G-dH.github.com', 'dash2dock-lite@icedman.github.com', 'dash-to-panel@jderose9.github.com', 'clipboard-indicator@tudmotu.com', 'tilingshell@ferrarodomenico.com', 'netspeed@alynx.one', 'network-stats@gnome.noroadsleft.xyz']
 favorite-apps=['userapp-Zen-XU3MA3.desktop', 'google-chrome.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Software.desktop', 'org.gnome.Ptyxis.desktop', 'code.desktop']
-last-selected-power-profile='performance'
+last-selected-power-profile='power-saver'
 welcome-dialog-last-shown-version='47.5'
 
 [org/gnome/shell/extensions/advanced-alt-tab-window-switcher]
@@ -590,41 +590,17 @@ check-x11wayland=true
 
 [org/gnome/shell/extensions/gsconnect]
 debug=false
-devices=['bc0a0d535f42450fb8fa47904f7bcaf9', 'd18abcd592a2428ab014fb3380038c86', 'e687e3c3325d42018f0e96162c0c40a7']
+devices=['d18abcd592a2428ab014fb3380038c86', '0e6fcef6835344638ddd33f4bb4ac885']
 enabled=true
 keep-alive-when-locked=true
 name='Fedora'
 show-indicators=false
 
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9]
-certificate-pem='-----BEGIN CERTIFICATE-----\nMIIBjDCCATGgAwIBAgIBATAKBggqhkjOPQQDBDBPMSkwJwYDVQQDDCBiYzBhMGQ1\nMzVmNDI0NTBmYjhmYTQ3OTA0ZjdiY2FmOTEUMBIGA1UECwwLS0RFIENvbm5lY3Qx\nDDAKBgNVBAoMA0tERTAeFw0yNDA2MTkxODMwMDBaFw0zNTA2MTkxODMwMDBaME8x\nKTAnBgNVBAMMIGJjMGEwZDUzNWY0MjQ1MGZiOGZhNDc5MDRmN2JjYWY5MRQwEgYD\nVQQLDAtLREUgQ29ubmVjdDEMMAoGA1UECgwDS0RFMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEPsmKmLgxcl0c4jTq+Tw6NYT1MWDZMrxeEoU1jDWHEZYe7/Tbx4mt\nL8UDYVHOUIngo0Ya/7HkNMmNxKbcMAJrBzAKBggqhkjOPQQDBANJADBGAiEA1YFy\nT/eoz0D9zmYmnMIDGJz2DltSBesko5b4zJk+lqYCIQCyEuVQetwvQxhog1bl83Gp\nGtst+awWJe+x78BMQaNDTQ==\n-----END CERTIFICATE-----\n'
-last-connection='lan://192.168.1.39:1716'
-name='Redmi  Note  7'
-paired=true
-supported-plugins=['battery', 'clipboard', 'connectivity_report', 'contacts', 'findmyphone', 'mousepad', 'mpris', 'notification', 'ping', 'presenter', 'runcommand', 'sftp', 'share', 'sms', 'systemvolume', 'telephony']
-type='phone'
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/battery]
-custom-battery-notification=true
-custom-battery-notification-value=uint32 80
-full-battery-notification=true
-send-statistics=true
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/clipboard]
-receive-content=true
-send-content=true
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/notification]
-applications='{"Printers":{"iconName":"org.gnome.Settings-printers-symbolic","enabled":true},"Bottles":{"iconName":"com.usebottles.bottles","enabled":true},"Events and Tasks Reminders":{"iconName":"org.gnome.Evolution-alarm-notify","enabled":true},"Zenity":{"iconName":"application-x-executable","enabled":true},"Disks":{"iconName":"org.gnome.DiskUtility","enabled":true},"Software":{"iconName":"org.gnome.Software","enabled":true},"Date & Time":{"iconName":"org.gnome.Settings-time-symbolic","enabled":true},"Rhythmbox":{"iconName":"org.gnome.Rhythmbox3","enabled":true},"Disk Usage Analyzer":{"iconName":"org.gnome.baobab","enabled":true},"Power":{"iconName":"org.gnome.Settings-power-symbolic","enabled":true},"Color Management":{"iconName":"org.gnome.Settings-color-symbolic","enabled":true},"Files":{"iconName":"org.gnome.Nautilus","enabled":true},"Clocks":{"iconName":"org.gnome.clocks","enabled":true},"Problem Reporting":{"iconName":"abrt","enabled":true},"Firefox":{"iconName":"","enabled":true},"Pika Backup":{"iconName":"org.gnome.World.PikaBackup","enabled":true},"Pika Backup Monitor":{"iconName":"org.gnome.World.PikaBackup","enabled":true},"Zen":{"iconName":"","enabled":true},"Zen Browser":{"iconName":"app.zen_browser.zen","enabled":true},"MEGAsync":{"iconName":"","enabled":true}}'
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/share]
-receive-directory='/home/ajay/Redmi Note 7'
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/sms]
-legacy-sms=true
-
-[org/gnome/shell/extensions/gsconnect/device/bc0a0d535f42450fb8fa47904f7bcaf9/plugin/telephony]
-ringing-pause=true
+[org/gnome/shell/extensions/gsconnect/device/0e6fcef6835344638ddd33f4bb4ac885]
+last-connection='lan://192.168.86.178:1716'
+name='fedora'
+supported-plugins=['battery', 'clipboard', 'findmyphone', 'mousepad', 'mpris', 'notification', 'ping', 'runcommand', 'share', 'systemvolume', 'telephony']
+type='desktop'
 
 [org/gnome/shell/extensions/gsconnect/device/d18abcd592a2428ab014fb3380038c86]
 certificate-pem='-----BEGIN CERTIFICATE-----\nMIIBizCCATGgAwIBAgIBATAKBggqhkjOPQQDBDBPMSkwJwYDVQQDDCBkMThhYmNk\nNTkyYTI0MjhhYjAxNGZiMzM4MDAzOGM4NjEUMBIGA1UECwwLS0RFIENvbm5lY3Qx\nDDAKBgNVBAoMA0tERTAeFw0yNDA3MTIxODMwMDBaFw0zNTA3MTIxODMwMDBaME8x\nKTAnBgNVBAMMIGQxOGFiY2Q1OTJhMjQyOGFiMDE0ZmIzMzgwMDM4Yzg2MRQwEgYD\nVQQLDAtLREUgQ29ubmVjdDEMMAoGA1UECgwDS0RFMFkwEwYHKoZIzj0CAQYIKoZI\nzj0DAQcDQgAEIgEcGeeOSwfCQlTnyUJJoJ74H2asAUhus3FaW4/d9PHtpFdieiEr\nyExKFeopcbcUqdGBuDgQ32+9CYMXAhBHJzAKBggqhkjOPQQDBANIADBFAiBZgVt7\n/rgBA9EvEt89Qvqx/h61jamSj8qOG3bAwCigswIhAPGc8PGXRUTSCAc9moURrxI8\nYLwIjPqIy2FDIhYrKhUL\n-----END CERTIFICATE-----\n'
@@ -642,6 +618,9 @@ custom-battery-notification-value=uint32 80
 receive-content=true
 send-content=true
 
+[org/gnome/shell/extensions/gsconnect/device/d18abcd592a2428ab014fb3380038c86/plugin/mousepad]
+share-control=true
+
 [org/gnome/shell/extensions/gsconnect/device/d18abcd592a2428ab014fb3380038c86/plugin/notification]
 applications='{"Printers":{"iconName":"org.gnome.Settings-printers-symbolic","enabled":true},"Bottles":{"iconName":"com.usebottles.bottles","enabled":true},"Events and Tasks Reminders":{"iconName":"org.gnome.Evolution-alarm-notify","enabled":true},"Pika Backup":{"iconName":"org.gnome.World.PikaBackup","enabled":true},"Zenity":{"iconName":"application-x-executable","enabled":true},"Disks":{"iconName":"org.gnome.DiskUtility","enabled":true},"Software":{"iconName":"org.gnome.Software","enabled":true},"Date & Time":{"iconName":"org.gnome.Settings-time-symbolic","enabled":true},"Rhythmbox":{"iconName":"org.gnome.Rhythmbox3","enabled":true},"Disk Usage Analyzer":{"iconName":"org.gnome.baobab","enabled":true},"Power":{"iconName":"org.gnome.Settings-power-symbolic","enabled":true},"Color Management":{"iconName":"org.gnome.Settings-color-symbolic","enabled":true},"Files":{"iconName":"org.gnome.Nautilus","enabled":true},"Clocks":{"iconName":"org.gnome.clocks","enabled":true},"Problem Reporting":{"iconName":"abrt","enabled":true},"Pika Backup Monitor":{"iconName":"org.gnome.World.PikaBackup","enabled":true},"Firefox":{"iconName":"","enabled":true},"Zen":{"iconName":"","enabled":true},"Zen Browser":{"iconName":"app.zen_browser.zen","enabled":true},"MEGAsync":{"iconName":"","enabled":true}}'
 
@@ -653,12 +632,6 @@ legacy-sms=true
 
 [org/gnome/shell/extensions/gsconnect/device/d18abcd592a2428ab014fb3380038c86/plugin/telephony]
 ringing-pause=true
-
-[org/gnome/shell/extensions/gsconnect/device/e687e3c3325d42018f0e96162c0c40a7]
-last-connection='lan://192.168.1.44:1716'
-name='fedora'
-supported-plugins=['battery', 'clipboard', 'findmyphone', 'mousepad', 'mpris', 'notification', 'ping', 'runcommand', 'share', 'systemvolume', 'telephony']
-type='desktop'
 
 [org/gnome/shell/extensions/gsconnect/messaging]
 window-maximized=false
@@ -714,7 +687,7 @@ workspaces-in-app-grid=false
 world-clock=true
 
 [org/gnome/shell/extensions/network-stats]
-devices-info='{"wlp0s20f3":{"totalUpload":273545953,"totalDownload":3659390871,"resetedAt":"Sun Jul 27 2025 09:00:08 GMT+0530 (India Standard Time)"},"virbr0":{"totalUpload":20050882,"totalDownload":801915,"resetedAt":"Sun Jul 27 2025 14:04:42 GMT+0530 (India Standard Time)"},"tap0":{"totalUpload":26133,"totalDownload":20074,"resetedAt":"Sun Jul 27 2025 15:31:38 GMT+0530 (India Standard Time)"}}'
+devices-info='{"wlp0s20f3":{"totalUpload":523369757,"totalDownload":51673420,"resetedAt":"Thu Jul 31 2025 08:28:31 GMT+0530 (India Standard Time)"},"virbr0":{"totalUpload":0,"totalDownload":0,"resetedAt":"Wed Jul 30 2025 12:52:25 GMT+0530 (India Standard Time)"},"tap0":{"totalUpload":115513172,"totalDownload":2127981,"resetedAt":"Sun Jul 27 2025 19:08:32 GMT+0530 (India Standard Time)"}}'
 display-mode='download_speed'
 refresh-interval=1000
 show-icon=false
@@ -727,7 +700,7 @@ inner-gaps=uint32 3
 last-version-name-installed='16.4'
 layouts-json='[{"id":"Layout 1","tiles":[{"x":0,"y":0,"width":0.22,"height":0.5,"groups":[1,2]},{"x":0,"y":0.5,"width":0.22,"height":0.5,"groups":[1,2]},{"x":0.22,"y":0,"width":0.56,"height":1,"groups":[2,3]},{"x":0.78,"y":0,"width":0.22,"height":0.5,"groups":[3,4]},{"x":0.78,"y":0.5,"width":0.22,"height":0.5,"groups":[3,4]}]},{"id":"Layout 2","tiles":[{"x":0,"y":0,"width":0.22,"height":1,"groups":[1]},{"x":0.22,"y":0,"width":0.56,"height":1,"groups":[1,2]},{"x":0.78,"y":0,"width":0.22,"height":1,"groups":[2]}]},{"id":"Layout 3","tiles":[{"x":0,"y":0,"width":0.37207943925233644,"height":1,"groups":[1]},{"x":0.37207943925233644,"y":0,"width":0.6279205607476637,"height":1,"groups":[1]}]},{"id":"Layout 4","tiles":[{"x":0,"y":0,"width":0.6022196261682243,"height":1,"groups":[1]},{"x":0.6022196261682243,"y":0,"width":0.3977803738317757,"height":1,"groups":[1]}]},{"id":"5033547","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5000000000000016,"height":1,"groups":[1]}]},{"id":"5103643","tiles":[{"x":0,"y":0,"width":0.5,"height":1,"groups":[1]},{"x":0.5,"y":0,"width":0.5000000000000016,"height":0.5,"groups":[2,1]},{"x":0.5,"y":0.5,"width":0.5000000000000016,"height":0.5,"groups":[2,1]}]}]'
 outer-gaps=uint32 3
-selected-layouts=[['5033547'], ['5033547'], ['5033547'], ['5033547']]
+selected-layouts=[['5033547'], ['5033547'], ['5033547']]
 top-edge-maximize=false
 window-border-width=uint32 1
 
@@ -882,9 +855,9 @@ locations=[<(uint32 2, <('Hyderabad', 'VOHY', true, [(0.30455995447301049, 1.369
 locations=@av []
 
 [org/gnome/software]
-check-timestamp=int64 1753587037
+check-timestamp=int64 1753936352
 first-run=false
-flatpak-purge-timestamp=int64 1753594414
+flatpak-purge-timestamp=int64 1753936073
 install-timestamp=int64 1753342083
 packagekit-historical-updates-timestamp=uint64 1745075030
 update-notification-timestamp=int64 1753342579

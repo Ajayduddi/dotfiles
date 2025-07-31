@@ -1,0 +1,4 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Sat Apr 26 21:45:09 IST 2025
+@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1745684109535
+https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact org.springframework\:spring-core\:jar\:javadoc\:6.2.1 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org
