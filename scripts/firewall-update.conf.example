@@ -1,0 +1,215 @@
+# Firewall Update Script Configuration
+# Copy this file to ~/.config/firewall-update.conf to customize settings
+
+# ============================================================================
+# BASIC CONFIGURATION
+# ============================================================================
+
+# Execution Modes
+DRY_RUN=false                    # Set to true to preview actions without applying
+VERBOSE=false                    # Enable detailed output and logging
+FORCE=false                      # Skip confirmations (use with caution)
+AUTO_UPDATE=false                # Enable fully automated updates
+
+# ============================================================================
+# PERFORMANCE SETTINGS
+# ============================================================================
+
+# Download Optimization
+PARALLEL_DOWNLOADS=true          # Enable parallel processing of downloads
+MAX_PARALLEL_JOBS=5              # Maximum concurrent downloads (1-10)
+DOWNLOAD_TIMEOUT=30              # Timeout for individual downloads (seconds)
+DOWNLOAD_RETRIES=3               # Number of retries for failed downloads
+
+# Processing Optimization
+BATCH_SIZE=10000                 # Number of IPs to process in each batch
+INCREMENTAL_UPDATE=true          # Only process changed IPs (much faster)
+USE_NATIVE_IPSET=true           # Use native ipset commands for better performance
+
+# Caching System
+CACHE_EXPIRY_HOURS=6            # Cache expiry time (1-24 hours)
+
+# ============================================================================
+# THREAT INTELLIGENCE SOURCES
+# ============================================================================
+
+# Core Sources (Always Enabled)
+# - Malware sources: IPsum, Spamhaus DROP/EDROP, Emerging Threats, etc.
+# - Suspicious sources: FireHOL Level 1, DShield, Tor exits, etc.
+
+# Additional Specialized Sources
+ENABLE_SPECIALIZED_SOURCES=false # Enable additional threat intelligence sources
+                                # Adds: IBM X-Force, NormShield, advanced trackers
+                                # Total sources: 18 → 31
+
+# Proxy and Anonymization Blocking
+ENABLE_PROXY_BLOCKING=false     # Enable blocking of proxy servers and anonymizers
+                               # WARNING: May block legitimate users behind corporate proxies
+                               # Adds: ProxyLists, ProxZ, RI proxies
+                               # Total sources: +4
+
+# Cryptocurrency Mining Protection
+ENABLE_CRYPTO_MINING_BLOCKING=false # Enable blocking of cryptocurrency mining IPs
+                                   # Protects against cryptojacking attacks
+                                   # Adds: CoinBlocker feeds
+                                   # Total sources: +1
+
+# ============================================================================
+# BACKUP AND CLEANUP SETTINGS
+# ============================================================================
+
+# Backup Management
+MAX_BACKUPS_TO_KEEP=10          # Maximum number of backup files to retain
+MAX_BACKUP_AGE_DAYS=30          # Maximum age of backup files (days)
+
+# Validation Settings
+MIN_IPS_THRESHOLD=10            # Minimum number of IPs required for validation
+
+# ============================================================================
+# DIRECTORY SETTINGS (Advanced Users Only)
+# ============================================================================
+
+# Usually don't need to change these unless you have custom setup
+# DOTFILES_DIR="$HOME/.dotfiles"
+# BACKUP_DIR="$DOTFILES_DIR/firewall_backups"
+# CACHE_DIR="$DOTFILES_DIR/.firewall_cache"
+
+# Custom Sources File (Optional)
+# CUSTOM_SOURCES="/path/to/custom/sources.txt"
+
+# ============================================================================
+# EXAMPLE CONFIGURATIONS FOR DIFFERENT USE CASES
+# ============================================================================
+
+# CONSERVATIVE (Default) - Home Users
+# Best for: Home users, basic protection, low false positives
+# Sources: 18 (core malware + basic suspicious activity)
+# Performance: ~15-20 seconds
+# Risk: Low false positives
+#
+# ENABLE_SPECIALIZED_SOURCES=false
+# ENABLE_PROXY_BLOCKING=false
+# ENABLE_CRYPTO_MINING_BLOCKING=false
+
+# BALANCED - Small Business
+# Best for: Small business, enhanced protection, minimal false positives
+# Sources: 31 (+ specialized sources + crypto protection)
+# Performance: ~25-30 seconds
+# Risk: Minimal false positives
+#
+# ENABLE_SPECIALIZED_SOURCES=true
+# ENABLE_PROXY_BLOCKING=false
+# ENABLE_CRYPTO_MINING_BLOCKING=true
+
+# AGGRESSIVE - Corporate Environments
+# Best for: Corporate environments, maximum protection
+# Sources: 35 (+ proxy blocking)
+# Performance: ~30-35 seconds
+# Risk: Potential legitimate proxy blocking
+#
+# ENABLE_SPECIALIZED_SOURCES=true
+# ENABLE_PROXY_BLOCKING=true
+# ENABLE_CRYPTO_MINING_BLOCKING=true
+
+# ENTERPRISE - High-Security Environments
+# Best for: High-security environments, complete threat coverage
+# Sources: 45+ (all available sources)
+# Performance: ~35-45 seconds
+# Risk: Highest false positive potential, maximum protection
+#
+# ENABLE_SPECIALIZED_SOURCES=true
+# ENABLE_PROXY_BLOCKING=true
+# ENABLE_CRYPTO_MINING_BLOCKING=true
+# FORCE=true
+# AUTO_UPDATE=true
+# VERBOSE=true
+
+# ============================================================================
+# AUTOMATION SETTINGS
+# ============================================================================
+
+# For automated deployments and cron jobs
+# Uncomment and customize as needed:
+
+# AUTO_UPDATE=true              # Enable fully automated updates
+# FORCE=true                    # Skip all confirmations
+# VERBOSE=true                  # Enable detailed logging for automation
+
+# Example cron job entries:
+# Daily updates at 2 AM with standard protection:
+# 0 2 * * * /home/user/.dotfiles/scripts/firewall.sh --auto-update --verbose >> /var/log/firewall-update.log 2>&1
+
+# Weekly full update with all sources on Sundays at 3 AM:
+# 0 3 * * 0 /home/user/.dotfiles/scripts/firewall.sh --enable-all-sources --force --auto-update >> /var/log/firewall-update.log 2>&1
+
+# ============================================================================
+# PERFORMANCE TUNING
+# ============================================================================
+
+# For systems with limited resources:
+# MAX_PARALLEL_JOBS=2           # Reduce concurrent downloads
+# BATCH_SIZE=5000               # Smaller batch sizes
+# CACHE_EXPIRY_HOURS=12         # Longer cache retention
+
+# For high-performance systems:
+# MAX_PARALLEL_JOBS=8           # More concurrent downloads
+# BATCH_SIZE=20000              # Larger batch sizes
+# CACHE_EXPIRY_HOURS=3          # More frequent updates
+
+# ============================================================================
+# SECURITY CONSIDERATIONS
+# ============================================================================
+
+# Network Security:
+# - All downloads use HTTPS when available
+# - Source validation and integrity checking
+# - Automatic fallback for failed sources
+
+# System Security:
+# - Firewall rules are applied atomically
+# - Automatic backup before changes
+# - Rollback capability in case of issues
+
+# Privacy:
+# - No personal data is collected or transmitted
+# - All processing is done locally
+# - Cache files contain only IP addresses
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+
+# Common Issues and Solutions:
+
+# Issue: Downloads are slow
+# Solution: Reduce MAX_PARALLEL_JOBS or check network connectivity
+
+# Issue: High memory usage
+# Solution: Reduce BATCH_SIZE or disable PARALLEL_DOWNLOADS
+
+# Issue: Firewall rules not applying
+# Solution: Check sudo permissions and firewall service status
+
+# Issue: Too many false positives
+# Solution: Disable ENABLE_PROXY_BLOCKING or use conservative settings
+
+# Issue: Cache not working
+# Solution: Check CACHE_DIR permissions and disk space
+
+# Enable debug mode for troubleshooting:
+# VERBOSE=true
+# DRY_RUN=true
+
+# ============================================================================
+# SUPPORT AND DOCUMENTATION
+# ============================================================================
+
+# For more information:
+# - Run: ./firewall.sh --help
+# - Check logs in: ~/.dotfiles/firewall_backups/
+# - Review threat sources: ~/.dotfiles/THREAT_SOURCES_UPDATE.md
+# - Performance guide: ~/.dotfiles/FIREWALL_OPTIMIZATIONS.md
+
+# Version: 1.1.0
+# Last Updated: 2025-08-04
+# Compatible with: Linux (firewalld, ufw, iptables), macOS (pfctl)

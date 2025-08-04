@@ -148,96 +148,96 @@ enhance_shell_history_security() {
             if [ "$DRY_RUN" = false ]; then
                 mkdir -p "$SHELL_DIR"
                 
-                cat > "$history_security_file" << 'EOF'
-# Enhanced History Security Settings
-# Add this to your .bashrc or .zshrc to prevent sensitive commands from being logged
-
-# Bash history security settings
-if [ -n "$BASH_VERSION" ]; then
-    # Don't log commands that start with a space
-    export HISTCONTROL=ignorespace:ignoredups:erasedups
-    
-    # Don't log sensitive commands (expanded patterns)
-    export HISTIGNORE="*password*:*secret*:*token*:*key*:*credential*:*auth*:*pass*:*login*:mysql*:psql*:*sudo*:ssh*:curl*-u*:*bearer*:*api*key*:*access*token*:*-p*:*--password*"
-    
-    # Limit history size
-    export HISTSIZE=10000
-    export HISTFILESIZE=10000
-    
-    # Enable history timestamps
-    export HISTTIMEFORMAT="%F %T "
-fi
-
-# Zsh history security settings  
-if [ -n "$ZSH_VERSION" ]; then
-    # Don't log commands that start with a space
-    setopt HIST_IGNORE_SPACE
-    setopt HIST_IGNORE_DUPS
-    setopt HIST_IGNORE_ALL_DUPS
-    setopt HIST_SAVE_NO_DUPS
-    
-    # Don't share history between sessions immediately (more secure)
-    unsetopt SHARE_HISTORY
-    setopt INC_APPEND_HISTORY
-    
-    # Add timestamps to history
-    setopt EXTENDED_HISTORY
-    
-    # Limit history size
-    export HISTSIZE=10000
-    export SAVEHIST=10000
-fi
-
-# Universal security aliases to prevent accidental logging
-alias mysql_secure='HISTCONTROL=ignorespace mysql'
-alias ssh_secure='HISTCONTROL=ignorespace ssh'
-alias curl_secure='HISTCONTROL=ignorespace curl'
-alias aws_secure='HISTCONTROL=ignorespace aws'
-alias gcloud_secure='HISTCONTROL=ignorespace gcloud'
-alias docker_secure='HISTCONTROL=ignorespace docker'
-
-# Function to run sensitive commands without logging
-secure_cmd() {
-    # Temporarily disable history
-    if [ -n "$BASH_VERSION" ]; then
-        set +o history
-        "$@"
-        set -o history
-    elif [ -n "$ZSH_VERSION" ]; then
-        unsetopt SHARE_HISTORY
-        fc -p /dev/null
-        "$@"
-        fc -P
-    fi
-}
-
-# Function to securely set environment variables
-secure_env() {
-    local var_name="$1"
-    # Use read -s to avoid showing the value in terminal
-    read -s -p "Enter value for $var_name: " var_value
-    echo ""  # Add newline after hidden input
-    
-    # Export the variable without logging
-    if [ -n "$BASH_VERSION" ]; then
-        set +o history
-        export "$var_name"="$var_value"
-        set -o history
-    elif [ -n "$ZSH_VERSION" ]; then
-        unsetopt SHARE_HISTORY
-        fc -p /dev/null
-        export "$var_name"="$var_value"
-        fc -P
-    fi
-    
-    echo "✅ Environment variable $var_name set securely"
-}
-
-echo "🔒 Enhanced history security settings loaded"
-echo "💡 Tip: Prefix sensitive commands with a space to avoid logging"
-echo "💡 Or use: secure_cmd <your-sensitive-command>"
-echo "💡 For secure environment variables: secure_env API_KEY"
-EOF
+                {
+                    echo "# Enhanced History Security Settings"
+                    echo "# Add this to your .bashrc or .zshrc to prevent sensitive commands from being logged"
+                    echo ""
+                    echo "# Bash history security settings"
+                    echo "if [ -n \"\$BASH_VERSION\" ]; then"
+                    echo "    # Don't log commands that start with a space"
+                    echo "    export HISTCONTROL=ignorespace:ignoredups:erasedups"
+                    echo "    "
+                    echo "    # Don't log sensitive commands (expanded patterns)"
+                    echo "    export HISTIGNORE=\"*password*:*secret*:*token*:*key*:*credential*:*auth*:*pass*:*login*:mysql*:psql*:*sudo*:ssh*:curl*-u*:*bearer*:*api*key*:*access*token*:*-p*:*--password*\""
+                    echo "    "
+                    echo "    # Limit history size"
+                    echo "    export HISTSIZE=10000"
+                    echo "    export HISTFILESIZE=10000"
+                    echo "    "
+                    echo "    # Enable history timestamps"
+                    echo "    export HISTTIMEFORMAT=\"%F %T \""
+                    echo "fi"
+                    echo ""
+                    echo "# Zsh history security settings"
+                    echo "if [ -n \"\$ZSH_VERSION\" ]; then"
+                    echo "    # Don't log commands that start with a space"
+                    echo "    setopt HIST_IGNORE_SPACE"
+                    echo "    setopt HIST_IGNORE_DUPS"
+                    echo "    setopt HIST_IGNORE_ALL_DUPS"
+                    echo "    setopt HIST_SAVE_NO_DUPS"
+                    echo "    "
+                    echo "    # Don't share history between sessions immediately (more secure)"
+                    echo "    unsetopt SHARE_HISTORY"
+                    echo "    setopt INC_APPEND_HISTORY"
+                    echo "    "
+                    echo "    # Add timestamps to history"
+                    echo "    setopt EXTENDED_HISTORY"
+                    echo "    "
+                    echo "    # Limit history size"
+                    echo "    export HISTSIZE=10000"
+                    echo "    export SAVEHIST=10000"
+                    echo "fi"
+                    echo ""
+                    echo "# Universal security aliases to prevent accidental logging"
+                    echo "alias mysql_secure='HISTCONTROL=ignorespace mysql'"
+                    echo "alias ssh_secure='HISTCONTROL=ignorespace ssh'"
+                    echo "alias curl_secure='HISTCONTROL=ignorespace curl'"
+                    echo "alias aws_secure='HISTCONTROL=ignorespace aws'"
+                    echo "alias gcloud_secure='HISTCONTROL=ignorespace gcloud'"
+                    echo "alias docker_secure='HISTCONTROL=ignorespace docker'"
+                    echo ""
+                    echo "# Function to run sensitive commands without logging"
+                    echo "secure_cmd() {"
+                    echo "    # Temporarily disable history"
+                    echo "    if [ -n \"\$BASH_VERSION\" ]; then"
+                    echo "        set +o history"
+                    echo "        \"\$@\""
+                    echo "        set -o history"
+                    echo "    elif [ -n \"\$ZSH_VERSION\" ]; then"
+                    echo "        unsetopt SHARE_HISTORY"
+                    echo "        fc -p /dev/null"
+                    echo "        \"\$@\""
+                    echo "        fc -P"
+                    echo "    fi"
+                    echo "}"
+                    echo ""
+                    echo "# Function to securely set environment variables"
+                    echo "secure_env() {"
+                    echo "    local var_name=\"\$1\""
+                    echo "    # Use read -s to avoid showing the value in terminal"
+                    echo "    read -s -p \"Enter value for \$var_name: \" var_value"
+                    echo "    echo \"\"  # Add newline after hidden input"
+                    echo "    "
+                    echo "    # Export the variable without logging"
+                    echo "    if [ -n \"\$BASH_VERSION\" ]; then"
+                    echo "        set +o history"
+                    echo "        export \"\$var_name\"=\"\$var_value\""
+                    echo "        set -o history"
+                    echo "    elif [ -n \"\$ZSH_VERSION\" ]; then"
+                    echo "        unsetopt SHARE_HISTORY"
+                    echo "        fc -p /dev/null"
+                    echo "        export \"\$var_name\"=\"\$var_value\""
+                    echo "        fc -P"
+                    echo "    fi"
+                    echo "    "
+                    echo "    echo \"✅ Environment variable \$var_name set securely\""
+                    echo "}"
+                    echo ""
+                    echo "echo \"🔒 Enhanced history security settings loaded\""
+                    echo "echo \"💡 Tip: Prefix sensitive commands with a space to avoid logging\""
+                    echo "echo \"💡 Or use: secure_cmd <your-sensitive-command>\""
+                    echo "echo \"💡 For secure environment variables: secure_env API_KEY\""
+                } > "$history_security_file"
                 
                 chmod 644 "$history_security_file"
                 log_info "Created enhanced history security file: $history_security_file"
@@ -262,30 +262,30 @@ EOF
                     
                     # Add secure_env function if it doesn't exist
                     if ! grep -q "secure_env" "$history_security_file"; then
-                        cat >> "$history_security_file" << 'EOF'
-
-# Function to securely set environment variables
-secure_env() {
-    local var_name="$1"
-    # Use read -s to avoid showing the value in terminal
-    read -s -p "Enter value for $var_name: " var_value
-    echo ""  # Add newline after hidden input
-    
-    # Export the variable without logging
-    if [ -n "$BASH_VERSION" ]; then
-        set +o history
-        export "$var_name"="$var_value"
-        set -o history
-    elif [ -n "$ZSH_VERSION" ]; then
-        unsetopt SHARE_HISTORY
-        fc -p /dev/null
-        export "$var_name"="$var_value"
-        fc -P
-    fi
-    
-    echo "✅ Environment variable $var_name set securely"
-}
-EOF
+                        {
+                            echo ""
+                            echo "# Function to securely set environment variables"
+                            echo "secure_env() {"
+                            echo "    local var_name=\"\$1\""
+                            echo "    # Use read -s to avoid showing the value in terminal"
+                            echo "    read -s -p \"Enter value for \$var_name: \" var_value"
+                            echo "    echo \"\"  # Add newline after hidden input"
+                            echo "    "
+                            echo "    # Export the variable without logging"
+                            echo "    if [ -n \"\$BASH_VERSION\" ]; then"
+                            echo "        set +o history"
+                            echo "        export \"\$var_name\"=\"\$var_value\""
+                            echo "        set -o history"
+                            echo "    elif [ -n \"\$ZSH_VERSION\" ]; then"
+                            echo "        unsetopt SHARE_HISTORY"
+                            echo "        fc -p /dev/null"
+                            echo "        export \"\$var_name\"=\"\$var_value\""
+                            echo "        fc -P"
+                            echo "    fi"
+                            echo "    "
+                            echo "    echo \"✅ Environment variable \$var_name set securely\""
+                            echo "}"
+                        } >> "$history_security_file"
                     fi
                     
                     # Add EXTENDED_HISTORY for zsh if it doesn't exist
@@ -301,7 +301,7 @@ EOF
         else
             log_info "History security file already has enhanced protections"
         fi
-    }
+    fi
     
     # Update shell configuration files to include history security
     local shell_files=("$HOME/.bashrc" "$HOME/.zshrc" "$SHELL_DIR/.bashrc" "$SHELL_DIR/.zshrc")
@@ -392,7 +392,7 @@ harden_script_permissions() {
                 fi
             fi
         fi
-    }
+    done
 }
 
 # Function to detect and protect sensitive data
@@ -417,7 +417,7 @@ detect_sensitive_data() {
                 log_warning "Potentially sensitive file found: $file"
             done
         fi
-    }
+    done
     
     # Deduplicate the list
     sensitive_files=($(echo "${sensitive_files[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
@@ -460,7 +460,7 @@ detect_sensitive_data() {
         fi
     else
         log_info "No potentially sensitive files found"
-    }
+    fi
     
     # Also scan for hardcoded secrets in files
     log_info "Scanning for hardcoded secrets in files..."
@@ -493,7 +493,7 @@ detect_sensitive_data() {
                 fi
             done
         fi
-    }
+    done
     
     # Deduplicate the list
     files_with_secrets=($(echo "${files_with_secrets[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
@@ -535,7 +535,7 @@ detect_sensitive_data() {
         fi
     else
         log_info "No files with hardcoded secrets found"
-    }
+    fi
 }
 
 # Function to harden SSH configuration
@@ -575,7 +575,7 @@ harden_ssh_config() {
         else
             log_info "SSH directory has secure permissions: 700"
         fi
-    }
+    fi
     
     # Check SSH key files
     local ssh_keys=($(find "$ssh_config_dir" -name "id_*" -not -name "*.pub" 2>/dev/null || true))
@@ -597,7 +597,7 @@ harden_ssh_config() {
         else
             log_info "SSH key file has secure permissions: $key_file (600)"
         fi
-    }
+    done
     
     # Create or update SSH config with secure defaults
     if [ ! -f "$ssh_config_file" ]; then
@@ -706,7 +706,7 @@ EOF
         else
             log_info "SSH config appears to have secure settings"
         fi
-    }
+    fi
 }
 
 # Function to improve Git security
@@ -851,7 +851,7 @@ EOF
                 log_debug "Would create Git configuration with secure defaults: $dotfiles_gitconfig"
             fi
         fi
-    }
+    fi
 }
 
 # Function to enhance environment variable security
@@ -1082,7 +1082,7 @@ EOF
         fi
     else
         log_info "Secure environment variables file already exists: $secure_env_file"
-    }
+    fi
     
     # Update shell configuration files to include secure environment variables
     local shell_files=("$HOME/.bashrc" "$HOME/.zshrc" "$SHELL_DIR/.bashrc" "$SHELL_DIR/.zshrc")

@@ -152,7 +152,7 @@ check_sensitive_files() {
             
             echo "" >> "$report_file"
         fi
-    }
+    done
     
     # Check for files with sensitive content
     local content_patterns=(
@@ -204,7 +204,7 @@ check_sensitive_files() {
                 ((found_files++))
             done
         fi
-    }
+    done
     
     echo "RECOMMENDATIONS:" >> "$report_file"
     echo "----------------------------------------" >> "$report_file"
@@ -353,7 +353,7 @@ check_suspicious_changes() {
         echo "Git not available or not a git repository" >> "$report_file"
         echo "Cannot check for suspicious changes" >> "$report_file"
         return
-    }
+    fi
     
     # Get recent changes
     echo "RECENT CHANGES (LAST 10 COMMITS):" >> "$report_file"

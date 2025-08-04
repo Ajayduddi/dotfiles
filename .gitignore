@@ -59,6 +59,139 @@
 **/*temp*
 **/logs/
 
+# Comprehensive cache exclusions
+**/cache/
+**/.cache/
+**/Cache/
+**/.Cache/
+**/caches/
+**/.caches/
+**/Caches/
+**/.Caches/
+**/*-cache/
+**/*_cache/
+**/*.cache/
+**/.cache-*/
+**/cache-*/
+**/*cache*/
+**/*Cache*/
+
+# Application-specific cache directories
+**/.npm/
+**/.yarn/cache/
+**/node_modules/.cache/
+**/.pnpm-store/
+**/.next/cache/
+**/.nuxt/
+**/.vuepress/.cache/
+**/.docusaurus/.cache/
+**/.gatsby/cache/
+**/.parcel-cache/
+**/dist/cache/
+**/build/cache/
+
+# Browser cache directories
+**/.mozilla/firefox/*/cache2/
+**/.mozilla/firefox/*/startupCache/
+**/.mozilla/firefox/*/OfflineCache/
+**/.config/chromium/*/Cache/
+**/.config/chromium/*/Code\ Cache/
+**/.config/chromium/*/GPUCache/
+**/.config/chromium/*/Service\ Worker/CacheStorage/
+**/.config/google-chrome/*/Cache/
+**/.config/google-chrome/*/Code\ Cache/
+**/.config/google-chrome/*/GPUCache/
+**/.config/google-chrome/*/Service\ Worker/CacheStorage/
+**/.cache/mozilla/
+**/.cache/chromium/
+**/.cache/google-chrome/
+
+# System and application caches
+**/.cache/fontconfig/
+**/.cache/thumbnails/
+**/.cache/mesa_shader_cache/
+**/.cache/nvidia/
+**/.cache/pip/
+**/.cache/go-build/
+**/.cache/rust/
+**/.cache/cargo/
+**/.cache/composer/
+**/.cache/gem/
+**/.cache/bundler/
+**/.cache/rubygems/
+**/.cache/maven/
+**/.cache/gradle/
+**/.cache/sbt/
+**/.cache/coursier/
+**/.cache/mill/
+**/.cache/bazel/
+**/.cache/buck/
+**/.cache/ccache/
+**/.cache/clangd/
+**/.cache/electron/
+**/.cache/electron-builder/
+**/.cache/puppeteer/
+**/.cache/selenium/
+**/.cache/cypress/
+**/.cache/ms-playwright/
+
+# IDE and editor caches
+**/.vscode/extensions/
+**/.vscode-server/
+**/.idea/caches/
+**/.idea/shelf/
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+**/.idea/usage.statistics.xml
+**/.idea/dictionaries/
+**/.idea/inspectionProfiles/
+**/eclipse/workspace/.metadata/
+**/eclipse/**/.recommenders/
+**/sublime-text*/Cache/
+**/sublime-text*/Index/
+
+# Language-specific caches
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.coverage
+**/.tox/
+**/.nox/
+**/target/
+**/.m2/repository/
+**/.gradle/caches/
+**/.gradle/wrapper/
+**/build/
+**/dist/
+**/out/
+**/.next/
+**/.nuxt/
+**/.output/
+**/node_modules/
+**/bower_components/
+**/.sass-cache/
+**/.postcss-cache/
+
+# Database caches
+**/.sqlite/
+**/*.db-journal
+**/*.sqlite-journal
+**/redis.rdb
+**/dump.rdb
+
+# Media and thumbnail caches
+**/.thumbnails/
+**/Thumbs.db
+**/.DS_Store
+**/Desktop.ini
+**/*.tmp
+**/*.swp
+**/*.swo
+**/*~
+
 # Temp directories for script logs and operations
 **/temp/
 **/tmp/

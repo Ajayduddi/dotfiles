@@ -208,7 +208,7 @@ secure_ssh_directory() {
         fi
         
         return
-    }
+    fi
     
     # Set permissions for SSH directory
     set_directory_permissions "$ssh_dir" "700" "SSH directory"
@@ -258,7 +258,7 @@ secure_gpg_directory() {
         fi
         
         return
-    }
+    fi
     
     # Set permissions for GPG directory
     set_directory_permissions "$gpg_dir" "700" "GPG directory"
