@@ -5,7 +5,7 @@
 [![Platform: Linux](https://img.shields.io/badge/Platform-Linux-green.svg)](https://www.linux.org/)
 [![GNOME Compatible](https://img.shields.io/badge/DE-GNOME-orange.svg)](https://www.gnome.org/)
 
-A comprehensive, production-ready dotfiles management system for Linux environments with enterprise-grade safety features, comprehensive logging, and unified management interface.
+A comprehensive dotfiles management system for Linux environments with enterprise-grade safety features and a unified management interface.
 
 ## 📋 Table of Contents
 
@@ -26,7 +26,7 @@ A comprehensive, production-ready dotfiles management system for Linux environme
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/dotfiles.git ~/.dotfiles
+git clone https://github.com/Ajayduddi/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 
 # 2. Preview what will be installed (recommended)
@@ -68,40 +68,37 @@ cd ~/.dotfiles
 ### 🛡️ **Enterprise Safety Features**
 - **Automatic Backups**: Original files preserved before modification
 - **Dry-run Mode**: Preview changes without applying them
-- **Comprehensive Logging**: Detailed logs of all operations
 - **Error Recovery**: Robust error handling and rollback capabilities
 - **Multi-layer Confirmations**: Prevents accidental destructive operations
 - **Security Filtering**: Automatic exclusion of sensitive data and credentials
-- **Enhanced Security**: Advanced security hardening and monitoring
-- **Sensitive Data Protection**: Encryption of sensitive files and secure environment variables
-- **Permission Hardening**: Automatic secure permission management
+- **Permission Hardening**: Secure permission management
 - **Security Auditing**: Regular security checks and reporting
 
 ## 🔧 Core Scripts Overview
 
-| Script | Purpose | Safety Level | When to Use |
-|--------|---------|--------------|-------------|
-| **dotfiles-manager.sh** | **Unified Interface** | 🛡️ **High** | Primary entry point for all operations |
-| **setup-dotfiles.sh** | **Initial Setup + System Backup** | 🛡️ **High** | First installation or major updates |
-| **backup-dotfiles.sh** | **Complete Backup System** | 🛡️ **Safe** | Regular maintenance and updates |
-| **restore-dotfiles.sh** | **System Restore** | ⚠️ **Medium** | Restore from remote repository |
-| **reset-dotfiles.sh** | **Complete Uninstall** | 🚨 **Destructive** | Permanent removal |
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| **dotfiles-manager.sh** | Unified Interface | Primary entry point for all operations |
+| **setup-dotfiles.sh** | Initial Setup + System Backup | First installation or major updates |
+| **backup-dotfiles.sh** | Complete Backup System | Regular maintenance and updates |
+| **restore-dotfiles.sh** | System Restore |  Restore from remote repository |
+| **reset-dotfiles.sh** | Complete Uninstall | Permanent removal |
 
 ### 🛠️ System Configuration Scripts (in `scripts/` directory)
 
-| Script | Purpose | Safety Level | When to Use |
-|--------|---------|--------------|-------------|
-| **system-config-backup.sh** | **System-Wide Config Backup** | 🛡️ **High** | Backup server/development configs |
-| **restore-system-configs.sh** | **System Config Restoration** | ⚠️ **Medium** | Restore system configurations |
-| **security-hardening.sh** | **Security Hardening** | 🛡️ **High** | Apply comprehensive security improvements |
-| **security-monitor.sh** | **Security Monitoring** | 🛡️ **Safe** | Regular security checks and reporting |
-| **secure-permissions.sh** | **Permission Hardening** | 🛡️ **High** | Fix file and directory permissions |
-| **firewall.sh** | **🔥 Enterprise Firewall Manager** | 🛡️ **High** | Automated threat intelligence firewall |
-| **clean-history.sh** | **History Sanitization** | 🛡️ **Safe** | Remove sensitive data from history |
-| **dedupe-history.sh** | **History Deduplication** | 🛡️ **Safe** | Remove duplicate commands from history |
-| **analyze-history.sh** | **History Analysis** | 🛡️ **Safe** | Analyze command patterns and security |
-| **package-manager.sh** | **Package Management** | 🛡️ **High** | Cross-platform package management |
-| **audit-and-automation.sh** | **System Audit & Automation** | 🛡️ **High** | Comprehensive system auditing |
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| **system-config-backup.sh** | System-Wide Config Backup | Backup server/development configs |
+| **restore-system-configs.sh** | System Config Restoration | Restore system configurations |
+| **security-hardening.sh** | Security Hardening | Apply comprehensive security improvements |
+| **security-monitor.sh** | Security Monitoring | Regular security checks and reporting |
+| **secure-permissions.sh** | Permission Hardening | Fix file and directory permissions |
+| **firewall.sh** | Enterprise Firewall Manager | Automated threat intelligence firewall |
+| **clean-history.sh** | History Sanitization | Remove sensitive data from history |
+| **dedupe-history.sh** | History Deduplication | Remove duplicate commands from history |
+| **analyze-history.sh** | History Analysis | Analyze command patterns and security |
+| **package-manager.sh** | Package Management | Cross-platform package management |
+| **audit-and-automation.sh** | System Audit & Automation | Comprehensive system auditing |
 
 ## 📖 Detailed Usage Guide
 
@@ -239,7 +236,6 @@ cd ~/.dotfiles
 - ✅ **Regular maintenance** (weekly/monthly)
 - ✅ **Before making changes** to configurations
 - ✅ **Before system updates** or major changes
-- ✅ **Continuous integration** with your dotfiles
 
 **Where to run**: `~/.dotfiles` directory
 
@@ -252,7 +248,7 @@ cd ~/.dotfiles
 6. **Git Integration**: Commits changes automatically
 
 **Security Features**:
-- 🔒 **159 security patterns** exclude sensitive data
+- 🔒 **Security patterns** exclude sensitive data
 - 🔒 **History cleaning** removes passwords and secrets
 - 🔒 **Browser data exclusion** protects login information
 - 🔒 **Certificate filtering** excludes private keys
@@ -500,7 +496,6 @@ The dotfiles system now includes **comprehensive system-wide configuration manag
 - 🛡️ **Backup before restore**: Existing configs backed up before replacement
 - 🛡️ **Sudo handling**: Automatic privilege escalation when needed
 - 🛡️ **Service restart guidance**: Instructions for restarting affected services
-- 🛡️ **Dry-run mode**: Preview all operations before execution
 
 ### 📁 **Backup Structure**
 
@@ -558,7 +553,6 @@ sudo systemctl status httpd     # Check service status
 #### ✅ **Security & Safety**:
 - **Sensitive data exclusion**: Automatic filtering of credentials
 - **Backup before restore**: Existing configs backed up before replacement
-- **Dry-run mode**: Preview all operations before execution
 - **Sudo handling**: Automatic privilege escalation when needed
 
 #### ✅ **Cross-System Compatibility**:
@@ -576,22 +570,20 @@ sudo systemctl status httpd     # Check service status
 **When to use**:
 - ✅ **Daily/Weekly security updates** with latest threat intelligence
 - ✅ **Enterprise environments** requiring comprehensive threat blocking
-- ✅ **Home users** wanting advanced protection against malware and attacks
-- ✅ **Automated security** with cron job integration
+- ✅ **Home users** wanting advanced protection against malware
 
 **Where to run**: `~/.dotfiles/scripts/` directory
 
 **What it does**:
-1. **Threat Intelligence**: Downloads from 45+ premium threat intelligence sources
+1. **Threat Intelligence**: Downloads from premium threat intelligence sources
 2. **Malware Protection**: Blocks C&C servers, botnets, and ransomware infrastructure
 3. **Attack Prevention**: Stops brute force, web attacks, and suspicious activity
-4. **Advanced Threats**: Protects against APTs, cryptojacking, and zero-day infrastructure
-5. **Multi-OS Support**: Works with firewalld, ufw, iptables, and pfctl
-6. **Performance Optimized**: Parallel downloads, caching, and incremental updates
+4. **Multi-OS Support**: Works with firewalld, ufw, iptables, and pfctl
+5. **Performance Optimized**: Parallel downloads, caching, and incremental updates
 
 **Core Features**:
 
-#### 🎯 **Threat Intelligence Sources (45+ total)**:
+#### 🎯 **Threat Intelligence Sources**:
 
 **Malware & C&C Sources (14 sources)**:
 - **IPsum** - Daily updated malicious IPs with confidence scoring
@@ -677,10 +669,10 @@ VERBOSE=true
 **Cron Job Setup**:
 ```bash
 # Daily updates at 2 AM
-0 2 * * * /home/ajay/.dotfiles/scripts/firewall.sh --auto-update --verbose >> /var/log/firewall-update.log 2>&1
+0 2 * * * ~/.dotfiles/scripts/firewall.sh --auto-update --verbose >> /var/log/firewall-update.log 2>&1
 
 # Weekly full update with all sources
-0 3 * * 0 /home/ajay/.dotfiles/scripts/firewall.sh --enable-all-sources --force --auto-update
+0 3 * * 0 ~/.dotfiles/scripts/firewall.sh --enable-all-sources --force --auto-update
 ```
 
 **Performance Metrics**:
@@ -692,9 +684,8 @@ VERBOSE=true
 #### 🛡️ **Security Benefits**:
 - **Malware Protection**: Blocks C&C communication and botnet infrastructure
 - **Attack Prevention**: Stops brute force, web attacks, and spam sources
-- **Advanced Threats**: Protects against APTs and zero-day infrastructure
 - **Cryptojacking Prevention**: Blocks unauthorized cryptocurrency mining
-- **Real-time Updates**: Multiple daily updates from premium sources
+- **Real-time Updates**: Daily updates from premium sources
 
 **Example Output**:
 ```
@@ -717,31 +708,27 @@ VERBOSE=true
 #### **1. Re-run Protection**
 - **Setup Marker Detection**: Prevents accidental re-installation
 - **Symlink Analysis**: Detects existing dotfiles installation
-- **Backup Verification**: Ensures backups exist before proceeding
 - **Interactive Confirmation**: Requires explicit user confirmation
 
-#### **2. Comprehensive Backup System**
+#### **2. Backup System**
 - **Pre-Installation Backups**: Automatic backup of existing files
 - **Timestamped Backups**: Unique timestamps prevent conflicts
 - **Safety Backups**: Additional backups before destructive operations
-- **Backup Verification**: Confirms backup integrity before proceeding
 
 #### **3. Security Filtering**
 - **159 Security Patterns**: Comprehensive exclusion of sensitive files
-- **History Cleaning**: Removes passwords, tokens, and secrets from shell history
-- **Browser Data Protection**: Excludes login data, cookies, and session information
-- **Certificate Filtering**: Protects private keys and authentication files
+- **History Cleaning**: Removes passwords and secrets from shell history
+- **Browser Data Protection**: Excludes login data and cookies
+- **Certificate Filtering**: Protects private keys
 
 #### **4. Error Recovery System**
 - **Comprehensive Logging**: Every operation logged with details
 - **Error Detection**: Robust error handling for all operations
 - **Graceful Rollback**: Automatic rollback on critical failures
-- **Recovery Instructions**: Clear guidance for manual recovery
 
 #### **5. Dry-Run System**
 - **Complete Preview**: Shows exactly what would be changed
 - **Risk Assessment**: Identifies potential conflicts before applying
-- **Impact Analysis**: Detailed breakdown of system changes
 - **Safe Testing**: Test configurations without system changes
 
 ## 🔄 Common Workflows
@@ -794,14 +781,11 @@ git pull origin main
 # 1. Test changes safely
 ./dotfiles-manager.sh --dry-run test
 
-# 2. Preview setup changes
-./dotfiles-manager.sh --dry-run setup
-
-# 3. Apply and verify
+# 2. Apply and verify
 ./dotfiles-manager.sh --force setup
 ./dotfiles-manager.sh status
 
-# 4. Run comprehensive tests
+# 3. Run tests
 ./dotfiles-manager.sh test
 ```
 
@@ -845,53 +829,6 @@ git pull origin main
 # 4. Remove dotfiles directory (optional)
 cd ~ && rm -rf ~/.dotfiles
 ```
-
-## 📚 Comprehensive Documentation
-
-### 📖 **Available Documentation**
-
-| Document | Purpose | Location |
-|----------|---------|----------|
-| **README.md** | Main documentation and usage guide | `/README.md` |
-| **scripts/README.md** | Comprehensive scripts documentation | `/scripts/README.md` |
-| **THREAT_SOURCES_UPDATE.md** | Firewall threat intelligence sources | `/THREAT_SOURCES_UPDATE.md` |
-| **scripts/SECURITY.md** | Security guidelines and best practices | `/scripts/SECURITY.md` |
-| **firewall-update.conf.example** | Firewall configuration template | `/scripts/firewall-update.conf.example` |
-
-### 🔥 **Latest Updates**
-
-#### **Enterprise Firewall Manager (firewall.sh)**
-- **45+ Threat Intelligence Sources**: Expanded from 10 to 45+ premium sources
-- **Performance Optimized**: 4-5x faster with parallel downloads and caching
-- **Enterprise Ready**: Automated updates, comprehensive logging, multiple protection levels
-- **Multi-OS Support**: Works with firewalld, ufw, iptables, and pfctl
-- **Threat Coverage**: 350,000-800,000 unique threat indicators
-
-**Quick Start**:
-```bash
-# Standard protection for home users
-./scripts/firewall.sh --verbose
-
-# Maximum protection for enterprises  
-./scripts/firewall.sh --enable-all-sources --auto-update
-
-# Preview all changes first
-./scripts/firewall.sh --dry-run --verbose --enable-all-sources
-```
-
-#### **Enhanced Security Scripts**
-- **security-hardening.sh**: Multi-profile system hardening (Basic → Enterprise)
-- **security-monitor.sh**: Real-time security monitoring and alerting
-- **secure-permissions.sh**: Comprehensive permission hardening
-- **analyze-history.sh**: Advanced shell history analysis with security focus
-
-#### **System Configuration Management**
-- **system-config-backup.sh**: Discovers and backs up system-wide configurations
-- **restore-system-configs.sh**: Safely restores system configurations
-- **package-manager.sh**: Cross-platform package management
-- **audit-and-automation.sh**: System auditing and automation setup
-
----
 
 ## 📂 Directory Structure
 
@@ -1019,13 +956,6 @@ If your system becomes unusable:
 ### **Getting Help**
 
 ```bash
-# Get help for any script
-./dotfiles-manager.sh --help
-./setup-dotfiles.sh --help
-./backup-dotfiles.sh --help
-./restore-dotfiles.sh --help
-./reset-dotfiles.sh --help
-
 # Check system status
 ./dotfiles-manager.sh status
 
@@ -1063,7 +993,6 @@ If your system becomes unusable:
 ./dotfiles-manager.sh --force setup
 
 # 4. Verify everything works
-./dotfiles-manager.sh test
 ./dotfiles-manager.sh status
 
 # 5. Create backup of working state
@@ -1101,7 +1030,7 @@ If your system becomes unusable:
 **A:** Yes! The system auto-detects your OS and supports Fedora/RHEL, Ubuntu/Debian, and Arch Linux.
 
 ### **Q: What sensitive files are excluded from backups?**
-**A:** 159 security patterns exclude passwords, tokens, keys, browser data, SSH keys, and other sensitive information.
+**A:** Security patterns exclude passwords, tokens, keys, browser data, SSH keys, and other sensitive information.
 
 ### **Q: How do I update my dotfiles from a remote repository?**
 **A:** Run `git pull` in `~/.dotfiles`, then `./dotfiles-manager.sh setup` to apply updates.
@@ -1111,17 +1040,6 @@ If your system becomes unusable:
 
 ---
 
-## 🎯 **Quick Reference Card**
-
-| Task | Command | Safety |
-|------|---------|--------|
-| **First Setup** | `./dotfiles-manager.sh setup` | 🛡️ Safe |
-| **Daily Backup** | `./dotfiles-manager.sh backup` | 🛡️ Safe |
-| **Check Status** | `./dotfiles-manager.sh status` | 🛡️ Safe |
-| **New System** | `./restore-dotfiles.sh` | ⚠️ Medium |
-| **Test Changes** | `./dotfiles-manager.sh --dry-run test` | 🛡️ Safe |
-| **Emergency** | `./dotfiles-manager.sh emergency-restore` | ⚠️ Medium |
-| **Uninstall** | `./reset-dotfiles.sh` | 🚨 Destructive |
 
 **Remember**: Always use `--dry-run` first to preview changes!
 

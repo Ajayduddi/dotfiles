@@ -409,6 +409,7 @@ ${TMPDIR:-/tmp}/dotfiles-*
 **/.idea/logs/
 **/eclipse/workspace/.metadata/.log
 **/eclipse/**/*.log
+firewall_backups
 
 # Package manager logs
 **/dnf.log

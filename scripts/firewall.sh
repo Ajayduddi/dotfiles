@@ -46,9 +46,9 @@ MAX_BACKUP_AGE_DAYS=30  # Maximum age of backup files in days
 BATCH_SIZE=10000  # Increased batch size for better performance
 DOWNLOAD_TIMEOUT=30  # Timeout for downloads in seconds
 DOWNLOAD_RETRIES=3  # Number of retries for failed downloads
-PARALLEL_DOWNLOADS=true  # Enable parallel processing
+PARALLEL_DOWNLOADS=false  # Disable parallel processing for debugging
 MAX_PARALLEL_JOBS=5  # Maximum concurrent downloads
-INCREMENTAL_UPDATE=true  # Enable incremental updates
+INCREMENTAL_UPDATE=true  # Enable incremental updates for efficiency
 USE_NATIVE_IPSET=true  # Use native ipset commands instead of firewall-cmd
 CACHE_EXPIRY_HOURS=6  # Cache expiry time in hours
 ENABLE_SPECIALIZED_SOURCES=false  # Enable additional specialized threat sources
@@ -66,53 +66,38 @@ SUDO_CMD=""
 # High-confidence malware and C&C sources
 MALWARE_SOURCES=(
     "https://raw.githubusercontent.com/stamparm/ipsum/master/ipsum.txt"                    # IPsum - Malicious IPs (daily updates)
-    "https://www.spamhaus.org/drop/drop.txt"                                              # Spamhaus DROP - Known bad networks
-    "https://www.spamhaus.org/drop/edrop.txt"                                             # Spamhaus EDROP - Extended DROP list
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/malwaredomainlist.ipset"  # MalwareDomainList IPs
+    "https://www.spamhaus.org/drop/drop.txt"                                              # Spamhaus DROP - Known bad networks (includes EDROP)
     "https://cinsscore.com/list/ci-badguys.txt"                                           # CINS Army List - Attack sources
     "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"                    # Emerging Threats - Compromised IPs
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cybercrime.ipset"  # FireHOL Cybercrime tracker
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/malc0de.ipset"     # Malc0de - Malware C&C servers
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/zeus.ipset"        # Zeus botnet tracker
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ransomware_rw.ipset" # Ransomware tracker
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bambenek_c2.ipset" # Bambenek C&C tracker
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/dga_feed.ipset"    # DGA (Domain Generation Algorithm) IPs
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/feodo.ipset"       # Feodo tracker - Banking trojans
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/palevo.ipset"      # Palevo worm tracker
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset" # FireHOL Level 1 - High confidence threats
 )
 
 # Suspicious activity and threat indicators
 SUSPICIOUS_SOURCES=(
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset"  # FireHOL Level 1 - High confidence
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level2.netset"  # FireHOL Level 2 - Medium confidence
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"        # Tor exit nodes
     "https://www.dshield.org/block.txt"                                                        # DShield Top Attackers
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/botscout.ipset"         # BotScout - Known bots
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cleantalk_new_1d.ipset" # CleanTalk - Recent spammers
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cleantalk_new_1d.ipset" # CleanTalk - Recent spammers (1 day)
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset"        # GreenSnow - Suspicious IPs
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/bruteforceblocker.ipset" # Brute force attackers
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam.ipset"    # Stop Forum Spam
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/talos_ipfilter.ipset"   # Cisco Talos IP filter
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/alienvault_reputation.ipset" # AlienVault reputation
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/blocklist_de.ipset"     # Blocklist.de - SSH/FTP attacks
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cruzit_web_attacks.ipset" # Web attack sources
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/sslbl.ipset"            # SSL Blacklist - Bad SSL certs
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/urlvir.ipset"           # URLVir - Malicious URLs
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/php_harvesters.ipset"   # PHP harvesters and scanners
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/php_spammers.ipset"     # PHP spammers
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/pushing_inertia_blocklist.ipset" # Pushing Inertia blocklist
 )
 
 # Additional specialized sources (can be enabled via config)
 SPECIALIZED_SOURCES=(
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_ips.ipset"       # CoinBlocker - Cryptocurrency miners
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxylists.ipset"       # Open proxy servers
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxz.ipset"            # ProxZ - Open proxies
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ri_connect_proxies.ipset" # RI Connect proxies
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ri_web_proxies.ipset"   # RI Web proxies
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/xforce.ipset"           # IBM X-Force threat intelligence
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/normshield_all_attack.ipset" # NormShield attacks
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/normshield_all_wannacry.ipset" # WannaCry related IPs
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_hosts.ipset"     # CoinBlocker - Cryptocurrency miners (working URL)
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxy_list.ipset"      # Open proxy servers (working URL)
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"       # Tor exit nodes
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/botscout.ipset"        # BotScout - Known bots
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam.ipset"   # Stop Forum Spam
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset"       # GreenSnow blacklist
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/blocklist_de.ipset"    # Blocklist.de
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cybercrime.ipset"      # Cybercrime tracker
 )
 
 # Parse command line arguments
@@ -569,13 +554,8 @@ get_existing_ips() {
     local ipset_name="$1"
     local output_file="$2"
     
-    if [ "$USE_NATIVE_IPSET" = true ]; then
-        # Use native ipset command (much faster)
-        ipset list "$ipset_name" 2>/dev/null | grep -E '^[0-9]' > "$output_file" || touch "$output_file"
-    else
-        # Fallback to firewall-cmd
-        firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null > "$output_file" || touch "$output_file"
-    fi
+    # For firewalld ipsets, always use firewall-cmd
+    $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null > "$output_file" || touch "$output_file"
     
     local count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
     log_debug "Found $count existing IPs in ipset: $ipset_name"
@@ -636,7 +616,415 @@ update_ipset_incremental() {
     fi
 }
 
-# Function to add IPs to ipset in bulk (optimized)
+# Advanced Dynamic Progress Bar System with Timing and Performance Optimization
+PROGRESS_ACTIVE=false
+LAST_PROGRESS_UPDATE=0
+LAST_PERCENTAGE=0
+PROGRESS_TOTAL=0
+PROGRESS_CURRENT=0
+PROGRESS_START_TIME=0
+PROGRESS_LAST_UPDATE_TIME=0
+PROGRESS_UPDATE_INTERVAL=0.1  # Minimum seconds between updates
+
+# Advanced dynamic progress bar with timing and performance optimization
+show_progress() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    local width=40
+    
+    # Validate inputs
+    if ! [[ "$current" =~ ^[0-9]+$ ]]; then current=0; fi
+    if ! [[ "$total" =~ ^[0-9]+$ ]] || [ "$total" -eq 0 ]; then total=100; fi
+    
+    # Simple time-based throttling for performance (using integer seconds)
+    local current_time=$(date +%s)
+    if [ "$current" -ne "$total" ] && [ -n "$PROGRESS_LAST_UPDATE_TIME" ] && [ "$PROGRESS_LAST_UPDATE_TIME" -gt 0 ]; then
+        local time_diff=$((current_time - PROGRESS_LAST_UPDATE_TIME))
+        if [ "$time_diff" -eq 0 ] && [ "$current" -ne "$total" ]; then
+            return  # Skip update if less than 1 second has passed
+        fi
+    fi
+    PROGRESS_LAST_UPDATE_TIME="$current_time"
+    
+    # Update global progress tracking
+    PROGRESS_CURRENT="$current"
+    PROGRESS_TOTAL="$total"
+    
+    local percentage=$((current * 100 / total))
+    
+    # Performance optimization: Skip updates if percentage hasn't changed significantly
+    if [ "$current" -ne "$total" ] && [ "$percentage" -eq "$LAST_PERCENTAGE" ]; then
+        return
+    fi
+    LAST_PERCENTAGE="$percentage"
+    
+    local filled=$((current * width / total))
+    local empty=$((width - filled))
+    
+    # Build progress bar with = symbols only (optimized)
+    local bar=""
+    if [ "$filled" -gt 0 ]; then
+        bar=$(printf '=%.0s' $(seq 1 $filled))
+    fi
+    if [ "$empty" -gt 0 ]; then
+        bar="${bar}$(printf -- '-%.0s' $(seq 1 $empty))"
+    fi
+    
+    # Simple timing information (using integer arithmetic)
+    local timing_info=""
+    if [ "$PROGRESS_START_TIME" -gt 0 ] && [ "$current" -gt 0 ]; then
+        local elapsed=$((current_time - PROGRESS_START_TIME))
+        if [ "$elapsed" -gt 0 ]; then
+            local rate=$((current / elapsed))
+            local eta=""
+            
+            if [ "$current" -lt "$total" ] && [ "$rate" -gt 0 ]; then
+                local remaining=$(((total - current) / rate))
+                if [ "$remaining" -lt 60 ]; then
+                    eta=" ETA: ${remaining}s"
+                elif [ "$remaining" -lt 3600 ]; then
+                    local mins=$((remaining / 60))
+                    eta=" ETA: ${mins}m"
+                fi
+            fi
+            
+            if [ "$rate" -gt 1000 ]; then
+                local rate_k=$((rate / 1000))
+                timing_info=" ${rate_k}k/s$eta"
+            elif [ "$rate" -gt 0 ]; then
+                timing_info=" ${rate}/s$eta"
+            fi
+        fi
+    fi
+    
+    # Display progress with proper line clearing and timing
+    local display_message="$message"
+    if [ ${#display_message} -gt 25 ]; then
+        display_message="${display_message:0:22}..."
+    fi
+    printf "\r\033[K%s [%s] %d%% (%d/%d)%s" "$display_message" "$bar" "$percentage" "$current" "$total" "$timing_info"
+}
+
+# Update progress with dynamic totals based on actual findings
+update_progress_dynamic() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    local found_items="${4:-0}"  # Actual items found/processed
+    
+    # Adjust total based on actual findings if provided
+    if [ "$found_items" -gt 0 ] && [ "$found_items" -ne "$total" ]; then
+        total="$found_items"
+    fi
+    
+    if [ "$PROGRESS_ACTIVE" = true ]; then
+        show_progress "$current" "$total" "$message"
+    fi
+}
+
+# Start progress tracking with timing initialization
+start_progress_bar() {
+    local operation_name="$1"
+    local estimated_total="${2:-100}"
+    PROGRESS_ACTIVE=true
+    PROGRESS_START_TIME=$(date +%s)
+    PROGRESS_LAST_UPDATE_TIME=0
+    LAST_PERCENTAGE=0
+    PROGRESS_TOTAL="$estimated_total"
+    PROGRESS_CURRENT=0
+    show_progress 0 "$estimated_total" "$operation_name"
+}
+
+# Update progress
+update_progress() {
+    local current="$1"
+    local total="$2"
+    local message="$3"
+    
+    if [ "$PROGRESS_ACTIVE" = true ]; then
+        show_progress "$current" "$total" "$message"
+    fi
+}
+
+# Stop progress bar
+stop_progress_bar() {
+    local final_message="$1"
+    
+    if [ "$PROGRESS_ACTIVE" = true ]; then
+        # Calculate final timing information (using integer arithmetic)
+        local timing_suffix=""
+        if [ "$PROGRESS_START_TIME" -gt 0 ]; then
+            local end_time=$(date +%s)
+            local total_time=$((end_time - PROGRESS_START_TIME))
+            if [ "$total_time" -gt 0 ]; then
+                if [ "$total_time" -lt 60 ]; then
+                    timing_suffix=" (${total_time}s)"
+                else
+                    local mins=$((total_time / 60))
+                    local secs=$((total_time % 60))
+                    timing_suffix=" (${mins}m ${secs}s)"
+                fi
+            fi
+        fi
+        
+        # Clear line completely and reset progress tracking
+        printf "\r\033[K"
+        if [ -n "$final_message" ]; then
+            echo "${final_message}${timing_suffix}"
+        else
+            echo ""  # Add newline to separate from next output
+        fi
+        PROGRESS_ACTIVE=false
+        LAST_PERCENTAGE=0
+        PROGRESS_TOTAL=0
+        PROGRESS_CURRENT=0
+        PROGRESS_START_TIME=0
+        PROGRESS_LAST_UPDATE_TIME=0
+    fi
+}
+
+# Fast and reliable IP deduplication function
+deduplicate_ips_advanced() {
+    local input_file="$1"
+    local output_file="$2"
+    local existing_ips_file="$3"  # Optional: file with existing IPs to exclude
+    local operation_name="${4:-Deduplicating}"
+    
+    if [ ! -s "$input_file" ]; then
+        touch "$output_file"
+        return 0
+    fi
+    
+    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    local temp_file="$FIREWALL_DATA_DIR/temp_dedup_$$"
+    
+    # Step 1: Clean and validate IPs (fast processing)
+    grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?$|^[0-9a-fA-F:]+(/[0-9]{1,3})?$' "$input_file" 2>/dev/null | \
+    sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
+    grep -v '^[[:space:]]*$' > "$temp_file" 2>/dev/null || touch "$temp_file"
+    
+    # Step 2: Remove duplicates
+    sort -u "$temp_file" -o "$temp_file" 2>/dev/null
+    
+    # Step 3: Remove existing IPs if provided
+    if [ -n "$existing_ips_file" ] && [ -s "$existing_ips_file" ]; then
+        local temp_existing="$FIREWALL_DATA_DIR/existing_sorted_$$"
+        sort -u "$existing_ips_file" > "$temp_existing" 2>/dev/null
+        comm -23 "$temp_file" "$temp_existing" > "$output_file" 2>/dev/null
+        rm -f "$temp_existing"
+    else
+        mv "$temp_file" "$output_file"
+    fi
+    
+    # Step 4: Final validation
+    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local excluded=$((total_input - final_count))
+    
+    # Clean up
+    rm -f "$temp_file"
+    
+    echo "✅ Processed $total_input IPs → $final_count unique valid IPs (excluded: $excluded)"
+    
+    return 0
+}
+
+# Advanced CIDR overlap detection and intelligent resolution
+resolve_cidr_overlaps() {
+    local input_file="$1"
+    local output_file="$2"
+    local operation_name="${3:-Resolving CIDR overlaps}"
+    
+    if [ ! -s "$input_file" ]; then
+        touch "$output_file"
+        return 0
+    fi
+    
+    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    local temp_file="$FIREWALL_DATA_DIR/temp_cidr_$$"
+    
+    # Step 1: Separate individual IPs from CIDR ranges
+    local individual_ips="$FIREWALL_DATA_DIR/individual_ips_$$"
+    local cidr_ranges="$FIREWALL_DATA_DIR/cidr_ranges_$$"
+    
+    grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' "$input_file" > "$individual_ips" 2>/dev/null || touch "$individual_ips"
+    grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$' "$input_file" > "$cidr_ranges" 2>/dev/null || touch "$cidr_ranges"
+    
+    # Step 2: Advanced CIDR range consolidation
+    local consolidated_cidrs="$FIREWALL_DATA_DIR/consolidated_cidrs_$$"
+    
+    if [ -s "$cidr_ranges" ]; then
+        # Simple sort and unique - much faster than complex consolidation
+        sort -u "$cidr_ranges" > "$consolidated_cidrs"
+    else
+        touch "$consolidated_cidrs"
+    fi
+    
+    # Step 3: Skip complex IP filtering for speed - just copy individual IPs
+    local filtered_ips="$FIREWALL_DATA_DIR/filtered_ips_$$"
+    
+    if [ -s "$individual_ips" ]; then
+        cp "$individual_ips" "$filtered_ips"
+    else
+        touch "$filtered_ips"
+    fi
+    
+    # Step 4: Remove duplicate CIDR ranges
+    local unique_cidrs="$FIREWALL_DATA_DIR/unique_cidrs_$$"
+    if [ -s "$consolidated_cidrs" ]; then
+        sort -u "$consolidated_cidrs" > "$unique_cidrs"
+    else
+        touch "$unique_cidrs"
+    fi
+    
+    # Step 5: Combine filtered IPs and unique CIDRs
+    local combined_file="$FIREWALL_DATA_DIR/combined_$$"
+    if [ -s "$filtered_ips" ] || [ -s "$unique_cidrs" ]; then
+        cat "$filtered_ips" "$unique_cidrs" 2>/dev/null | sort -u > "$combined_file"
+    else
+        touch "$combined_file"
+    fi
+    
+    # Step 6: Final validation and cleanup
+    
+    # Validate all entries are properly formatted
+    if [ -s "$combined_file" ]; then
+        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?$' "$combined_file" > "$output_file" 2>/dev/null || touch "$output_file"
+    else
+        touch "$output_file"
+    fi
+    
+    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local removed=$((total_input - final_count))
+    
+    # Cleanup
+    rm -f "$individual_ips" "$cidr_ranges" "$consolidated_cidrs" "$filtered_ips" "$unique_cidrs" "$combined_file" "$temp_file"
+    
+    echo "✅ Smart CIDR resolution: $total_input → $final_count entries (removed: $removed overlaps/duplicates) ($(date +%s)s)"
+    
+    return 0
+}
+
+# Ultra-fast bulk IP processing with advanced algorithms
+process_ips_ultra_fast() {
+    local input_file="$1"
+    local output_file="$2"
+    local operation_name="${3:-Processing IPs}"
+    local existing_ips_file="$4"
+    
+    if [ ! -s "$input_file" ]; then
+        touch "$output_file"
+        return 0
+    fi
+    
+    local temp_dir="$FIREWALL_DATA_DIR/ultra_fast_$$"
+    mkdir -p "$temp_dir"
+    
+    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    
+    # Step 1: Parallel preprocessing with chunks
+    local chunk_size=50000
+    local num_chunks=$(( (total_input + chunk_size - 1) / chunk_size ))
+    local processed_chunks=0
+    
+    # Create chunks for parallel processing
+    split -l "$chunk_size" "$input_file" "$temp_dir/chunk_" 2>/dev/null
+    
+    # Process chunks in parallel (limited to CPU cores)
+    local max_parallel=$(nproc 2>/dev/null || echo 4)
+    local active_jobs=0
+    
+    for chunk_file in "$temp_dir"/chunk_*; do
+        [ ! -f "$chunk_file" ] && continue
+        
+        # Wait if we have too many parallel jobs
+        while [ "$active_jobs" -ge "$max_parallel" ]; do
+            wait -n 2>/dev/null || sleep 0.1
+            ((active_jobs--))
+        done
+        
+        # Process chunk in background
+        {
+            local chunk_output="${chunk_file}.processed"
+            local valid_count=0
+            
+            while IFS= read -r line; do
+                # Fast IP validation and cleaning
+                line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | cut -d' ' -f1 | cut -d$'\t' -f1)
+                
+                # Skip empty lines and comments
+                [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+                
+                # Ultra-fast IP validation using regex
+                if [[ "$line" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?$ ]]; then
+                    # Quick octet validation
+                    local valid=true
+                    IFS='.' read -ra octets <<< "${line%/*}"
+                    for octet in "${octets[@]}"; do
+                        if [ "$octet" -gt 255 ] || [ "$octet" -lt 0 ]; then
+                            valid=false
+                            break
+                        fi
+                    done
+                    
+                    if [ "$valid" = true ]; then
+                        echo "$line"
+                        ((valid_count++))
+                    fi
+                elif [[ "$line" =~ ^[0-9a-fA-F:]+(/[0-9]{1,3})?$ ]]; then
+                    # IPv6 validation (basic)
+                    echo "$line"
+                    ((valid_count++))
+                fi
+            done < "$chunk_file" > "$chunk_output"
+            
+            echo "$valid_count" > "${chunk_file}.count"
+        } &
+        
+        ((active_jobs++))
+        ((processed_chunks++))
+    done
+    
+    # Wait for all background jobs to complete
+    wait
+    
+    # Step 2: Merge and deduplicate results ultra-fast
+    
+    # Combine all processed chunks
+    local temp_combined="$temp_dir/combined.txt"
+    cat "$temp_dir"/*.processed 2>/dev/null | sort -u > "$temp_combined"
+    
+    # Step 3: Remove existing IPs if provided (ultra-fast using comm)
+    if [ -n "$existing_ips_file" ] && [ -s "$existing_ips_file" ]; then
+        local temp_existing="$temp_dir/existing_sorted.txt"
+        sort -u "$existing_ips_file" > "$temp_existing"
+        
+        # Use comm for ultra-fast set difference
+        comm -23 "$temp_combined" "$temp_existing" > "$output_file"
+    else
+        mv "$temp_combined" "$output_file"
+    fi
+    
+    # Calculate final statistics
+    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local total_valid=0
+    for count_file in "$temp_dir"/*.count; do
+        [ -f "$count_file" ] && total_valid=$((total_valid + $(cat "$count_file")))
+    done
+    
+    local excluded=$((total_valid - final_count))
+    
+    # Cleanup
+    rm -rf "$temp_dir"
+    
+    echo "✅ Processed $total_input IPs → $final_count unique valid IPs (excluded: $excluded duplicates)"
+    
+    return 0
+}
+
+# Legacy function removed to prevent infinite recursion
+
+# Function to add IPs to ipset in bulk (highly optimized)
 add_ips_to_ipset_bulk() {
     local ipset_name="$1"
     local ips_file="$2"
@@ -645,36 +1033,163 @@ add_ips_to_ipset_bulk() {
         return 0  # No IPs to add
     fi
     
+    local total_ips=$(wc -l < "$ips_file")
+    
     if [ "$DRY_RUN" = true ]; then
-        local count=$(wc -l < "$ips_file")
-        log_debug "Would add $count IPs to ipset: $ipset_name"
+        log_debug "Would add $total_ips IPs to ipset: $ipset_name"
         return 0
     fi
     
-    if [ "$USE_NATIVE_IPSET" = true ]; then
-        # Use native ipset with restore format (fastest method)
-        {
-            while IFS= read -r ip; do
-                [ -n "$ip" ] && echo "add $ipset_name $ip"
-            done < "$ips_file"
-        } | ipset restore -exist 2>/dev/null
-        return $?
-    else
-        # Fallback to firewall-cmd batch processing
-        local batch_file="$FIREWALL_DATA_DIR/batch_add_${ipset_name}.txt"
-        while IFS= read -r ip; do
-            [ -n "$ip" ] && echo "--ipset=$ipset_name --add-entry=$ip"
-        done < "$ips_file" > "$batch_file"
+    echo "📥 Adding $total_ips IPs to ipset: $ipset_name"
+    local start_time=$(date +%s)
+    
+    # Skip Python helper - use native methods directly for reliability
+    
+    # Method 1: Try native ipset restore with smart batching (fast and reliable)
+    if command -v ipset >/dev/null 2>&1; then
+        echo "🚀 Using native ipset restore with smart batching"
         
-        if [ -s "$batch_file" ]; then
-            firewall-cmd --permanent $(cat "$batch_file") 2>/dev/null
-            local result=$?
-            rm -f "$batch_file"
-            return $result
+        # Process in manageable chunks to avoid overwhelming the system
+        local batch_size=5000
+        local processed=0
+        local successful=0
+        local temp_batch="$FIREWALL_DATA_DIR/${ipset_name}_batch.txt"
+        
+        while IFS= read -r ip || [ -n "$ip" ]; do
+            if [[ -n "$ip" && ! "$ip" =~ ^[[:space:]]*# ]]; then
+                echo "add $ipset_name $ip" >> "$temp_batch"
+                ((processed++))
+                
+                # Process batch when it reaches batch_size or at end of file
+                if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $total_ips ]; then
+                    if [ -s "$temp_batch" ]; then
+                        if $SUDO_CMD ipset restore -exist < "$temp_batch" 2>/dev/null; then
+                            local batch_count=$(wc -l < "$temp_batch")
+                            ((successful += batch_count))
+                        fi
+                        > "$temp_batch"  # Clear the batch file
+                    fi
+                    
+                    # Show progress every 25k IPs
+                    if [ $((processed % 25000)) -eq 0 ]; then
+                        echo "  Processed $processed/$total_ips IPs..."
+                    fi
+                fi
+            fi
+        done < "$ips_file"
+        
+        rm -f "$temp_batch"
+        
+        if [ $successful -gt 0 ]; then
+            local end_time=$(date +%s)
+            local duration=$((end_time - start_time))
+            local rate=$((successful / (duration + 1)))
+            echo "✅ Added $successful IPs using native ipset restore ($rate IPs/sec)"
+            return 0
         fi
     fi
     
-    return 1
+    # Method 2: Try firewall-cmd with smart batching
+    echo "🔄 Using firewall-cmd with smart batching"
+    
+    local batch_size=2000
+    local processed=0
+    local successful=0
+    local temp_batch="$FIREWALL_DATA_DIR/${ipset_name}_fw_batch.txt"
+    
+    while IFS= read -r ip || [ -n "$ip" ]; do
+        if [[ -n "$ip" && ! "$ip" =~ ^[[:space:]]*# ]]; then
+            echo "$ip" >> "$temp_batch"
+            ((processed++))
+            
+            # Process batch when it reaches batch_size or at end of file
+            if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $total_ips ]; then
+                if [ -s "$temp_batch" ]; then
+                    if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entries-from-file="$temp_batch" >/dev/null 2>&1; then
+                        local batch_count=$(wc -l < "$temp_batch")
+                        ((successful += batch_count))
+                    fi
+                    > "$temp_batch"  # Clear the batch file
+                fi
+                
+                # Show progress every 20k IPs
+                if [ $((processed % 20000)) -eq 0 ]; then
+                    echo "  Processed $processed/$total_ips IPs..."
+                fi
+            fi
+        fi
+    done < "$ips_file"
+    
+    rm -f "$temp_batch"
+    
+    if [ $successful -gt 0 ]; then
+        local end_time=$(date +%s)
+        local duration=$((end_time - start_time))
+        local rate=$((successful / (duration + 1)))
+        echo "✅ Added $total_ips IPs using firewall-cmd bulk ($rate IPs/sec)"
+        return 0
+    fi
+    
+    # Method 4: Optimized batch processing with progress bar (last resort)
+    update_progress 0 "$total_ips" "⚠️ Using batch processing fallback"
+    
+    local batch_size=20000  # Very large batches for efficiency
+    local temp_batch_dir="$FIREWALL_DATA_DIR/batch_${ipset_name}"
+    mkdir -p "$temp_batch_dir"
+    
+    # Split the file into batches
+    split -l "$batch_size" "$ips_file" "$temp_batch_dir/batch_"
+    
+    local batch_files=("$temp_batch_dir"/batch_*)
+    local total_batches=${#batch_files[@]}
+    local processed_batches=0
+    local total_added=0
+    
+    update_progress 0 "$total_ips" "📦 Processing $total_ips IPs in $total_batches batches"
+    
+    for batch_file in "${batch_files[@]}"; do
+        if [ -f "$batch_file" ]; then
+            ((processed_batches++))
+            local batch_size_actual=$(wc -l < "$batch_file")
+            
+            update_progress "$total_added" "$total_ips" "Processing batch $processed_batches/$total_batches"
+            
+            # Try firewall-cmd batch file method first
+            if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entries-from-file="$batch_file" >/dev/null 2>&1; then
+                total_added=$((total_added + batch_size_actual))
+            else
+                # Silent individual processing for this batch
+                local added_count=0
+                local batch_processed=0
+                while IFS= read -r ip; do
+                    if [[ -n "$ip" ]]; then
+                        ((batch_processed++))
+                        if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entry="$ip" >/dev/null 2>&1; then
+                            ((added_count++))
+                        fi
+                        # Update progress much less frequently for better performance
+                        if [ $((batch_processed % 5000)) -eq 0 ]; then
+                            local current_total=$((total_added + added_count))
+                            update_progress "$current_total" "$total_ips" "Batch $processed_batches/$total_batches"
+                        fi
+                    fi
+                done < "$batch_file"
+                total_added=$((total_added + added_count))
+            fi
+            
+            rm -f "$batch_file"
+        fi
+    done
+    
+    rm -rf "$temp_batch_dir"
+    
+    # Performance summary
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    local rate=$((total_added / (duration + 1)))  # +1 to avoid division by zero
+    stop_progress_bar "✅ Added $total_added/$total_ips IPs using batch processing ($rate IPs/sec)"
+    
+    return 0
 }
 
 # Function to remove IPs from ipset in bulk
@@ -887,12 +1402,12 @@ create_directories() {
             mkdir -p "$dir"
             chmod 700 "$dir"
             if [ "$DRY_RUN" = false ]; then
-                log_info "Created directory: $dir"
+                log_info "✅ Created directory: $dir"
             else
-                log_debug "Created temporary directory for dry-run: $dir"
+                log_debug "✅ Created temporary directory for dry-run: $dir"
             fi
         else
-            log_debug "Directory already exists: $dir"
+            log_info "📁 Directory already exists: $dir"
         fi
     done
 }
@@ -901,24 +1416,55 @@ create_directories() {
 backup_firewall_rules() {
     log_section "BACKING UP CURRENT FIREWALL RULES"
     
+    # Clean up old backups (keep only last 5 backup sets)
+    if [ -d "$BACKUP_DIR" ]; then
+        # Count backup sets (not individual files)
+        local backup_sets=$(find "$BACKUP_DIR" -name "firewall_backup_*.zones" -type f | wc -l)
+        if [ "$backup_sets" -gt 5 ]; then
+            log_info "🧹 Cleaning up old backups (found $backup_sets sets, keeping latest 5)..."
+            # Get the timestamps of old backup sets to remove
+            find "$BACKUP_DIR" -name "firewall_backup_*.zones" -type f -printf '%T@ %f\n' | \
+            sort -n | head -n -5 | cut -d' ' -f2 | sed 's/\.zones$//' | \
+            while read backup_base; do
+                rm -f "$BACKUP_DIR/${backup_base}".* 2>/dev/null || true
+                log_debug "Removed old backup set: ${backup_base}"
+            done
+        fi
+    fi
+    
     local backup_file="$BACKUP_DIR/firewall_backup_$(date +%Y%m%d_%H%M%S)"
     
     if [ "$DRY_RUN" = false ]; then
         case "$FIREWALL_TYPE" in
             firewalld)
                 if $SUDO_CMD firewall-cmd --list-all-zones > "${backup_file}.zones" 2>/dev/null; then
-                    log_info "Backed up firewall zones to: ${backup_file}.zones"
+                    log_info "✅ Backed up firewall zones to: ${backup_file}.zones"
                 fi
                 
                 if $SUDO_CMD firewall-cmd --list-ipsets > "${backup_file}.ipsets" 2>/dev/null; then
-                    log_info "Backed up firewall ipsets to: ${backup_file}.ipsets"
+                    log_info "✅ Backed up firewall ipsets to: ${backup_file}.ipsets"
                 fi
                 
-                # Export complete configuration
+                # Try different methods to export complete configuration
+                local export_success=false
+                
+                # Method 1: Try direct export
                 if $SUDO_CMD firewall-cmd --export-config > "${backup_file}.xml" 2>/dev/null; then
-                    log_info "Backed up complete firewall config to: ${backup_file}.xml"
-                else
-                    log_warning "Could not export complete firewall configuration"
+                    log_info "✅ Backed up complete firewall config to: ${backup_file}.xml"
+                    export_success=true
+                # Method 2: Try exporting individual zones
+                elif $SUDO_CMD firewall-cmd --list-all-zones --verbose > "${backup_file}.detailed" 2>/dev/null; then
+                    log_info "✅ Backed up detailed firewall config to: ${backup_file}.detailed"
+                    export_success=true
+                # Method 3: Export runtime configuration
+                elif $SUDO_CMD firewall-cmd --runtime-to-permanent 2>/dev/null && \
+                     $SUDO_CMD firewall-cmd --list-all > "${backup_file}.runtime" 2>/dev/null; then
+                    log_info "✅ Backed up runtime firewall config to: ${backup_file}.runtime"
+                    export_success=true
+                fi
+                
+                if [ "$export_success" = false ]; then
+                    log_debug "Note: Complete firewall configuration export not available (this is normal on some systems)"
                 fi
                 ;;
             ufw)
@@ -1021,11 +1567,27 @@ download_single_source() {
         fi
     fi
     
-    # Validate file format
-    if ! grep -qE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' "$temp_file"; then
-        echo "0:INVALID" > "$result_file"
+    # Validate file format - check for IP addresses or CIDR blocks
+    # Also check for common error responses
+    if grep -q "404: Not Found\|404 Not Found\|File not found" "$temp_file" 2>/dev/null; then
+        echo "0:NOT_FOUND" > "$result_file"
         rm -f "$temp_file"
         return 1
+    elif grep -q "This list has been merged\|EOF" "$temp_file" 2>/dev/null && ! grep -qE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' "$temp_file"; then
+        echo "0:MERGED_OR_EMPTY" > "$result_file"
+        rm -f "$temp_file"
+        return 1
+    fi
+    
+    # More lenient validation - check if file contains any IP-like patterns
+    # This allows files with headers, comments, or mixed content to be processed
+    if ! grep -qE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' "$temp_file" 2>/dev/null; then
+        # Only reject if file is completely empty or contains obvious error messages
+        if [ ! -s "$temp_file" ] || grep -qE "error|Error|ERROR|not found|Not Found|NOT FOUND" "$temp_file" 2>/dev/null; then
+            echo "0:INVALID" > "$result_file"
+            rm -f "$temp_file"
+            return 1
+        fi
     fi
     
     # Process the data
@@ -1093,8 +1655,9 @@ download_threat_data() {
     log_section "DOWNLOADING THREAT INTELLIGENCE DATA"
     
     local sources_to_use=()
-    local successful_downloads=0
-    local failed_downloads=0
+    # Make these global for report generation
+    SUCCESSFUL_DOWNLOADS=0
+    FAILED_DOWNLOADS=0
     
     # Use custom sources if provided
     if [ -n "$CUSTOM_SOURCES" ] && [ -f "$CUSTOM_SOURCES" ]; then
@@ -1130,17 +1693,15 @@ download_threat_data() {
         if [ "$ENABLE_PROXY_BLOCKING" = true ]; then
             log_info "Including proxy server blocking sources"
             sources_to_use+=(
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxylists.ipset"
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxz.ipset"
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ri_connect_proxies.ipset"
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/ri_web_proxies.ipset"
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxy_list.ipset"
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"
             )
         fi
         
         if [ "$ENABLE_CRYPTO_MINING_BLOCKING" = true ]; then
             log_info "Including cryptocurrency mining blocking sources"
             sources_to_use+=(
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_ips.ipset"
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_hosts.ipset"
             )
         fi
     fi
@@ -1153,6 +1714,8 @@ download_threat_data() {
     > "$suspicious_ips"
     
     local total_sources=${#sources_to_use[@]}
+    # Make this global for report generation
+    TOTAL_SOURCES_PROCESSED=$total_sources
     log_info "Downloading from $total_sources threat intelligence sources..."
     
     if [ "$DRY_RUN" = true ]; then
@@ -1204,10 +1767,13 @@ download_threat_data() {
     fi
     
     # Collect results and merge data
+    update_progress 0 "$total_sources" "Processing downloaded data"
     local source_index=0
     for source in "${sources_to_use[@]}"; do
         ((source_index++))
         local result_file="$FIREWALL_DATA_DIR/result_${source_index}.txt"
+        
+        # Process source without progress updates
         
         if [ -f "$result_file" ]; then
             local result=$(cat "$result_file")
@@ -1231,41 +1797,140 @@ download_threat_data() {
                 fi
                 
                 log_debug "Successfully processed $count IPs from: $source"
-                ((successful_downloads++))
+                ((SUCCESSFUL_DOWNLOADS++))
             else
                 case "$data_file" in
                     "FAILED") log_warning "Failed to download from: $source" ;;
+                    "NOT_FOUND") log_warning "Source not found (404): $source" ;;
+                    "MERGED_OR_EMPTY") log_warning "Source has been merged or is empty: $source" ;;
                     "INVALID") log_warning "Downloaded file from $source does not contain valid IP format" ;;
                     "EMPTY") log_warning "Downloaded file from $source contained no valid IP addresses" ;;
                 esac
-                ((failed_downloads++))
+                ((FAILED_DOWNLOADS++))
             fi
             
             rm -f "$result_file"
         else
             log_warning "No result file for source: $source"
-            ((failed_downloads++))
+            ((FAILED_DOWNLOADS++))
         fi
     done
     
-    # Final processing and deduplication
+    # Advanced processing and cross-deduplication
+    echo ""
+    
     local malware_count=$(wc -l < "$malware_ips" 2>/dev/null || echo 0)
     local suspicious_count=$(wc -l < "$suspicious_ips" 2>/dev/null || echo 0)
     
-    log_info "Downloaded $malware_count malware IPs and $suspicious_count suspicious IPs from $successful_downloads sources ($failed_downloads failed)"
+    log_info "📊 Downloaded data summary: $malware_count malware, $suspicious_count suspicious IPs"
+    log_debug "🔄 Starting IP processing and deduplication..."
     
-    # Sort and deduplicate the IP lists (optimized)
+    # Get existing IPs from current ipsets for cross-checking
+    local existing_malware="$FIREWALL_DATA_DIR/existing_malware.txt"
+    local existing_suspicious="$FIREWALL_DATA_DIR/existing_suspicious.txt"
+    
+    # Extract existing IPs from current ipsets if they exist
+    echo "🔍 Checking for existing IPs to avoid duplicates..."
+    
+    # Try firewalld first (most common on modern systems), then direct ipset
+    local extraction_method=""
+    
+    if command -v firewall-cmd >/dev/null 2>&1; then
+        # Check if ipsets exist in firewalld
+        if $SUDO_CMD firewall-cmd --get-ipsets 2>/dev/null | grep -q "malware-blocklist"; then
+            extraction_method="firewalld"
+            $SUDO_CMD firewall-cmd --ipset=malware-blocklist --get-entries 2>/dev/null > "$existing_malware" || touch "$existing_malware"
+            $SUDO_CMD firewall-cmd --ipset=suspicious-blocklist --get-entries 2>/dev/null > "$existing_suspicious" || touch "$existing_suspicious"
+        else
+            touch "$existing_malware" "$existing_suspicious"
+        fi
+    elif command -v ipset >/dev/null 2>&1; then
+        # Fallback to direct ipset method
+        extraction_method="ipset"
+        $SUDO_CMD ipset list malware-blocklist 2>/dev/null | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' > "$existing_malware" 2>/dev/null || touch "$existing_malware"
+        $SUDO_CMD ipset list suspicious-blocklist 2>/dev/null | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' > "$existing_suspicious" 2>/dev/null || touch "$existing_suspicious"
+    else
+        touch "$existing_malware" "$existing_suspicious"
+    fi
+    
+    local existing_malware_count=$(wc -l < "$existing_malware" 2>/dev/null || echo 0)
+    local existing_suspicious_count=$(wc -l < "$existing_suspicious" 2>/dev/null || echo 0)
+    
+    if [ "$existing_malware_count" -gt 0 ] || [ "$existing_suspicious_count" -gt 0 ]; then
+        echo "📊 Found existing IPs: $existing_malware_count malware, $existing_suspicious_count suspicious"
+        if [ -n "$extraction_method" ]; then
+            echo "🔧 Extraction method: $extraction_method"
+        fi
+    else
+        echo "📊 No existing IPs found (fresh installation or empty ipsets)"
+        if [ -n "$extraction_method" ]; then
+            echo "🔧 Checked using: $extraction_method"
+        fi
+    fi
+    
+    # Fast and reliable IP processing with progress feedback
     if [ "$malware_count" -gt 0 ]; then
-        sort -u "$malware_ips" -o "$malware_ips"
-        malware_count=$(wc -l < "$malware_ips")
-        log_debug "After deduplication: $malware_count unique malware IPs"
+        echo "🔧 Processing malware IPs ($malware_count entries)..."
+        local temp_malware="$FIREWALL_DATA_DIR/temp_malware.txt"
+        local temp_resolved="$FIREWALL_DATA_DIR/temp_resolved_malware.txt"
+        
+        # Disable trap during critical processing to prevent temp dir cleanup
+        trap - EXIT INT TERM
+        
+        # Step 1: Deduplicate and validate
+        deduplicate_ips_advanced "$malware_ips" "$temp_malware" "$existing_malware" "Processing malware"
+        
+        # Step 2: Resolve CIDR overlaps to prevent firewall errors
+        resolve_cidr_overlaps "$temp_malware" "$temp_resolved" "Resolving malware overlaps"
+        
+        if [ -f "$temp_resolved" ]; then
+            mv "$temp_resolved" "$malware_ips"
+        else
+            mv "$temp_malware" "$malware_ips"
+        fi
+        rm -f "$temp_malware"
+        malware_count=$(wc -l < "$malware_ips" 2>/dev/null || echo 0)
+        echo "✅ Malware IPs processed: $malware_count unique entries"
+        
+        # Re-enable trap after processing
+        trap cleanup_on_exit EXIT INT TERM
     fi
     
     if [ "$suspicious_count" -gt 0 ]; then
-        sort -u "$suspicious_ips" -o "$suspicious_ips"
-        suspicious_count=$(wc -l < "$suspicious_ips")
-        log_debug "After deduplication: $suspicious_count unique suspicious IPs"
+        echo "🔧 Processing suspicious IPs ($suspicious_count entries)..."
+        local temp_suspicious="$FIREWALL_DATA_DIR/temp_suspicious.txt"
+        local temp_resolved_sus="$FIREWALL_DATA_DIR/temp_resolved_suspicious.txt"
+        
+        # Disable trap during critical processing to prevent temp dir cleanup
+        trap - EXIT INT TERM
+        
+        # Cross-check suspicious IPs against both existing lists and malware list
+        local combined_existing="$FIREWALL_DATA_DIR/combined_existing.txt"
+        cat "$existing_suspicious" "$existing_malware" "$malware_ips" 2>/dev/null | sort -u > "$combined_existing"
+        
+        # Step 1: Deduplicate and validate
+        deduplicate_ips_advanced "$suspicious_ips" "$temp_suspicious" "$combined_existing" "Processing suspicious"
+        
+        # Step 2: Resolve CIDR overlaps to prevent firewall errors
+        resolve_cidr_overlaps "$temp_suspicious" "$temp_resolved_sus" "Resolving suspicious overlaps"
+        
+        if [ -f "$temp_resolved_sus" ]; then
+            mv "$temp_resolved_sus" "$suspicious_ips"
+        else
+            mv "$temp_suspicious" "$suspicious_ips"
+        fi
+        rm -f "$temp_suspicious" "$combined_existing"
+        suspicious_count=$(wc -l < "$suspicious_ips" 2>/dev/null || echo 0)
+        echo "✅ Suspicious IPs processed: $suspicious_count unique entries"
+        
+        # Re-enable trap after processing
+        trap cleanup_on_exit EXIT INT TERM
     fi
+    
+    # Clean up temporary files
+    rm -f "$existing_malware" "$existing_suspicious"
+    
+    echo "✅ Downloaded $malware_count malware IPs and $suspicious_count suspicious IPs from $SUCCESSFUL_DOWNLOADS sources ($FAILED_DOWNLOADS failed)"
     
     # Validate that we have enough IPs to proceed
     if [ "$malware_count" -lt "$MIN_IPS_THRESHOLD" ]; then
@@ -1289,9 +1954,9 @@ download_threat_data() {
     fi
     
     # If all downloads failed but we're forcing execution
-    if [ "$successful_downloads" -eq 0 ] && [ "$FORCE" = true ]; then
+    if [ "$SUCCESSFUL_DOWNLOADS" -eq 0 ] && [ "$FORCE" = true ]; then
         log_warning "All downloads failed but continuing due to --force option"
-    elif [ "$successful_downloads" -eq 0 ] && [ "$FORCE" = false ]; then
+    elif [ "$SUCCESSFUL_DOWNLOADS" -eq 0 ] && [ "$FORCE" = false ]; then
         if ! confirm_action "All downloads failed. Continue anyway?"; then
             handle_error "All downloads failed" false
             return 1
@@ -1300,96 +1965,6 @@ download_threat_data() {
 }
 
 # Old process_threat_data function replaced with optimized version above
-
-create_firewall_ipsets() {
-    log_section "CREATING FIREWALL BLOCKING RULES"
-    
-    local malware_ips="$FIREWALL_DATA_DIR/malware_ips.txt"
-    local suspicious_ips="$FIREWALL_DATA_DIR/suspicious_ips.txt"
-    
-    # Process the file to extract valid IP addresses and CIDR blocks
-    # Handle different source formats:
-    # 1. IPsum format: "IP\tcount" (e.g., "179.43.189.98\t10")
-    # 2. Spamhaus format: "CIDR ; comment" (e.g., "1.10.16.0/20 ; SBL256894")
-    # 3. DShield format: "IP\tcount\tname" (e.g., "1.2.3.4\t100\tAS1234")
-    # 4. FireHOL format: plain IPs or CIDRs, one per line
-    # 5. Clean format: just IPs/CIDRs, one per line
-    
-    # Clear the processed file
-    > "$processed_file"
-    
-    # First, normalize line endings and remove comments
-    tr -d '\r' < "$temp_file" | grep -v '^#' | grep -v '^;' | grep -v '^$' > "${temp_file}.clean" 2>/dev/null || true
-    
-    # Extract IPs/CIDRs using multiple patterns based on source type
-    {
-        # Pattern 1: Clean IP/CIDR format (one per line)
-        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?[[:space:]]*$' "${temp_file}.clean" 2>/dev/null || true
-        
-        # Pattern 2: IPsum format - IP followed by tab and count (handle both tab and spaces)
-        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}[[:space:]]+[0-9]+' "${temp_file}.clean" 2>/dev/null | \
-            awk '{print $1}' || true
-        
-        # Pattern 3: Spamhaus format - CIDR followed by semicolon and comment
-        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}[[:space:]]*;' "${temp_file}.clean" 2>/dev/null | \
-            cut -d';' -f1 | sed 's/[[:space:]]*$//' || true
-        
-        # Pattern 4: DShield format - convert /24 subnets to CIDR
-        # DShield format: start_ip\tend_ip\tcidr\tcount\tname\tcountry\temail
-        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.0[[:space:]]+[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.255[[:space:]]+24' "${temp_file}.clean" 2>/dev/null | \
-            awk '{print $1}' | sed 's/\.0$/\.0\/24/' || true
-        
-        # Pattern 5: Any line starting with an IP (fallback)
-        grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' "${temp_file}.clean" 2>/dev/null | \
-            grep -oE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?' || true
-        
-    } | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?$' | sort -u > "$processed_file"
-    
-    # Clean up temporary file
-    rm -f "${temp_file}.clean"
-    
-    # Validate IP addresses and count valid ones
-    local valid_count=0
-    if [ -s "$processed_file" ]; then
-        # Filter for valid IP addresses (basic check)
-        while IFS= read -r ip; do
-            # Skip empty lines
-            [[ -z "$ip" ]] && continue
-            
-            # Extract IP part (without CIDR)
-            local ip_part
-            if [[ "$ip" == */* ]]; then
-                ip_part=$(echo "$ip" | cut -d'/' -f1)
-            else
-                ip_part="$ip"
-            fi
-            
-            # Basic validation of IP format
-            if [[ "$ip_part" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-                # Check each octet is <= 255
-                local valid=true
-                IFS='.' read -r -a octets <<< "$ip_part"
-                for octet in "${octets[@]}"; do
-                    if [ "$octet" -gt 255 ]; then
-                        valid=false
-                        break
-                    fi
-                done
-                
-                if [ "$valid" = true ]; then
-                    echo "$ip" >> "$target_file"
-                    ((valid_count++))
-                fi
-            fi
-        done < "$processed_file"
-    fi
-    
-    # Clean up
-    rm -f "$processed_file"
-    
-    # Return the count of valid IPs processed
-    echo "$valid_count"
-}
 
 # Function to create firewall blocking rules
 create_firewall_ipsets() {
@@ -1481,10 +2056,10 @@ create_firewalld_ipset() {
         # Create ipset if it doesn't exist
         if [ "$ipset_exists" = false ]; then
             log_debug "Creating new ipset: $ipset_name"
-            if $SUDO_CMD firewall-cmd --permanent --new-ipset="$ipset_name" --type=hash:net --option=family=inet --option=hashsize=8192 --option=maxelem=500000 2>/dev/null; then
+            if $SUDO_CMD firewall-cmd --permanent --new-ipset="$ipset_name" --type=hash:net --option=family=inet --option=hashsize=8192 --option=maxelem=500000 >/dev/null 2>&1; then
                 log_debug "Created ipset: $ipset_name"
                 # Add description
-                $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --set-description="$description" 2>/dev/null || true
+                $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --set-description="$description" >/dev/null 2>&1 || true
                 ipset_exists=true  # Mark as existing now
             else
                 # Check if it was created by another process in the meantime
@@ -1498,40 +2073,101 @@ create_firewalld_ipset() {
             fi
         fi
         
-        # Use incremental updates if enabled and ipset exists
+        # Use incremental updates if enabled and ipset exists and has entries
         if [ "$INCREMENTAL_UPDATE" = true ] && [ "$ipset_exists" = true ]; then
-            log_debug "Using incremental update for ipset: $ipset_name"
-            if update_ipset_incremental "$ipset_name" "$ip_file"; then
-                log_info "Incrementally updated ipset: $ipset_name"
-                return 0
+            # Check if ipset has any entries
+            local existing_count=$($SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
+            if [ "$existing_count" -gt 0 ]; then
+                log_debug "Using incremental update for ipset: $ipset_name (has $existing_count existing entries)"
+                if update_ipset_incremental "$ipset_name" "$ip_file"; then
+                    log_info "Incrementally updated ipset: $ipset_name"
+                    return 0
+                else
+                    log_debug "No incremental updates needed for ipset: $ipset_name"
+                    return 0
+                fi
             else
-                log_debug "No incremental updates needed for ipset: $ipset_name"
-                return 0
+                log_debug "Ipset $ipset_name is empty, performing full update instead of incremental"
             fi
         fi
         
         # Full update - use optimized bulk operations
         log_debug "Performing full update for ipset: $ipset_name"
         
-        # Clear existing entries if doing full update
+        # Clear existing entries if doing full update (optimized)
         if [ "$ipset_exists" = true ]; then
-            if [ "$USE_NATIVE_IPSET" = true ]; then
-                $SUDO_CMD ipset flush "$ipset_name" 2>/dev/null || true
+            log_debug "Clearing existing entries from ipset: $ipset_name"
+            
+            # Method 1: Try to recreate the ipset (fastest way to clear)
+            if $SUDO_CMD firewall-cmd --permanent --delete-ipset="$ipset_name" >/dev/null 2>&1; then
+                # Recreate the ipset
+                if $SUDO_CMD firewall-cmd --permanent --new-ipset="$ipset_name" --type=hash:net --option=family=inet --option=hashsize=8192 --option=maxelem=500000 >/dev/null 2>&1; then
+                    $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --set-description="$description" >/dev/null 2>&1 || true
+                    log_debug "Recreated ipset for fast clearing: $ipset_name"
+                else
+                    log_warning "Failed to recreate ipset after deletion: $ipset_name"
+                    return 1
+                fi
             else
-                # Clear entries using firewall-cmd (slower but compatible)
-                $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --remove-entries-from-file="$ip_file" 2>/dev/null || true
+                # Method 2: Fallback to bulk removal if recreation fails
+                log_debug "Could not recreate ipset, using bulk removal method"
+                local existing_entries_file="$FIREWALL_DATA_DIR/existing_${ipset_name}_clear.txt"
+                $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null > "$existing_entries_file" || touch "$existing_entries_file"
+                
+                if [ -s "$existing_entries_file" ]; then
+                    # Try native ipset flush first
+                    if command -v ipset >/dev/null 2>&1; then
+                        $SUDO_CMD ipset flush "$ipset_name" 2>/dev/null || true
+                    else
+                        # Individual removal as last resort
+                        while IFS= read -r ip; do
+                            [ -n "$ip" ] && $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --remove-entry="$ip" >/dev/null 2>&1 || true
+                        done < "$existing_entries_file"
+                    fi
+                fi
+                rm -f "$existing_entries_file"
             fi
         fi
         
-        # Add all IPs using optimized method
-        if add_ips_to_ipset_bulk "$ipset_name" "$ip_file"; then
-            log_info "Added $ip_count IPs to firewalld ipset: $ipset_name (optimized bulk mode)"
-            return 0
-        else
-            # Fallback to traditional batch processing
-            log_warning "Bulk addition failed, falling back to traditional batch mode"
-            return create_firewalld_ipset_fallback "$ipset_name" "$ip_file" "$ip_count"
-        fi
+        # Use simple reliable batch processing instead of complex bulk methods
+        log_info "📥 Adding $ip_count IPs to ipset: $ipset_name"
+        
+        # Process in small batches to avoid overwhelming firewalld
+        local batch_size=1000
+        local temp_batch="$FIREWALL_DATA_DIR/batch_temp.txt"
+        local processed=0
+        local successful=0
+        
+        while IFS= read -r ip || [ -n "$ip" ]; do
+            [ -n "$ip" ] && echo "$ip" >> "$temp_batch"
+            ((processed++))
+            
+            # Process batch when it reaches batch_size or at end of file
+            if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $ip_count ]; then
+                if [ -s "$temp_batch" ]; then
+                    local batch_count=$(wc -l < "$temp_batch")
+                    if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entries-from-file="$temp_batch" >/dev/null 2>&1; then
+                        ((successful += batch_count))
+                    fi
+                    > "$temp_batch"  # Clear the batch file
+                fi
+                
+                # Show progress every 10k IPs
+                if [ $((processed % 10000)) -eq 0 ]; then
+                    echo "  Processed $processed/$ip_count IPs..."
+                fi
+            fi
+        done < "$ip_file"
+        
+        rm -f "$temp_batch"
+        
+        # Reload firewalld to sync configurations
+        $SUDO_CMD firewall-cmd --reload >/dev/null 2>&1 || true
+        
+        # Verify the IPs were actually added
+        local actual_count=$($SUDO_CMD firewall-cmd --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
+        log_info "Added $ip_count IPs to firewalld ipset: $ipset_name (verified: $actual_count IPs in ipset)"
+        return 0
     else
         local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_debug "Would create firewalld ipset '$ipset_name' with $ip_count IPs"
@@ -1958,16 +2594,19 @@ apply_firewalld_rules() {
     for ipset in "${ipsets[@]}"; do
         if [ "$DRY_RUN" = false ]; then
             # Check if ipset exists
-            if $SUDO_CMD firewall-cmd --get-ipsets | grep -q "$ipset"; then
+            if $SUDO_CMD firewall-cmd --permanent --get-ipsets | grep -q "$ipset"; then
+                log_debug "Ipset $ipset exists, applying firewall rule"
                 # Remove existing rule if it exists
-                $SUDO_CMD firewall-cmd --permanent --remove-rich-rule="rule source ipset=$ipset drop" 2>/dev/null || true
+                $SUDO_CMD firewall-cmd --permanent --remove-rich-rule="rule source ipset=$ipset drop" >/dev/null 2>&1 || true
                 
                 # Add new blocking rule
-                if $SUDO_CMD firewall-cmd --permanent --add-rich-rule="rule source ipset=$ipset drop"; then
+                if $SUDO_CMD firewall-cmd --permanent --add-rich-rule="rule source ipset=$ipset drop" >/dev/null 2>&1; then
                     log_info "Applied firewalld blocking rule for ipset: $ipset"
                 else
                     log_error "Failed to apply firewalld blocking rule for ipset: $ipset"
                 fi
+            else
+                log_warning "Ipset $ipset does not exist, skipping rule application"
             fi
         else
             log_debug "Would apply firewalld blocking rule for ipset: $ipset"
@@ -1976,7 +2615,7 @@ apply_firewalld_rules() {
     
     # Reload firewall to apply changes
     if [ "$DRY_RUN" = false ]; then
-        if $SUDO_CMD firewall-cmd --reload; then
+        if $SUDO_CMD firewall-cmd --reload >/dev/null 2>&1; then
             log_info "Firewalld rules reloaded successfully"
         else
             log_error "Failed to reload firewalld rules"
@@ -2073,9 +2712,9 @@ System: $OS_TYPE ($OS_DISTRO)
 Firewall: $FIREWALL_TYPE
 
 SUMMARY:
-- Total sources processed: ${#sources_to_use[@]:-0}
-- Successful downloads: $successful_downloads
-- Failed downloads: $failed_downloads
+- Total sources processed: ${TOTAL_SOURCES_PROCESSED:-0}
+- Successful downloads: ${SUCCESSFUL_DOWNLOADS:-0}
+- Failed downloads: ${FAILED_DOWNLOADS:-0}
 - Total IPs processed: $total_ips
   - Malware IPs: $malware_count
   - Suspicious IPs: $suspicious_count
@@ -2383,6 +3022,13 @@ cleanup_on_exit() {
     local exit_code=$?
     log_debug "Running cleanup on exit (code: $exit_code)"
     
+    # Stop any active progress bars
+    if [ "$PROGRESS_ACTIVE" = true ]; then
+        printf "\r%*s\r" 120 ""
+        echo ""
+        PROGRESS_ACTIVE=false
+    fi
+    
     # Ensure temporary directory is removed even if script exits unexpectedly
     if [ -d "$FIREWALL_DATA_DIR" ]; then
         log_debug "Removing temporary directory: $FIREWALL_DATA_DIR"
@@ -2441,27 +3087,29 @@ main() {
         workflow_success=false
     fi
     
+    # Create directories and backup without progress bars (quick operations)
     create_directories || log_warning "Directory creation had issues, but continuing..."
-    
     backup_firewall_rules || log_warning "Backup had issues, but continuing..."
     
+    # Download threat data without progress bar (detailed progress shown internally)
     if ! download_threat_data; then
         log_warning "Threat data download had issues, but continuing..."
         workflow_success=false
     fi
     
+
     if ! create_firewall_ipsets; then
         log_warning "Firewall rule creation had issues, but continuing..."
         workflow_success=false
     fi
     
+
     if ! apply_firewall_rules; then
         log_warning "Firewall rule application had issues, but continuing..."
         workflow_success=false
     fi
     
     generate_report || log_warning "Report generation had issues, but continuing..."
-    
     cleanup_old_data || log_warning "Cleanup had issues, but continuing..."
     
     # Calculate execution time

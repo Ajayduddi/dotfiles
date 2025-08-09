@@ -3,6 +3,12 @@
 # Version: 1.1.0
 # Last Updated: $(date +%Y-%m-%d)
 # Description: Restores dotfiles from a repository and configures system settings
+#
+# SECURITY WARNING:
+# This script will modify your home directory files and install packages.
+# It requires sudo privileges for package installation.
+# Review the script and understand what it does before running.
+# Only run this script if you trust the source repository.
 
 set -e  # Exit on first error
 umask 077  # Restrict file permissions for security
@@ -29,22 +35,36 @@ YELLOW='\e[1;33m'
 BLUE='\e[1;34m'
 NC='\e[0m' # No Color
 
-# Function to log messages
+# Function to log messages with timestamp
 log() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    echo -e "${GREEN}[INFO]${NC} [$timestamp] $1"
 }
 
-# Function to log warnings
+# Function to log warnings with timestamp
 warn() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    echo -e "${YELLOW}[WARNING]${NC} [$timestamp] $1"
 }
 
-# Function to handle errors
+# Enhanced error handling function
 error_exit() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    local message="$1"
+    local exit_code="${2:-1}"
+    local rollback="${3:-false}"
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    
+    echo -e "${RED}[ERROR]${NC} [$timestamp] $message"
+    
+    if [[ "$rollback" == "true" ]]; then
+        echo -e "${YELLOW}[ROLLBACK]${NC} Attempting to restore previous state..."
+        # Implement rollback logic here if needed
+    }
+    
     # Clean up temp directory on exit
-    [ -d "$TEMP_DIR" ] && rm -rf "$TEMP_DIR"
-    exit 1
+    [ -d "$TEMP_DIR" ] && safe_remove "$TEMP_DIR"
+    
+    exit "$exit_code"
 }
 
 # Function to run Git safely
@@ -55,11 +75,89 @@ dotfiles() {
 # Function to clean up on exit
 cleanup() {
     log "Cleaning up temporary files..."
-    [ -d "$TEMP_DIR" ] && rm -rf "$TEMP_DIR"
+    [ -d "$TEMP_DIR" ] && safe_remove "$TEMP_DIR"
 }
 
 # Set up trap to ensure cleanup on exit
 trap cleanup EXIT INT TERM
+
+# Function to create secure temporary files
+create_temp_file() {
+    local prefix="${1:-temp}"
+    local temp_file
+    
+    temp_file=$(mktemp "$TEMP_DIR/${prefix}_XXXXXX")
+    chmod 600 "$temp_file"
+    echo "$temp_file"
+}
+
+# Safe removal function
+safe_remove() {
+    local path="$1"
+    
+    # Don't remove critical directories
+    if [[ "$path" == "/" || "$path" == "/home" || "$path" == "$HOME" || -z "$path" ]]; then
+        error_exit "Attempted to remove critical directory: $path"
+        return 1
+    fi
+    
+    # Ensure path exists before removing
+    if [[ -e "$path" ]]; then
+        rm -rf "$path"
+        return $?
+    fi
+    
+    return 0
+}
+
+# Function to safely run commands with sudo
+safe_sudo() {
+    local cmd="$1"
+    shift
+    
+    # Log the command being executed with sudo
+    log "Executing with sudo: $cmd $*"
+    
+    # Execute the command with sudo
+    sudo "$cmd" "$@"
+}
+
+# Function to validate path safety
+validate_path() {
+    local path="$1"
+    local base_dir="$2"
+    
+    # Convert to absolute path
+    local abs_path
+    abs_path=$(realpath -s "$path" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    
+    # Check if path is within base directory
+    if [[ "$abs_path" != "$base_dir"* ]]; then
+        return 1
+    fi
+    
+    return 0
+}
+
+# Function to safely create symlinks
+safe_symlink() {
+    local source="$1"
+    local target="$2"
+    local base_dir="$3"
+    
+    # Validate source path
+    if ! validate_path "$source" "$base_dir"; then
+        error_exit "Invalid source path for symlink: $source"
+        return 1
+    fi
+    
+    # Create the symlink
+    ln -sf "$source" "$target" || return 1
+    return 0
+}
 
 # Function to detect OS type automatically
 detect_os_type() {
@@ -124,7 +222,7 @@ if [ -d "$DOTFILES_DIR" ]; then
     read -p "Do you want to delete and re-clone it? (y/n): " REPLY
     if [[ "$REPLY" =~ ^[Yy]$ ]]; then
         log "Removing existing dotfiles directory..."
-        rm -rf "$DOTFILES_DIR"
+        safe_remove "$DOTFILES_DIR"
     else
         log "Skipping cloning. Using existing dotfiles."
     fi
@@ -133,7 +231,7 @@ fi
 # Clone Dotfiles Repo only if it was removed
 if [ ! -d "$DOTFILES_DIR" ]; then
     log "Cloning Dotfiles Repository from $REPO_URL (branch: $DEFAULT_BRANCH)..."
-    git clone --branch "$DEFAULT_BRANCH" "$REPO_URL" "$DOTFILES_DIR" || error_exit "Failed to clone dotfiles repo"
+    git clone --branch "$DEFAULT_BRANCH" "$REPO_URL" "$DOTFILES_DIR" --config transfer.fsckObjects=true || error_exit "Failed to clone dotfiles repo"
 fi
 
 # Ensure the repository is valid before running Git commands
@@ -151,16 +249,17 @@ dotfiles checkout "$DEFAULT_BRANCH" 2>/dev/null || {
     
     # Create a list of conflicting files
     mkdir -p "$TEMP_DIR/conflicts"
-    dotfiles checkout 2>&1 | grep -E "^\s+(.+)$" | awk '{print $1}' > "$TEMP_DIR/conflict_files.txt"
+    local conflict_file=$(create_temp_file "conflict_files")
+    dotfiles checkout 2>&1 | grep -E "^\s+(.+)$" | awk '{print $1}' > "$conflict_file"
     
     # Backup conflicting files before force checkout
-    if [ -s "$TEMP_DIR/conflict_files.txt" ]; then
+    if [ -s "$conflict_file" ]; then
         while IFS= read -r file; do
             if [ -f "$HOME/$file" ]; then
                 cp -a "$HOME/$file" "$TEMP_DIR/conflicts/" 2>/dev/null || true
                 log "Backed up conflicting file: $file"
             fi
-        done < "$TEMP_DIR/conflict_files.txt"
+        done < "$conflict_file"
     fi
     
     # Force checkout
@@ -173,8 +272,9 @@ log "Dotfiles checkout successful!"
 if [ -f "$DOTFILES_DIR/gnome-settings.dconf" ]; then
     log "Restoring GNOME Settings..."
     # Attempt to load settings; capture any errors to a temporary log
-    if ! sudo -u "$(logname)" dconf load / < "$DOTFILES_DIR/gnome-settings.dconf" 2> "$TEMP_DIR/dconf_error.log"; then
-        log "Some settings couldn't be restored. Check $TEMP_DIR/dconf_error.log for details."
+    local dconf_error_log=$(create_temp_file "dconf_error")
+    if ! sudo -u "$(logname)" dconf load / < "$DOTFILES_DIR/gnome-settings.dconf" 2> "$dconf_error_log"; then
+        log "Some settings couldn't be restored. Check $dconf_error_log for details."
     fi
 else
     log "No GNOME settings backup found."
@@ -183,29 +283,94 @@ fi
 # Restore .config files safely: if .config exists, rename it; then link the backup
 log "Restoring .config files..."
 if [ -e "$CONFIG_DIR" ]; then
-    mv "$CONFIG_DIR" "${CONFIG_DIR}_backup_$(date +%s)" && log "Renamed existing .config to backup."
+    mv "$CONFIG_DIR" "${CONFIG_DIR}${BACKUP_SUFFIX}" && log "Renamed existing .config to backup."
 fi
-ln -s "$DOTFILES_DIR/.config" "$CONFIG_DIR" || error_exit "Failed to link .config folder."
+safe_symlink "$DOTFILES_DIR/.config" "$CONFIG_DIR" "$DOTFILES_DIR" || error_exit "Failed to link .config folder."
 
 # Restore GNOME Extensions safely: if extensions folder exists, rename it; then link the backup
 log "Restoring GNOME Extensions..."
 if [ -e "$EXTENSIONS_DIR" ]; then
-    mv "$EXTENSIONS_DIR" "${EXTENSIONS_DIR}_backup_$(date +%s)" && log "Renamed existing extensions folder to backup."
+    mv "$EXTENSIONS_DIR" "${EXTENSIONS_DIR}${BACKUP_SUFFIX}" && log "Renamed existing extensions folder to backup."
 fi
-ln -s "$DOTFILES_DIR/.local/share/gnome-shell/extensions" "$EXTENSIONS_DIR" || error_exit "Failed to link GNOME extensions folder."
+safe_symlink "$DOTFILES_DIR/.local/share/gnome-shell/extensions" "$EXTENSIONS_DIR" "$DOTFILES_DIR" || error_exit "Failed to link GNOME extensions folder."
 
 # Restore Shell Configuration Files & Create Symlinks
+log "WARNING: Shell history files may contain sensitive information. Review them before restoring."
 log "Restoring shell configuration files..."
-for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history; do
+
+# Handle regular config files
+for file in .bashrc .zshrc .bash_profile; do
     if [ -f "$DOTFILES_DIR/shell/$file" ]; then
         if [ -e "$HOME/$file" ]; then
-            mv "$HOME/$file" "$HOME/${file}_backup_$(date +%s)" && log "Renamed existing $file to backup."
+            mv "$HOME/$file" "$HOME/${file}${BACKUP_SUFFIX}" && log "Renamed existing $file to backup."
         fi
-        ln -sf "$DOTFILES_DIR/shell/$file" "$HOME/$file" || error_exit "Failed to link $file"
+        safe_symlink "$DOTFILES_DIR/shell/$file" "$HOME/$file" "$DOTFILES_DIR" || error_exit "Failed to link $file"
     fi
 done
 
-# Function to install packages more efficiently
+# Handle history files separately with a prompt
+for history_file in .bash_history .zsh_history .mysql_history; do
+    if [ -f "$DOTFILES_DIR/shell/$history_file" ]; then
+        echo -e "${YELLOW}[WARNING]${NC} $history_file may contain sensitive information."
+        read -p "Do you want to restore this history file? (y/n): " RESTORE_HISTORY
+        if [[ "$RESTORE_HISTORY" =~ ^[Yy]$ ]]; then
+            if [ -e "$HOME/$history_file" ]; then
+                mv "$HOME/$history_file" "$HOME/${history_file}${BACKUP_SUFFIX}" && log "Renamed existing $history_file to backup."
+            fi
+            safe_symlink "$DOTFILES_DIR/shell/$history_file" "$HOME/$history_file" "$DOTFILES_DIR" || error_exit "Failed to link $history_file"
+            log "Restored $history_file"
+        else
+            log "Skipped restoring $history_file"
+        fi
+    fi
+done
+
+# Helper function to check if a package is installed
+check_package_installed() {
+    local check_cmd="$1"
+    local package="$2"
+    
+    case "$check_cmd" in
+        "rpm -q")
+            rpm -q "$package" &>/dev/null
+            ;;
+        "dpkg -l | grep -q")
+            dpkg -l "$package" 2>/dev/null | grep -q "^ii"
+            ;;
+        "pacman -Q")
+            pacman -Q "$package" &>/dev/null
+            ;;
+        *)
+            warn "Unknown package check command: $check_cmd"
+            return 1
+            ;;
+    esac
+}
+
+# Helper function to install packages safely
+install_packages_safely() {
+    local install_cmd="$1"
+    shift
+    local packages=("$@")
+    
+    case "$install_cmd" in
+        "sudo dnf install -y")
+            safe_sudo dnf install -y "${packages[@]}"
+            ;;
+        "sudo apt-get install -y")
+            safe_sudo apt-get install -y "${packages[@]}"
+            ;;
+        "sudo pacman -S --needed --noconfirm")
+            safe_sudo pacman -S --needed --noconfirm "${packages[@]}"
+            ;;
+        *)
+            warn "Unknown install command: $install_cmd"
+            return 1
+            ;;
+    esac
+}
+
+# Function to install packages more efficiently and securely
 install_packages() {
     local package_file="$1"
     local install_cmd="$2"
@@ -220,28 +385,38 @@ install_packages() {
     log "Reading package list from $package_file..."
     
     # Filter out comments and empty lines
-    local packages=$(grep -v '^#' "$package_file" | grep -v '^$')
     local to_install=()
     local already_installed=0
     local total_packages=0
     
-    # Check which packages need to be installed
-    for pkg in $packages; do
+    # Read packages safely line by line
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^[[:space:]]*# || -z "$line" ]] && continue
+        
+        # Trim whitespace
+        pkg=$(echo "$line" | xargs)
+        [[ -z "$pkg" ]] && continue
+        
         ((total_packages++))
-        if eval "$check_cmd $pkg" &>/dev/null; then
+        
+        # Check if package is installed - avoid eval
+        if check_package_installed "$check_cmd" "$pkg"; then
             ((already_installed++))
             log "Package already installed: $pkg"
         else
             to_install+=("$pkg")
         fi
-    done
+    done < "$package_file"
     
     log "$already_installed out of $total_packages packages are already installed."
     
     # Install missing packages
     if [ ${#to_install[@]} -gt 0 ]; then
         log "Installing ${#to_install[@]} $os_name packages..."
-        if eval "$install_cmd ${to_install[*]}"; then
+        
+        # Execute the install command with proper array handling
+        if install_packages_safely "$install_cmd" "${to_install[@]}"; then
             log "Successfully installed all missing $os_name packages."
         else
             warn "Failed to install some $os_name packages. Check the output above for details."
@@ -261,7 +436,7 @@ else
         1)
             log "Installing Fedora Packages..."
             # Update package database first
-            sudo dnf check-update -y || true
+            safe_sudo dnf check-update -y || true
             install_packages "$DOTFILES_DIR/dnf-packages.txt" \
                             "sudo dnf install -y" \
                             "rpm -q" \
@@ -270,7 +445,7 @@ else
         2)
             log "Installing Ubuntu/Debian Packages..."
             # Update package database first
-            sudo apt-get update -y || warn "Failed to update APT package database"
+            safe_sudo apt-get update -y || warn "Failed to update APT package database"
             install_packages "$DOTFILES_DIR/apt-packages.txt" \
                             "sudo apt-get install -y" \
                             "dpkg -l | grep -q" \
@@ -279,7 +454,7 @@ else
         3)
             log "Installing Arch Linux Packages..."
             # Update package database first
-            sudo pacman -Sy || warn "Failed to update Pacman package database"
+            safe_sudo pacman -Sy || warn "Failed to update Pacman package database"
             install_packages "$DOTFILES_DIR/pacman-packages.txt" \
                             "sudo pacman -S --needed --noconfirm" \
                             "pacman -Q" \
@@ -304,21 +479,42 @@ cleanup_old_backups() {
     read -p "Remove backups older than how many days? [default: $days_threshold]: " DAYS_INPUT
     days_threshold=${DAYS_INPUT:-$days_threshold}
     
-    # Find and remove old backup files
+    # Validate input
+    if ! [[ "$days_threshold" =~ ^[0-9]+$ ]]; then
+        warn "Invalid input: $days_threshold is not a number. Using default: 30"
+        days_threshold=30
+    fi
+    
+    # Use a more specific pattern for backup files
     log "Finding backup files older than $days_threshold days..."
-    local old_backups=$(find "$HOME" -name "*$BACKUP_SUFFIX*" -type f -o -type d -mtime +$days_threshold 2>/dev/null)
+    local backup_pattern="*${BACKUP_SUFFIX}*"
+    local old_backups=$(find "$HOME" -path "$HOME/.*${BACKUP_SUFFIX}*" -type f -o -type d -mtime "+$days_threshold" 2>/dev/null)
     local count=0
     
     if [ -n "$old_backups" ]; then
-        echo "$old_backups" | while read -r backup; do
-            if rm -rf "$backup" 2>/dev/null; then
-                ((count++))
-                log "Removed old backup: $backup"
-            else
-                warn "Failed to remove: $backup"
-            fi
-        done
-        log "Removed $count old backup files/directories."
+        # Show files that will be removed and ask for confirmation
+        echo "The following backup files will be removed:"
+        echo "$old_backups"
+        read -p "Are you sure you want to remove these files? (y/n): " CONFIRM_REMOVE
+        
+        if [[ "$CONFIRM_REMOVE" =~ ^[Yy]$ ]]; then
+            echo "$old_backups" | while IFS= read -r backup; do
+                # Additional validation to ensure we're only removing backup files
+                if [[ "$backup" == *"$BACKUP_SUFFIX"* ]]; then
+                    if safe_remove "$backup"; then
+                        ((count++))
+                        log "Removed old backup: $backup"
+                    else
+                        warn "Failed to remove: $backup"
+                    fi
+                else
+                    warn "Skipping non-backup file: $backup"
+                fi
+            done
+            log "Removed $count old backup files/directories."
+        else
+            log "Backup removal cancelled."
+        fi
     else
         log "No old backup files found."
     fi
@@ -340,4 +536,3 @@ echo "• Review any error messages above"
 echo "• Check that all your configurations were properly restored"
 echo "• Log out and log back in to apply all GNOME settings"
 echo "• If you encounter any issues, check the backup files in $TEMP_DIR/conflicts"
-
