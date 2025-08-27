@@ -13,6 +13,18 @@
 set -e  # Exit on first error
 umask 077  # Restrict file permissions for security
 
+# Minimal emoji output (set NO_EMOJI=true to strip icons)
+NO_EMOJI=${NO_EMOJI:-true}
+strip_emojis() { sed -E 's/(✅|🔍|⚠️|❌|🟡|📝|🔧|💾|📦|🖥️|🚀|🌐|🗄️|🔒|🔗|🔄|➡️|🐱|☕|🛠️|📁|🔌|🛡️|🧪|🔎|📊|🧹|🟢|🟠|🔵)//g'; }
+echo() {
+  local newline=true; local enable_escape=false; local args=()
+  while [[ $# -gt 0 ]]; do case "$1" in -n) newline=false;; -e) enable_escape=true;; *) args+=("$1");; esac; shift; done
+  local msg="${args[*]}"
+  if [[ "$NO_EMOJI" = "true" ]]; then msg=$(printf "%s" "$msg" | strip_emojis); fi
+  if $enable_escape; then if $newline; then builtin echo -e "$msg"; else builtin echo -ne "$msg"; fi
+  else if $newline; then builtin echo "$msg"; else builtin echo -n "$msg"; fi; fi
+}
+
 # Record start time for execution time calculation
 START_TIME=$(date +%s)
 
@@ -59,7 +71,7 @@ error_exit() {
     if [[ "$rollback" == "true" ]]; then
         echo -e "${YELLOW}[ROLLBACK]${NC} Attempting to restore previous state..."
         # Implement rollback logic here if needed
-    }
+    fi
     
     # Clean up temp directory on exit
     [ -d "$TEMP_DIR" ] && safe_remove "$TEMP_DIR"
@@ -268,17 +280,134 @@ dotfiles checkout "$DEFAULT_BRANCH" 2>/dev/null || {
 }
 log "Dotfiles checkout successful!"
 
-# Restore GNOME Settings with error capture
-if [ -f "$DOTFILES_DIR/gnome-settings.dconf" ]; then
-    log "Restoring GNOME Settings..."
-    # Attempt to load settings; capture any errors to a temporary log
-    local dconf_error_log=$(create_temp_file "dconf_error")
-    if ! sudo -u "$(logname)" dconf load / < "$DOTFILES_DIR/gnome-settings.dconf" 2> "$dconf_error_log"; then
-        log "Some settings couldn't be restored. Check $dconf_error_log for details."
+# Detect desktop environment in a robust way
+_detect_desktop_env() {
+    local de
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+        de="$XDG_CURRENT_DESKTOP"
+    elif [ -n "$DESKTOP_SESSION" ]; then
+        de="$DESKTOP_SESSION"
+    elif [ -n "$GDMSESSION" ]; then
+        de="$GDMSESSION"
+    else
+        de="unknown"
     fi
-else
-    log "No GNOME settings backup found."
-fi
+    de=$(printf '%s' "$de" | tr '[:upper:]' '[:lower:]')
+    case "$de" in
+        *gnome*) echo "gnome" ;;
+        *cinnamon*) echo "cinnamon" ;;
+        *cosmic*) echo "cosmic" ;;
+        *plasma*|*kde*) echo "kde" ;;
+        *xfce*) echo "xfce" ;;
+        *mate*) echo "mate" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+_restore_gnome() {
+    log "Restoring GNOME desktop settings..."
+    # Restore dconf settings if backup exists
+    if [ -f "$DOTFILES_DIR/gnome-settings.dconf" ]; then
+        local dconf_error_log; dconf_error_log=$(create_temp_file "dconf_error_gnome")
+        if dconf load / < "$DOTFILES_DIR/gnome-settings.dconf" 2> "$dconf_error_log"; then
+            log "GNOME settings restored from dconf backup."
+            echo GNOME > "$TEMP_DIR/desktop_applied"
+        else
+            warn "Some GNOME settings couldn't be restored. See $dconf_error_log"
+        fi
+    else
+        log "No GNOME dconf backup found; skipping dconf restore."
+    fi
+
+    # Restore GNOME extensions if present in dotfiles
+    local ext_src="$DOTFILES_DIR/.local/share/gnome-shell/extensions"
+    if [ -d "$ext_src" ]; then
+        log "Restoring GNOME Extensions..."
+        if [ -e "$EXTENSIONS_DIR" ]; then
+            mv "$EXTENSIONS_DIR" "${EXTENSIONS_DIR}${BACKUP_SUFFIX}" && log "Renamed existing extensions folder to backup."
+        fi
+        safe_symlink "$ext_src" "$EXTENSIONS_DIR" "$DOTFILES_DIR" || warn "Failed to link GNOME extensions folder."
+    fi
+}
+
+_restore_cinnamon() {
+    log "Restoring Cinnamon desktop settings..."
+    local file="$DOTFILES_DIR/cinnamon-settings.dconf"
+    if [ -f "$file" ]; then
+        local dconf_error_log; dconf_error_log=$(create_temp_file "dconf_error_cinnamon")
+        if dconf load / < "$file" 2> "$dconf_error_log"; then
+            log "Cinnamon settings restored from dconf backup."
+            echo CINNAMON > "$TEMP_DIR/desktop_applied"
+        else
+            warn "Some Cinnamon settings couldn't be restored. See $dconf_error_log"
+        fi
+    else
+        log "No Cinnamon dconf backup found; skipping."
+    fi
+}
+
+_restore_cosmic() {
+    log "Restoring COSMIC desktop settings..."
+    local file="$DOTFILES_DIR/cosmic-settings.dconf"
+    if [ -f "$file" ]; then
+        local dconf_error_log; dconf_error_log=$(create_temp_file "dconf_error_cosmic")
+        if dconf load / < "$file" 2> "$dconf_error_log"; then
+            log "COSMIC settings restored from dconf backup."
+            echo COSMIC > "$TEMP_DIR/desktop_applied"
+        else
+            warn "Some COSMIC settings couldn't be restored. See $dconf_error_log"
+        fi
+    else
+        log "No COSMIC dconf backup found; skipping."
+    fi
+}
+
+_restore_kde() {
+    log "Restoring KDE Plasma settings..."
+    # Restore plasmoids if backed up
+    local plasmoids_src="$DOTFILES_DIR/.local/share/plasma/plasmoids"
+    local plasmoids_dst="$HOME/.local/share/plasma/plasmoids"
+    if [ -d "$plasmoids_src" ]; then
+        log "Restoring KDE plasmoids..."
+        if [ -e "$plasmoids_dst" ]; then
+            mv "$plasmoids_dst" "${plasmoids_dst}${BACKUP_SUFFIX}" && log "Renamed existing plasmoids folder to backup."
+        fi
+        safe_symlink "$plasmoids_src" "$plasmoids_dst" "$DOTFILES_DIR" || warn "Failed to link KDE plasmoids folder."
+        echo KDE > "$TEMP_DIR/desktop_applied"
+    fi
+
+    # Import konsave profile if available and konsave is installed
+    if command -v konsave >/dev/null 2>&1; then
+        local ks
+        ks=$(ls -1 "$DOTFILES_DIR"/kde/*.knsv 2>/dev/null | head -n1 || true)
+        if [ -n "$ks" ]; then
+            local prof
+            prof=$(basename "$ks" .knsv)
+            log "Importing KDE konsave profile: $prof"
+            if konsave -i "$ks" && konsave -a "$prof"; then
+                log "Applied konsave profile: $prof"
+                echo KDE > "$TEMP_DIR/desktop_applied"
+            else
+                warn "Failed to import/apply konsave profile: $prof"
+            fi
+        fi
+    fi
+}
+
+restore_desktop_settings() {
+    local de; de=$(_detect_desktop_env)
+    log "Detected desktop environment: $de"
+    case "$de" in
+        gnome) _restore_gnome ;;
+        cinnamon) _restore_cinnamon ;;
+        cosmic) _restore_cosmic ;;
+        kde) _restore_kde ;;
+        *) log "No desktop-specific restore steps for: $de" ;;
+    esac
+}
+
+# Desktop environment-specific restore
+restore_desktop_settings
 
 # Restore .config files safely: if .config exists, rename it; then link the backup
 log "Restoring .config files..."
@@ -286,13 +415,6 @@ if [ -e "$CONFIG_DIR" ]; then
     mv "$CONFIG_DIR" "${CONFIG_DIR}${BACKUP_SUFFIX}" && log "Renamed existing .config to backup."
 fi
 safe_symlink "$DOTFILES_DIR/.config" "$CONFIG_DIR" "$DOTFILES_DIR" || error_exit "Failed to link .config folder."
-
-# Restore GNOME Extensions safely: if extensions folder exists, rename it; then link the backup
-log "Restoring GNOME Extensions..."
-if [ -e "$EXTENSIONS_DIR" ]; then
-    mv "$EXTENSIONS_DIR" "${EXTENSIONS_DIR}${BACKUP_SUFFIX}" && log "Renamed existing extensions folder to backup."
-fi
-safe_symlink "$DOTFILES_DIR/.local/share/gnome-shell/extensions" "$EXTENSIONS_DIR" "$DOTFILES_DIR" || error_exit "Failed to link GNOME extensions folder."
 
 # Restore Shell Configuration Files & Create Symlinks
 log "WARNING: Shell history files may contain sensitive information. Review them before restoring."
@@ -322,6 +444,49 @@ for history_file in .bash_history .zsh_history .mysql_history; do
         else
             log "Skipped restoring $history_file"
         fi
+    fi
+done
+
+# Restore tmux and nano configurations
+# We keep only .tmux.conf under version control and re-clone plugins via TPM.
+for cfg_file in ".tmux.conf" ".nanorc"; do
+    if [ -f "$DOTFILES_DIR/shell/$cfg_file" ]; then
+        if [ -e "$HOME/$cfg_file" ]; then
+            mv "$HOME/$cfg_file" "$HOME/${cfg_file}${BACKUP_SUFFIX}" && log "Renamed existing $cfg_file to backup."
+        fi
+        safe_symlink "$DOTFILES_DIR/shell/$cfg_file" "$HOME/$cfg_file" "$DOTFILES_DIR" || error_exit "Failed to link $cfg_file"
+    fi
+done
+
+# Ensure TPM and install plugins at pinned versions
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+    git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm" || warn "Failed to clone TPM"
+fi
+
+# Install plugins (non-fatal if tmux not present)
+if command -v tmux >/dev/null 2>&1 && [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins" || warn "TPM plugin install reported issues"
+fi
+
+# Pin catppuccin/tmux to v2.1.3 if present
+if [ -d "$HOME/.tmux/plugins/tmux" ]; then
+    git -C "$HOME/.tmux/plugins/tmux" fetch --tags --quiet || true
+    git -C "$HOME/.tmux/plugins/tmux" checkout -q v2.1.3 || warn "Failed to checkout catppuccin/tmux v2.1.3"
+fi
+
+# Prune any leftover plugin directories in dotfiles backup (we don't track them)
+if [ -d "$DOTFILES_DIR/.tmux/plugins" ]; then
+    warn "Pruning backed-up TPM plugin checkouts from dotfiles repo"
+    rm -rf "$DOTFILES_DIR/.tmux/plugins" || true
+fi
+
+# Restore nano and tmux directories only if intentionally backed up (excluding plugins)
+for cfg_dir in ".tmuxp" ".nano"; do
+    if [ -d "$DOTFILES_DIR/$cfg_dir" ]; then
+        if [ -e "$HOME/$cfg_dir" ]; then
+            mv "$HOME/$cfg_dir" "$HOME/${cfg_dir}${BACKUP_SUFFIX}" && log "Renamed existing $cfg_dir to backup."
+        fi
+        safe_symlink "$DOTFILES_DIR/$cfg_dir" "$HOME/$cfg_dir" "$DOTFILES_DIR" || error_exit "Failed to link $cfg_dir"
     fi
 done
 
@@ -527,12 +692,17 @@ cleanup_old_backups
 END_TIME=$(date +%s)
 EXECUTION_TIME=$((END_TIME - START_TIME))
 
-log "GNOME settings restored. Please **log out and log back in** manually to apply changes."
+if [ -f "$TEMP_DIR/desktop_applied" ]; then
+    DESKTOP_APPLIED=$(cat "$TEMP_DIR/desktop_applied")
+    log "$DESKTOP_APPLIED settings restored. Please log out and log back in to apply all changes."
+else
+    log "Desktop settings restore skipped or not detected."
+fi
 log "Dotfiles restoration completed successfully in $EXECUTION_TIME seconds!"
 
 # Final recommendations
 echo -e "\n${BLUE}[RECOMMENDATIONS]${NC}"
 echo "• Review any error messages above"
 echo "• Check that all your configurations were properly restored"
-echo "• Log out and log back in to apply all GNOME settings"
+echo "• Log out and log back in to apply desktop settings if applicable"
 echo "• If you encounter any issues, check the backup files in $TEMP_DIR/conflicts"

@@ -2,6 +2,18 @@
 
 set -e
 
+# Minimal emoji output (set NO_EMOJI=true to strip icons)
+NO_EMOJI=${NO_EMOJI:-true}
+strip_emojis() { sed -E 's/(✅|🔍|⚠️|❌|🟡|📝|🔧|💾|📦|🖥️|🚀|🌐|🗄️|🔒|🔗|🔄|➡️|🐱|☕|🛠️|📁|🔌|🛡️|🧪|🔎|📊|🧹|🟢|🟠|🔵)//g'; }
+echo() {
+  local newline=true; local enable_escape=false; local args=()
+  while [[ $# -gt 0 ]]; do case "$1" in -n) newline=false;; -e) enable_escape=true;; *) args+=("$1");; esac; shift; done
+  local msg="${args[*]}"
+  if [[ "$NO_EMOJI" = "true" ]]; then msg=$(printf "%s" "$msg" | strip_emojis); fi
+  if $enable_escape; then if $newline; then builtin echo -e "$msg"; else builtin echo -ne "$msg"; fi
+  else if $newline; then builtin echo "$msg"; else builtin echo -n "$msg"; fi; fi
+}
+
 # Parse command line arguments
 DRY_RUN=false
 FORCE_RERUN=false
@@ -65,7 +77,7 @@ check_previous_setup() {
     
     # Check for existing symlinks
     local symlink_count=0
-    for path in ".bashrc" ".zshrc" ".config" ".themes" ".icons" ".fonts"; do
+    for path in ".bashrc" ".zshrc" ".nanorc" ".tmux.conf" ".config" ".themes" ".icons" ".fonts"; do
         if [ -L "$HOME/$path" ]; then
             local link_target=$(readlink "$HOME/$path" 2>/dev/null || echo "")
             if [ "$link_target" = "$DOTFILES_DIR/shell/$path" ] || [ "$link_target" = "$DOTFILES_DIR/$path" ]; then
@@ -323,6 +335,8 @@ SENSITIVE_PATTERNS=(
     # Authentication and keys
     "*/.ssh/*" "*/.gnupg/*" "*/.aws/*" "*/github-copilot/*"
     "*/.docker/config.json" "*/.netrc" "*/.pgpass" "*/github-copilot/*"
+    # Sensitive CLI config directories
+    "*/.config/gh/*"
     # Generic sensitive patterns
     "*password*" "*secret*" "*token*" "*credential*" "*auth*"
     "*.pem" "*.key" "*.p12"
@@ -340,6 +354,8 @@ SENSITIVE_PATTERNS=(
     "*/spotify/*" "*/Spotify/*" "*/steam/*" "*/Steam/*"
     "*/postman/*" "*/Postman/*" "*/insomnia/*" "*/MongoDB*/*"
     "*/docker/*" "*/Docker*/*" "*/code-*/*"
+    # Tmux plugins and nested git repos (avoid backing these up)
+    "*/.tmux/plugins/*" "*/.git/*"
 )
 
 # Function to check if a file/directory should be excluded
@@ -725,7 +741,7 @@ if [ -f "$HOME/.mysql_history" ]; then
 fi
 
 # Other common development configuration files
-for config_file in ".gradle/gradle.properties" ".sbt/1.0/global.sbt" ".ivy2/ivysettings.xml" ".dockerconfig" ".terraformrc" ".ansible.cfg" ".vimrc" ".tmux.conf" ".screenrc" ".curlrc" ".wgetrc"; do
+for config_file in ".gradle/gradle.properties" ".sbt/1.0/global.sbt" ".ivy2/ivysettings.xml" ".dockerconfig" ".terraformrc" ".ansible.cfg" ".vimrc" ".screenrc" ".curlrc" ".wgetrc"; do
     if [ -f "$HOME/$config_file" ]; then
         if [ "$DRY_RUN" = true ]; then
             echo "🔍 WOULD: Back up $config_file"
@@ -825,7 +841,7 @@ else
 fi
 
 # Backup shell configuration files (with security filtering)
-for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history; do
+for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history .nanorc .tmux.conf; do
     if [ -f "$HOME/$file" ]; then
         if [ "$DRY_RUN" = true ]; then
             echo "🔍 WOULD: Securely back up $file..."

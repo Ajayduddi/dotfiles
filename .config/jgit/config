@@ -7,3 +7,6 @@
 [filesystem "JetBrains s.r.o.|21.0.7|/dev/nvme0n1p9"]
 	timestampResolution = 5717 nanoseconds
 	minRacyThreshold = 0 nanoseconds
+[filesystem "Eclipse Adoptium|21.0.7|/dev/nvme0n1p6"]
+	timestampResolution = 5366 nanoseconds
+	minRacyThreshold = 0 nanoseconds

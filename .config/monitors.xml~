@@ -24,9 +24,27 @@
   <configuration>
     <layoutmode>logical</layoutmode>
     <logicalmonitor>
-      <x>0</x>
+      <x>1920</x>
       <y>0</y>
-      <scale>1.25</scale>
+      <scale>1</scale>
+      <monitor>
+        <monitorspec>
+          <connector>eDP-1</connector>
+          <vendor>AUO</vendor>
+          <product>0x0ba2</product>
+          <serial>0x00000000</serial>
+        </monitorspec>
+        <mode>
+          <width>2560</width>
+          <height>1440</height>
+          <rate>60.012</rate>
+        </mode>
+      </monitor>
+    </logicalmonitor>
+    <logicalmonitor>
+      <x>0</x>
+      <y>1440</y>
+      <scale>1</scale>
       <primary>yes</primary>
       <monitor>
         <monitorspec>
@@ -36,22 +54,9 @@
           <serial>0x00000000</serial>
         </monitorspec>
         <mode>
-          <width>1920</width>
-          <height>1080</height>
-          <rate>60.000</rate>
-        </mode>
-      </monitor>
-      <monitor>
-        <monitorspec>
-          <connector>eDP-1</connector>
-          <vendor>AUO</vendor>
-          <product>0x0ba2</product>
-          <serial>0x00000000</serial>
-        </monitorspec>
-        <mode>
-          <width>1920</width>
-          <height>1080</height>
-          <rate>59.963</rate>
+          <width>3840</width>
+          <height>2160</height>
+          <rate>30.000</rate>
         </mode>
       </monitor>
     </logicalmonitor>
@@ -96,7 +101,7 @@
     <logicalmonitor>
       <x>0</x>
       <y>0</y>
-      <scale>1.25</scale>
+      <scale>1.5</scale>
       <primary>yes</primary>
       <monitor>
         <monitorspec>
@@ -131,21 +136,8 @@
     <logicalmonitor>
       <x>0</x>
       <y>0</y>
-      <scale>1.25</scale>
+      <scale>1.5</scale>
       <primary>yes</primary>
-      <monitor>
-        <monitorspec>
-          <connector>HDMI-1</connector>
-          <vendor>NCS</vendor>
-          <product>0x2275</product>
-          <serial>0x00000000</serial>
-        </monitorspec>
-        <mode>
-          <width>1920</width>
-          <height>1080</height>
-          <rate>60.000</rate>
-        </mode>
-      </monitor>
       <monitor>
         <monitorspec>
           <connector>eDP-1</connector>
@@ -157,6 +149,19 @@
           <width>1920</width>
           <height>1080</height>
           <rate>59.963</rate>
+        </mode>
+      </monitor>
+      <monitor>
+        <monitorspec>
+          <connector>HDMI-1</connector>
+          <vendor>NCS</vendor>
+          <product>0x2275</product>
+          <serial>0x00000000</serial>
+        </monitorspec>
+        <mode>
+          <width>1920</width>
+          <height>1080</height>
+          <rate>60.000</rate>
         </mode>
       </monitor>
     </logicalmonitor>

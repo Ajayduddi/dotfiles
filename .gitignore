@@ -253,6 +253,10 @@ ${TMPDIR:-/tmp}/dotfiles-*
 .local/share/spotify/
 .local/share/applications/wine/
 
+# Tmux plugins and nested git directories
+.tmux/plugins/
+**/.git/
+
 # Enhanced security patterns - added by security hardening script
 # Private keys and certificates
 **/*.pem
@@ -403,6 +407,7 @@ ${TMPDIR:-/tmp}/dotfiles-*
 **/dist/**/*.log
 **/target/**/*.log
 **/out/**/*.log
+**/Wave
 
 # IDE and editor logs
 **/.vscode/logs/

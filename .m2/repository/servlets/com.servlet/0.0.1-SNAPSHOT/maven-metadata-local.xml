@@ -3,7 +3,7 @@
   <groupId>servlets</groupId>
   <artifactId>com.servlet</artifactId>
   <versioning>
-    <lastUpdated>20250730030558</lastUpdated>
+    <lastUpdated>20250822080429</lastUpdated>
     <snapshot>
       <localCopy>true</localCopy>
     </snapshot>
@@ -11,12 +11,12 @@
       <snapshotVersion>
         <extension>pom</extension>
         <value>0.0.1-SNAPSHOT</value>
-        <updated>20250730030558</updated>
+        <updated>20250822080429</updated>
       </snapshotVersion>
       <snapshotVersion>
         <extension>war</extension>
         <value>0.0.1-SNAPSHOT</value>
-        <updated>20250730030558</updated>
+        <updated>20250822080429</updated>
       </snapshotVersion>
     </snapshotVersions>
   </versioning>

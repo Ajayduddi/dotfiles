@@ -2,6 +2,18 @@
 
 set -e
 
+# Minimal emoji output (set NO_EMOJI=true to strip icons)
+NO_EMOJI=${NO_EMOJI:-true}
+strip_emojis() { sed -E 's/(✅|🔍|⚠️|❌|🟡|📝|🔧|💾|📦|🖥️|🚀|🌐|🗄️|🔒|🔗|🔄|➡️|🐱|☕|🛠️|📁|🔌|🛡️|🧪|🔎|📊|🧹|🟢|🟠|🔵)//g'; }
+echo() {
+  local newline=true; local enable_escape=false; local args=()
+  while [[ $# -gt 0 ]]; do case "$1" in -n) newline=false;; -e) enable_escape=true;; *) args+=("$1");; esac; shift; done
+  local msg="${args[*]}"
+  if [[ "$NO_EMOJI" = "true" ]]; then msg=$(printf "%s" "$msg" | strip_emojis); fi
+  if $enable_escape; then if $newline; then builtin echo -e "$msg"; else builtin echo -ne "$msg"; fi
+  else if $newline; then builtin echo "$msg"; else builtin echo -n "$msg"; fi; fi
+}
+
 # Check for dry-run mode and help
 DRY_RUN=false
 
@@ -99,7 +111,35 @@ else
     mkdir -p "$DOTFILES_DIR/.themes"
     mkdir -p "$DOTFILES_DIR/.icons"
     mkdir -p "$DOTFILES_DIR/shell"
+    mkdir -p "$DOTFILES_DIR/kde"
 fi
+
+# Detect desktop environment (normalized)
+_detect_desktop_env() {
+    local de
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+        de="$XDG_CURRENT_DESKTOP"
+    elif [ -n "$DESKTOP_SESSION" ]; then
+        de="$DESKTOP_SESSION"
+    elif [ -n "$GDMSESSION" ]; then
+        de="$GDMSESSION"
+    else
+        de="unknown"
+    fi
+    de=$(printf '%s' "$de" | tr '[:upper:]' '[:lower:]')
+    case "$de" in
+        *gnome*) echo "gnome" ;;
+        *cinnamon*) echo "cinnamon" ;;
+        *cosmic*) echo "cosmic" ;;
+        *plasma*|*kde*) echo "kde" ;;
+        *xfce*) echo "xfce" ;;
+        *mate*) echo "mate" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+DESKTOP_ENV=$(_detect_desktop_env)
+echo "🖥️ Detected desktop environment: $DESKTOP_ENV"
 
 # Update existing .gitignore with additional security patterns
 update_gitignore() {
@@ -221,6 +261,8 @@ SENSITIVE_PATTERNS=(
     "*/.aws/*" "*/.docker/config.json" "*/.gcloud/*" "*/.kube/*"
     # Authentication files
     "*/.netrc" "*/.pgpass" "*/github-copilot/*"
+    # Sensitive CLI config directories
+    "*/.config/gh/*"
     # Generic sensitive patterns
     "*password*" "*secret*" "*token*" "*credential*" "*auth*"
     "*.pem" "*.key" "*.p12"
@@ -238,6 +280,8 @@ SENSITIVE_PATTERNS=(
     "*/spotify/*" "*/Spotify/*" "*/steam/*" "*/Steam/*"
     "*/postman/*" "*/Postman/*" "*/insomnia/*" "*/MongoDB*/*"
     "*/docker/*" "*/Docker*/*" "*/code-*/*"
+    # Tmux plugins and nested git repos (avoid backing these up)
+    "*/.tmux/plugins/*" "*/.git/*"
 )
 
 # Function to check if a file/directory should be excluded
@@ -379,57 +423,78 @@ echo "🔒 Using secure backup for .config (sensitive files will be excluded)...
 secure_backup_directory ".config"
 
 # Backup GNOME extensions (usually safe but using secure method)
-secure_backup_directory ".local/share/gnome-shell/extensions"
-
-
-# Check if dconf-cli is installed
-if ! command -v dconf &> /dev/null; then
-    echo "❌ dconf-cli not found!"
-    echo "⚠️  dconf-cli is required to backup GNOME settings."
-    
-    if [ "$DRY_RUN" = true ]; then
-        echo "🔍 WOULD: Attempt to install dconf-cli or skip GNOME settings backup"
-    else
-        # Skip interactive prompt in non-interactive mode
-        if [ -t 0 ]; then
-            read -p "Do you want to install dconf-cli? (y/n): " install_dconf
-        else
-            install_dconf="n"
-            echo "Running in non-interactive mode, skipping dconf-cli installation"
-        fi
-        
-        if [[ "$install_dconf" =~ ^[Yy]$ ]]; then
-            if command -v dnf &> /dev/null; then
-                sudo dnf install -y dconf-cli
-            elif command -v apt &> /dev/null; then
-                sudo apt-get install -y dconf-cli
-            elif command -v pacman &> /dev/null; then
-                sudo pacman -S --noconfirm dconf-cli
-            else
-                echo "❌ Package manager not supported. Please install dconf-cli manually."
-                exit 1
-            fi
-        else
-            echo "⚠️ Skipping GNOME settings backup without dconf-cli"
-            echo "# GNOME settings backup skipped - dconf-cli not installed" > "$DOTFILES_DIR/gnome-settings.dconf"
-        fi
-    fi
+if [ "$DESKTOP_ENV" = "gnome" ]; then
+    secure_backup_directory ".local/share/gnome-shell/extensions"
 fi
 
-# Backup GNOME Settings including extension preferences (excluding sensitive keys)
-if command -v dconf &> /dev/null; then
-    if [ "$DRY_RUN" = true ]; then
-        echo "🔍 WOULD: Backup GNOME Settings (excluding sensitive keys) to $DOTFILES_DIR/gnome-settings.dconf"
-    else
-        echo "💾 Backing up GNOME Settings (excluding sensitive keys)..."
-        dconf dump / | grep -v -E "(password|secret|token|credential|key)" > "$DOTFILES_DIR/gnome-settings.dconf" || {
-            echo "⚠️ Some GNOME settings were excluded for security reasons"
-            dconf dump / > "$DOTFILES_DIR/gnome-settings.dconf"
-        }
+# Backup tmux-related directories if present
+secure_backup_directory ".tmux"
+secure_backup_directory ".tmuxp"
+
+# Backup nano configuration directory if present
+secure_backup_directory ".nano"
+
+# KDE Plasma plasmoids
+if [ "$DESKTOP_ENV" = "kde" ]; then
+    secure_backup_directory ".local/share/plasma/plasmoids"
+fi
+
+# Desktop settings backup (dconf-based for GNOME/Cinnamon/COSMIC)
+if [ "$DESKTOP_ENV" = "gnome" ] || [ "$DESKTOP_ENV" = "cinnamon" ] || [ "$DESKTOP_ENV" = "cosmic" ]; then
+    # Check if dconf is available
+    if ! command -v dconf &> /dev/null; then
+        echo "❌ dconf not found!"
+        echo "⚠️  dconf is required to backup $DESKTOP_ENV settings."
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Attempt to install dconf or skip $DESKTOP_ENV settings backup"
+        else
+            if [ -t 0 ]; then
+                read -p "Do you want to install dconf (y/n)? " install_dconf
+            else
+                install_dconf="n"
+                echo "Running in non-interactive mode, skipping dconf installation"
+            fi
+            if [[ "$install_dconf" =~ ^[Yy]$ ]]; then
+                if command -v dnf &> /dev/null; then
+                    sudo dnf install -y dconf
+                elif command -v apt-get &> /dev/null; then
+                    sudo apt-get install -y dconf-cli
+                elif command -v pacman &> /dev/null; then
+                    sudo pacman -S --noconfirm dconf
+                else
+                    echo "❌ Package manager not supported. Please install dconf manually."
+                    exit 1
+                fi
+            else
+                echo "⚠️ Skipping $DESKTOP_ENV settings backup without dconf"
+            fi
+        fi
     fi
-else
-    if [ "$DRY_RUN" = true ]; then
-        echo "🔍 WOULD: Skip GNOME settings backup (dconf not available)"
+
+    if command -v dconf &> /dev/null; then
+        case "$DESKTOP_ENV" in
+            gnome)
+                target_file="$DOTFILES_DIR/gnome-settings.dconf"
+                what="GNOME"
+                ;;
+            cinnamon)
+                target_file="$DOTFILES_DIR/cinnamon-settings.dconf"
+                what="Cinnamon"
+                ;;
+            cosmic)
+                target_file="$DOTFILES_DIR/cosmic-settings.dconf"
+                what="COSMIC"
+                ;;
+        esac
+        if [ "$DRY_RUN" = true ]; then
+            echo "🔍 WOULD: Backup $what settings (excluding sensitive keys) to $target_file"
+        else
+            echo "💾 Backing up $what settings (excluding sensitive keys)..."
+            dconf dump / | grep -v -E "(password|secret|token|credential|key)" > "$target_file" || {
+                echo "⚠️ Some $what settings were excluded for security reasons"
+                dconf dump / > "$target_file"
+            }
+        fi
     fi
 fi
 
@@ -465,6 +530,22 @@ if [ -d "$HOME/.supermaven" ]; then
     secure_backup_directory ".supermaven"
 fi
 
+# KDE konsave profile export (if konsave available)
+if [ "$DESKTOP_ENV" = "kde" ] && command -v konsave >/dev/null 2>&1; then
+    echo "💾 Exporting KDE konsave profile..."
+    # Use a timestamped name to avoid overwrite; keep only the latest export
+    ks_name="kde_profile_$(date +%Y%m%d_%H%M%S)"
+    ks_file="$DOTFILES_DIR/kde/${ks_name}.knsv"
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 WOULD: konsave -s $ks_name && konsave -e $ks_name -f $ks_file"
+    else
+        konsave -s "$ks_name" >/dev/null 2>&1 || true
+        konsave -e "$ks_name" -f "$ks_file" >/dev/null 2>&1 || echo "⚠️ konsave export may have failed"
+        # Optionally prune older .knsv files to keep repo clean (keep latest 3)
+        ls -1t "$DOTFILES_DIR"/kde/*.knsv 2>/dev/null | tail -n +4 | while read -r old; do rm -f "$old"; done
+    fi
+fi
+
 # Backup important development configuration files
 echo "📝 Backing up development configuration files..."
 
@@ -489,7 +570,7 @@ if [ -f "$HOME/.mysql_history" ]; then
 fi
 
 # Other common development configuration files
-for config_file in ".gradle/gradle.properties" ".sbt/1.0/global.sbt" ".ivy2/ivysettings.xml" ".dockerconfig" ".terraformrc" ".ansible.cfg" ".vimrc" ".tmux.conf" ".screenrc" ".curlrc" ".wgetrc"; do
+for config_file in ".gradle/gradle.properties" ".sbt/1.0/global.sbt" ".ivy2/ivysettings.xml" ".dockerconfig" ".terraformrc" ".ansible.cfg" ".vimrc" ".tmux.conf" ".tmux.conf.local" ".nanorc" ".screenrc" ".curlrc" ".wgetrc"; do
     if [ -f "$HOME/$config_file" ]; then
         if [ "$DRY_RUN" = true ]; then
             echo "🔍 WOULD: Back up $config_file"
@@ -718,7 +799,7 @@ clean_history_file() {
 }
 
 # Backup shell configuration files (with security filtering)
-for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history; do
+for file in .bashrc .zshrc .bash_history .bash_profile .zsh_history .mysql_history .nanorc .tmux.conf; do
     if [ -f "$HOME/$file" ]; then
         if [ "$DRY_RUN" = true ]; then
             echo "🔍 WOULD: Securely back up $file..."

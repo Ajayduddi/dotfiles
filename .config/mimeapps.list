@@ -2,9 +2,9 @@
 x-scheme-handler/mailto=userapp-Thunderbird-RYWJ42.desktop
 message/rfc822=userapp-Thunderbird-RYWJ42.desktop
 x-scheme-handler/mid=userapp-Thunderbird-RYWJ42.desktop
-text/html=userapp-Zen-XU3MA3.desktop
-x-scheme-handler/http=userapp-Zen-XU3MA3.desktop
-x-scheme-handler/https=userapp-Zen-XU3MA3.desktop
+text/html=google-chrome.desktop
+x-scheme-handler/http=google-chrome.desktop
+x-scheme-handler/https=google-chrome.desktop
 x-scheme-handler/about=google-chrome.desktop
 x-scheme-handler/unknown=google-chrome.desktop
 x-scheme-handler/postman=Postman.desktop

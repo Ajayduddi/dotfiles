@@ -5,4 +5,5 @@ codetogether.terminal.revealOnGuestActivity=false
 codetogether.trust.all.ssl=false
 eclipse.preferences.version=1
 offer.on.selection=false
+reported.codetogether=true
 uuid=2jpD0waMfcojLudb6A7ktM

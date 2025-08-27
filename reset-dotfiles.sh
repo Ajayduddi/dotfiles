@@ -228,7 +228,7 @@ for dir in ".config" ".themes" ".icons" ".fonts" ".local/share/gnome-shell/exten
 done
 
 # Check for symlinked files
-for file in ".bashrc" ".zshrc" ".bash_history" ".bash_profile" ".zsh_history" ".mysql_history"; do
+for file in ".bashrc" ".zshrc" ".bash_history" ".bash_profile" ".zsh_history" ".mysql_history" ".nanorc" ".tmux.conf"; do
     if [ -L "$HOME/$file" ]; then
         symlinks_found+=("$file (file)")
         dotfiles_elements+=("File symlink: $file")
@@ -342,7 +342,7 @@ done
 
 # Restore files
 echo "📄 RESTORING FILES..." | tee -a "$UNINSTALL_LOG"
-for file in ".bashrc" ".zshrc" ".bash_history" ".bash_profile" ".zsh_history" ".mysql_history"; do
+for file in ".bashrc" ".zshrc" ".bash_history" ".bash_profile" ".zsh_history" ".mysql_history" ".nanorc" ".tmux.conf"; do
     safe_restore_file "$file"
 done
 

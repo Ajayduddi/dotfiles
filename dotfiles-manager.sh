@@ -6,6 +6,18 @@
 
 set -e
 
+# Minimal emoji output (set NO_EMOJI=true to strip icons)
+NO_EMOJI=${NO_EMOJI:-true}
+strip_emojis() { sed -E 's/(✅|🔍|⚠️|❌|🟡|📝|🔧|💾|📦|🖥️|🚀|🌐|🗄️|🔒|🔗|🔄|➡️|🐱|☕|🛠️|📁|🔌|🛡️|🧪|🔎|📊|🧹|🟢|🟠|🔵)//g'; }
+echo() {
+  local newline=true; local enable_escape=false; local args=()
+  while [[ $# -gt 0 ]]; do case "$1" in -n) newline=false;; -e) enable_escape=true;; *) args+=("$1");; esac; shift; done
+  local msg="${args[*]}"
+  if [[ "$NO_EMOJI" = "true" ]]; then msg=$(printf "%s" "$msg" | strip_emojis); fi
+  if $enable_escape; then if $newline; then builtin echo -e "$msg"; else builtin echo -ne "$msg"; fi
+  else if $newline; then builtin echo "$msg"; else builtin echo -n "$msg"; fi; fi
+}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -472,7 +484,7 @@ cmd_status() {
     # Symlinks status
     echo
     echo "🔗 Symlink Status:"
-    local symlinks=(".config" ".themes" ".icons" ".fonts" ".bashrc" ".zshrc")
+    local symlinks=(".config" ".themes" ".icons" ".fonts" ".bashrc" ".zshrc" ".nanorc" ".tmux.conf")
     for link in "${symlinks[@]}"; do
         if [ -L "$HOME/$link" ]; then
             local target=$(readlink "$HOME/$link")
