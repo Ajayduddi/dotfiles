@@ -1,4 +1,0 @@
-#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
-#Mon Jun 16 08:15:41 IST 2025
-@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1750041941935
-https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact com.mysql\:mysql-connector-j\:pom\:9.3 from/to central (https\://repo.maven.apache.org/maven2)\: PKIX path building failed\: sun.security.provider.certpath.SunCertPathBuilderException\: unable to find valid certification path to requested target

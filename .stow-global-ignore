@@ -1,0 +1,25 @@
+# Global ignore patterns for GNU Stow. These patterns are matched against
+# items when Stow scans the repository. Useful to ensure consistent behavior
+# even if .stowignore is not picked by some stow versions.
+
+# Git and tooling metadata
+^.git$
+^\.github$
+^\.zencoder$
+^\.stowignore$
+^\.stow-global-ignore$
+^\.gitignore$
+^\.gitattributes$
+
+# Backups / non-stow content
+^non_stow$
+^scripts
+
+# Assets not destined for $HOME
+^wallpapers$
+
+# Repo helper scripts and misc files
+^backup-dotfiles\.sh$
+^restore-dotfiles\.sh$
+^dnf-packages\.txt$
+^gnome-settings\.dconf$

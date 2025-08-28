@@ -1,0 +1,13 @@
+[user]
+	email = ajayprofessional119@gmail.com
+	name = ajay from fedora
+[credential]
+	helper = cache
+[core]
+	autocrlf = true
+[color]
+    ui = auto
+[init]
+    defaultBranch = main 
+[http]
+	postBuffer = 1073741824

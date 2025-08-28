@@ -1,4 +1,0 @@
-#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
-#Fri Jun 06 14:35:55 IST 2025
-@default-central-https\://repo.maven.apache.org/maven2/.lastUpdated=1749200755952
-https\://repo.maven.apache.org/maven2/.error=Could not transfer artifact jakarta.annotation\:jakarta.annotation-api\:pom\:2.0.0 from/to central (https\://repo.maven.apache.org/maven2)\: repo.maven.apache.org

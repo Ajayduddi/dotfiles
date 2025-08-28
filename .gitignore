@@ -27,6 +27,8 @@
 
 # Additional ignores based on your system setup
 .private_config/
+.zencoder
+
 # Additional security patterns - automatically added
 **/*password*
 **/*secret*
@@ -48,7 +50,6 @@
 **/.docker/config.json
 **/.netrc
 **/.pgpass
-**/.gitconfig
 **/.npmrc
 **/github-copilot/
 **/gcloud/
