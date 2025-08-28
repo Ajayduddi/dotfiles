@@ -186,13 +186,22 @@ run_stow_in() { # base_dir
 }
 run_stow_in "$DOTFILES_DIR"
 
-# --- Restore packages from non_stow/packages/<os>-packages.txt ---
+# --- Restore packages from non_stow/packages/<os>-packages.txt with universal fallback ---
 restore_packages() {
-  local list="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
-  if [[ ! -f "$list" ]]; then
-    warn "Package list not found: $list; skipping package restore"
-    return 0
+  local specific="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
+  local universal="$NON_STOW_DIR/packages/universal-packages.txt"
+  local list="$specific"
+
+  if [[ ! -s "$list" ]]; then
+    if [[ -s "$universal" ]]; then
+      warn "Package list missing or empty: $specific; falling back to universal list: $universal"
+      list="$universal"
+    else
+      warn "No package lists found (missing: $specific and $universal); skipping package restore"
+      return 0
+    fi
   fi
+
   case "$OS_ID" in
     fedora)
       if [[ "$DRY_RUN" == true ]]; then
@@ -240,6 +249,100 @@ restore_packages() {
   esac
 }
 restore_packages
+
+# --- Restore developer environments ---
+restore_python() {
+  local base="$NON_STOW_DIR/dev/python"
+  local venv_specs_dir="$base/venvs"
+
+  # Restore global Python packages (user site)
+  local req="$base/global-requirements-python3.txt"
+  if [[ -f "$req" ]] && command -v python3 >/dev/null 2>&1 && python3 -m pip --version >/dev/null 2>&1; then
+    if [[ "$DRY_RUN" == true ]]; then
+      would "python3 -m pip install --user -r '$req'"
+    else
+      log "Restoring Python3 user site packages from $req"
+      python3 -m pip install --user -r "$req" || warn "Some Python user packages failed"
+    fi
+  fi
+
+  # Restore virtualenvs (create if missing)
+  if [[ -d "$venv_specs_dir" ]]; then
+    shopt -s nullglob
+    for f in "$venv_specs_dir"/*-requirements.txt; do
+      local bn; bn=$(basename "$f")
+      local name; name="${bn%-requirements.txt}"
+      local venv_path=""
+      local roots=("$HOME/.virtualenvs" "$HOME/.venvs" "$HOME/venvs")
+      for r in "${roots[@]}"; do
+        if [[ -d "$r/$name" ]]; then venv_path="$r/$name"; break; fi
+      done
+      [[ -n "$venv_path" ]] || venv_path="$HOME/.venvs/$name"
+
+      if [[ "$DRY_RUN" == true ]]; then
+        if [[ ! -d "$venv_path" ]]; then would "python3 -m venv '$venv_path'"; fi
+        would "'$venv_path/bin/pip' install -r '$f'"
+      else
+        if [[ ! -d "$venv_path" ]]; then
+          log "Creating venv: $venv_path"
+          python3 -m venv "$venv_path" || { warn "Failed to create venv $venv_path"; continue; }
+        fi
+        if [[ -x "$venv_path/bin/pip" ]]; then
+          log "Installing venv packages for '$name'"
+          "$venv_path/bin/pip" install -r "$f" || warn "Some packages failed for venv '$name'"
+        else
+          warn "pip not found in $venv_path"
+        fi
+      fi
+    done
+    shopt -u nullglob
+  fi
+}
+
+restore_node() {
+  local base="$NON_STOW_DIR/dev/node"
+  local versions="$base/node-installed-versions.txt"
+  local npmlist="$base/npm-global-packages.txt"
+
+  # Try to load nvm if available but not in PATH
+  if ! command -v nvm >/dev/null 2>&1; then
+    if [[ -s "$HOME/.nvm/nvm.sh" ]]; then . "$HOME/.nvm/nvm.sh" 2>/dev/null || true; fi
+  fi
+
+  # Restore Node versions via nvm/fnm/asdf if available
+  if [[ -f "$versions" ]]; then
+    while read -r ver; do
+      [[ -n "$ver" ]] || continue
+      if [[ "$DRY_RUN" == true ]]; then
+        if command -v nvm >/dev/null 2>&1; then would "nvm install '$ver'"; fi
+        if command -v fnm >/dev/null 2>&1; then would "fnm install '$ver'"; fi
+        if command -v asdf >/dev/null 2>&1; then would "asdf plugin add nodejs || true; asdf install nodejs '$ver'"; fi
+      else
+        if command -v nvm >/dev/null 2>&1; then nvm install "$ver" || warn "nvm install $ver failed"; 
+        elif command -v fnm >/dev/null 2>&1; then fnm install "$ver" || warn "fnm install $ver failed";
+        elif command -v asdf >/dev/null 2>&1; then asdf plugin add nodejs >/dev/null 2>&1 || true; asdf install nodejs "$ver" || warn "asdf install $ver failed";
+        else warn "No Node version manager (nvm/fnm/asdf) found to install $ver"; fi
+      fi
+    done < "$versions"
+  fi
+
+  # Restore npm global packages
+  if [[ -f "$npmlist" && -s "$npmlist" ]]; then
+    if command -v npm >/dev/null 2>&1; then
+      if [[ "$DRY_RUN" == true ]]; then
+        would "xargs -a '$npmlist' -r npm -g install"
+      else
+        log "Installing npm global packages"
+        xargs -a "$npmlist" -r npm -g install || warn "Some npm globals failed"
+      fi
+    else
+      warn "npm not found; cannot restore global packages"
+    fi
+  fi
+}
+
+restore_python
+restore_node
 
 # --- Restore DE settings from non_stow backups ---
 restore_dconf() { # file label

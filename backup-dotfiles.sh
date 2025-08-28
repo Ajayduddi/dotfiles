@@ -111,6 +111,7 @@ mkdir_p "$NON_STOW_DIR/packages"
 # --- Export package list (user-installed only when possible) ---
 export_packages() {
   local outfile="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
+  local universal="$NON_STOW_DIR/packages/universal-packages.txt"
   case "$OS_ID" in
     fedora)
       # Prefer dnf repoquery (userinstalled); enforce newline per item; fallback to rpm -qa
@@ -149,7 +150,60 @@ export_packages() {
       echo "🟡 Unknown OS. Skipping package export."; return 0
       ;;
   esac
-  if [[ "$DRY_RUN" == true ]]; then echo "🔍 WOULD: $cmd"; else bash -lc "$cmd" || true; echo "💾 Saved packages -> $outfile"; fi
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "🔍 WOULD: $cmd"
+    echo "🔍 WOULD: ensure template excludes at '$NON_STOW_DIR/packages/universal-excludes.txt' if missing"
+    echo "🔍 WOULD: build filtered candidate at '$NON_STOW_DIR/packages/.generated/universal-candidate.txt' (union with existing universal, unique + sorted)"
+  else
+    bash -lc "$cmd" || true
+    echo "💾 Saved packages -> $outfile"
+
+    # Prepare paths
+    local excludes="$NON_STOW_DIR/packages/universal-excludes.txt"
+    local canddir="$NON_STOW_DIR/packages/.generated"
+    local candidate="$canddir/universal-candidate.txt"
+    mkdir -p "$canddir"
+
+    # Create excludes template if missing (one-time)
+    if [[ ! -f "$excludes" ]]; then
+      cat > "$excludes" <<'EXCL'
+# Regex patterns (one per line) to EXCLUDE from universal candidates
+# Tweak to your preference. Examples below aim to drop OS/base/system bits.
+^(kernel|grub2|systemd|glibc|linux-firmware|microcode_ctl|dracut.*|anaconda.*)$
+^(NetworkManager(.*)?|firewalld|selinux-.*)$
+^(filesystem|setup|shadow-utils)$
+^(dnf5?|rpm|rpmfusion-.*-release|fedora-.*)$
+^(mesa-.*|xorg-.*)$
+^(gnome-.*|kde-.*|plasma-.*)$
+^(cups.*|plymouth.*)$
+.*firmware$
+# Add more lines to exclude additional packages
+EXCL
+      echo "📝 Created universal excludes template -> $excludes"
+    fi
+
+    # Build candidate: start with filtered current OS list
+    local tmp1
+    tmp1=$(mktemp)
+    if [[ -s "$outfile" ]]; then
+      if [[ -s "$excludes" ]]; then
+        grep -Ev -f "$excludes" "$outfile" | sort -u > "$tmp1" || true
+      else
+        sort -u "$outfile" > "$tmp1"
+      fi
+    fi
+
+    # Union with existing curated universal (if any), without overwriting it
+    if [[ -f "$universal" && -s "$universal" ]]; then
+      sort -u "$tmp1" "$universal" > "$candidate"
+    else
+      mv "$tmp1" "$candidate"
+    fi
+    rm -f "$tmp1" 2>/dev/null || true
+
+    echo "💾 Generated candidate universal list -> $candidate"
+    echo "➡️  Review and promote if OK: cp -f '$candidate' '$universal'"
+  fi
 }
 
 # --- dconf generic backup helper ---
@@ -183,8 +237,125 @@ backup_kde() {
   echo "💾 KDE plasmoids -> $outdir"
 }
 
+# --- Dev backups: Python ---
+backup_python() {
+  local base="$NON_STOW_DIR/dev/python"
+  local venv_out="$base/venvs"
+  mkdir_p "$base" && mkdir_p "$venv_out"
+
+  # Global Python3 site-packages
+  if command -v python3 >/dev/null 2>&1 && python3 -m pip --version >/dev/null 2>&1; then
+    local req="$base/global-requirements-python3.txt"
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "🔍 WOULD: python3 -m pip freeze > '$req'"
+    else
+      python3 -m pip freeze > "$req" 2>/dev/null || true
+      echo "💾 Python3 global requirements -> $req"
+    fi
+  else
+    echo "🟡 python3/pip not found; skipping global Python backup"
+  fi
+
+  # pyenv versions list
+  if command -v pyenv >/dev/null 2>&1; then
+    local pe="$base/pyenv-versions.txt"
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "🔍 WOULD: pyenv versions --bare > '$pe'"
+    else
+      pyenv versions --bare > "$pe" 2>/dev/null || true
+      echo "💾 pyenv versions -> $pe"
+    fi
+  fi
+
+  # Common virtualenv locations
+  local roots=("$HOME/.virtualenvs" "$HOME/.venvs" "$HOME/venvs")
+  for r in "${roots[@]}"; do
+    [[ -d "$r" ]] || continue
+    shopt -s nullglob
+    for vdir in "$r"/*; do
+      [[ -d "$vdir" && -x "$vdir/bin/pip" ]] || continue
+      local name
+      name=$(basename "$vdir")
+      local out="$venv_out/${name}-requirements.txt"
+      if [[ "$DRY_RUN" == true ]]; then
+        echo "🔍 WOULD: '$vdir/bin/pip' freeze > '$out'"
+      else
+        "$vdir/bin/pip" freeze > "$out" 2>/dev/null || true
+        echo "💾 Venv '$name' requirements -> $out"
+      fi
+    done
+    shopt -u nullglob
+  done
+
+  # Single-project venvs at $HOME (common names)
+  for single in "$HOME/.venv" "$HOME/venv"; do
+    if [[ -d "$single" && -x "$single/bin/pip" ]]; then
+      local out="$venv_out/$(basename "$single")-requirements.txt"
+      if [[ "$DRY_RUN" == true ]]; then
+        echo "🔍 WOULD: '$single/bin/pip' freeze > '$out'"
+      else
+        "$single/bin/pip" freeze > "$out" 2>/dev/null || true
+        echo "💾 Venv '$(basename "$single")' requirements -> $out"
+      fi
+    fi
+  done
+}
+
+# --- Dev backups: Node/NPM ---
+backup_node() {
+  local base="$NON_STOW_DIR/dev/node"
+  mkdir_p "$base"
+
+  # Node current version
+  if command -v node >/dev/null 2>&1; then
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "🔍 WOULD: node -v > '$base/node-current-version.txt'"
+    else
+      node -v > "$base/node-current-version.txt" 2>/dev/null || true
+      echo "💾 Node current version -> $base/node-current-version.txt"
+    fi
+  fi
+
+  # Installed Node versions from common managers
+  local versions_file="$base/node-installed-versions.txt"
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "🔍 WOULD: detect nvm/fnm/asdf installed node versions -> '$versions_file'"
+  else
+    : > "$versions_file"
+    # nvm directory listing
+    if [[ -d "$HOME/.nvm/versions/node" ]]; then
+      find "$HOME/.nvm/versions/node" -maxdepth 1 -mindepth 1 -type d -printf "%f\n" 2>/dev/null | sort -u >> "$versions_file" || true
+    fi
+    # fnm directory listing
+    if [[ -d "$HOME/.fnm/node-versions" ]]; then
+      find "$HOME/.fnm/node-versions" -maxdepth 1 -mindepth 1 -type d -printf "%f\n" 2>/dev/null | sort -u >> "$versions_file" || true
+    fi
+    # asdf directory listing
+    if [[ -d "$HOME/.asdf/installs/nodejs" ]]; then
+      find "$HOME/.asdf/installs/nodejs" -maxdepth 1 -mindepth 1 -type d -printf "%f\n" 2>/dev/null | sort -u >> "$versions_file" || true
+    fi
+    sed -i '/^$/d' "$versions_file" 2>/dev/null || true
+    [[ -s "$versions_file" ]] && echo "💾 Node installed versions -> $versions_file" || rm -f "$versions_file" 2>/dev/null || true
+  fi
+
+  # Global npm packages
+  if command -v npm >/dev/null 2>&1; then
+    local npmlist="$base/npm-global-packages.txt"
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "🔍 WOULD: npm -g ls --depth=0 --parseable | tail -n +2 | xargs -n1 basename | sort -u > '$npmlist'"
+    else
+      npm -g ls --depth=0 --parseable=true 2>/dev/null | tail -n +2 | xargs -n1 basename | sort -u > "$npmlist" || true
+      echo "💾 npm global packages -> $npmlist"
+    fi
+  else
+    echo "🟡 npm not found; skipping npm global packages backup"
+  fi
+}
+
 # --- Run tasks ---
 export_packages
+backup_python
+backup_node
 case "$DE_ID" in
   gnome)    backup_gnome ;;
   cinnamon) backup_cinnamon ;;
@@ -195,4 +366,4 @@ case "$DE_ID" in
   *)        echo "🟡 Desktop '$DE_ID' not specifically supported for backup. Skipping." ;;
 esac
 
-echo "✅ Backup complete (minimal). Files saved under: $NON_STOW_DIR"
+echo "✅ Backup complete. Files saved under: $NON_STOW_DIR"

@@ -109,6 +109,10 @@ bash -lc 'sudo dnf -y install stow || true; git clone https://github.com/Ajaydud
 
 backup-dotfiles.sh
 - Saves: `non_stow/packages/<os>-packages.txt` and DE settings (GNOME/KDE/Xfce/MATE/Cinnamon/COSMIC)
+- Builds a filtered candidate for `non_stow/packages/universal-packages.txt` at `non_stow/packages/.generated/universal-candidate.txt` using regex excludes in `non_stow/packages/universal-excludes.txt`
+- Backs up developer environments:
+  - Python: global `pip freeze` to `non_stow/dev/python/global-requirements-python3.txt`; per-venv freezes under `non_stow/dev/python/venvs/*.txt`; pyenv versions to `non_stow/dev/python/pyenv-versions.txt`
+  - Node: Node current version to `non_stow/dev/node/node-current-version.txt`; installed versions discovered from nvm/fnm/asdf to `non_stow/dev/node/node-installed-versions.txt`; global npm packages to `non_stow/dev/node/npm-global-packages.txt`
 - Usage:
 ```bash
 bash backup-dotfiles.sh --dry-run  # preview
@@ -116,7 +120,15 @@ bash backup-dotfiles.sh            # run
 ```
 
 restore-dotfiles.sh
-- Ensures Stow is present, stows packages, installs from `non_stow/packages/<os>-packages.txt`, restores DE settings
+- Ensures Stow is present, stows packages, installs packages, restores DE settings
+- Package restore: prefers `non_stow/packages/<os>-packages.txt`, falls back to `non_stow/packages/universal-packages.txt` if OS file is missing/empty
+- Restores developer environments when backups exist:
+  - Python: installs user-site packages from `non_stow/dev/python/global-requirements-python3.txt`; recreates venvs under `~/.venvs/<name>` (or existing roots) from `non_stow/dev/python/venvs/*-requirements.txt`
+  - Node: installs Node versions (if nvm/fnm/asdf present) from `non_stow/dev/node/node-installed-versions.txt`; installs global npm packages from `non_stow/dev/node/npm-global-packages.txt`
+- To curate universal list safely: the backup script writes a filtered candidate at `non_stow/packages/.generated/universal-candidate.txt` using regex excludes from `non_stow/packages/universal-excludes.txt`. Promote when satisfied:
+```bash
+cp -f ~/.dotfiles/non_stow/packages/.generated/universal-candidate.txt ~/.dotfiles/non_stow/packages/universal-packages.txt
+```
 - Usage:
 ```bash
 bash restore-dotfiles.sh --dry-run # preview

@@ -15,6 +15,9 @@
 ^non_stow$
 ^scripts
 
+# Dev environment backups (ensure never stowed)
+^non_stow/dev
+
 # Assets not destined for $HOME
 ^wallpapers$
 
