@@ -1,6 +1,15 @@
 ############################################
 # Starship Prompt
 ############################################
+# Detect if inside tmux
+if [[ -n "$TMUX" ]]; then
+  # In tmux session → use special config
+  export STARSHIP_CONFIG="$HOME/.config/starship-tmux.toml"
+else
+  # Normal terminal → use default config
+  export STARSHIP_CONFIG="$HOME/.config/starship.toml"
+fi
+
 # Modern, customizable shell prompt
 eval "$(starship init zsh)"
 

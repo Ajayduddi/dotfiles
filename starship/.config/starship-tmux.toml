@@ -1,0 +1,41 @@
+# ~/.config/starship.toml
+
+[directory]
+truncation_length = 0
+style = "bold blue"   # Change this to any color you like
+format = "[$path]($style) ${custom.dirstate}"  # 👈 added a space after [$path]
+
+[custom.dirstate]
+command = """
+/usr/bin/env zsh -lc '
+prevfile="/tmp/starship_prev_pwd_$(id -u)"
+
+prev=""
+if [[ -f "$prevfile" ]]; then
+  prev=$(<"$prevfile")
+fi
+
+pwd="$PWD"
+
+if [[ "$pwd" != "$prev" ]]; then
+  marker="➜ "
+else
+  marker="$ "
+fi
+
+if [[ ! -d "$pwd" ]]; then
+  x=" ✖"
+else
+  x=""
+fi
+
+# Space after path (x already has leading space if ✖ is present)
+printf "%s%s" "$x" "\n$marker"
+
+# Save current pwd for next time
+print -n -- "$pwd" >| "$prevfile"
+'
+"""
+when = "always"
+style = "bold yellow"
+
