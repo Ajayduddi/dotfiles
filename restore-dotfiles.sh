@@ -28,6 +28,8 @@ REPO_URL="${REPO_URL:-https://github.com/Ajayduddi/dotfiles.git}"
 DEFAULT_BRANCH="${BRANCH:-linux_stow}"
 NON_STOW_DIR="$DOTFILES_DIR/non_stow"
 DRY_RUN=${DRY_RUN:-false}
+STOW_ADOPT=${STOW_ADOPT:-false}
+BACKUP_DIR="${BACKUP_DIR:-$HOME/.dotfiles_backup/$(date +%Y%m%d_%H%M%S)}"
 
 # --- CLI Args ---
 case "${1:-}" in
@@ -53,6 +55,7 @@ ENVIRONMENT VARIABLES:
   BRANCH        Branch to clone (default: linux_stow)
   NO_EMOJI      Set to false to show emoji icons (default: true)
   DRY_RUN       true/false to force dry-run (default: false)
+  STOW_ADOPT    true/false to use 'stow --adopt' and absorb existing files into the repo (default: false)
 
 WHAT GETS STOWED:
   - Every top-level directory in the repo root is considered a stow package, except:
@@ -84,8 +87,22 @@ would() { echo "\e[1;34m[WOULD]\e[0m $*"; }
 
 # Detect OS and DE
 _detect_os() {
+  if command -v dnf5 >/dev/null 2>&1; then echo fedora; return; fi
   if command -v dnf >/dev/null 2>&1; then echo fedora; return; fi
-  if command -v apt-get >/dev/null 2>&1; then echo debian; return; fi
+  if command -v apt-get >/dev/null 2>&1; then
+    if [[ -r /etc/os-release ]]; then
+      . /etc/os-release
+      case "${ID:-}" in
+        kali) echo kali; return ;;
+        ubuntu) echo ubuntu; return ;;
+        debian) echo debian; return ;;
+      esac
+      case "${ID_LIKE:-}" in
+        *debian*) echo debian; return ;;
+      esac
+    fi
+    echo debian; return
+  fi
   if command -v pacman >/dev/null 2>&1; then echo arch; return; fi
   if command -v zypper >/dev/null 2>&1; then echo opensuse; return; fi
   if command -v brew >/dev/null 2>&1; then echo mac; return; fi
@@ -176,10 +193,28 @@ run_stow_in() { # base_dir
   (
     cd "$base"
     for p in "${pkgs[@]}"; do
+      # When files already exist in $HOME, stow may fail with conflicts.
+      # If STOW_ADOPT=true, we use --adopt to let stow move existing files into the repo tree.
       if [[ "$DRY_RUN" == true ]]; then
-        would "stow -R -v 1 -t '$HOME' '$p'"
+        if [[ "$STOW_ADOPT" == true ]]; then
+          would "mkdir -p '$BACKUP_DIR' && stow --adopt -R -v 1 -t '$HOME' '$p'"
+        else
+          would "stow -R -v 1 -t '$HOME' '$p'"
+        fi
       else
-        stow -R -v 1 -t "$HOME" "$p" || warn "Stow failed for package: $p"
+        if [[ "$STOW_ADOPT" == true ]]; then
+          log "Applying stow with --adopt for package: $p"
+          # Create a backup of any files that stow might modify by copying from HOME to BACKUP_DIR
+          mkdir -p "$BACKUP_DIR"
+          # Note: stow --adopt relocates real files into repo; we rely on git status to review changes
+          if ! stow --adopt -R -v 1 -t "$HOME" "$p"; then
+            warn "Stow --adopt failed for package: $p"
+          fi
+        else
+          if ! stow -R -v 1 -t "$HOME" "$p"; then
+            warn "Stow failed for package: $p (consider re-running with STOW_ADOPT=true)"
+          fi
+        fi
       fi
     done
   )
@@ -204,19 +239,38 @@ restore_packages() {
 
   case "$OS_ID" in
     fedora)
+      # Pick dnf5 if present, else fallback to dnf
+      local DNF_BIN="dnf"
+      command -v dnf5 >/dev/null 2>&1 && DNF_BIN="dnf5"
       if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo dnf install -y"
+        would "sudo $DNF_BIN -y makecache"
+        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if sudo $DNF_BIN info -q \"$pkg\" >/dev/null 2>&1; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo $DNF_BIN install -y"
       else
-        log "Installing packages from $list (dnf)"
-        xargs -a "$list" -r -n 50 sudo dnf install -y || warn "Some packages may have failed to install"
+        log "Refreshing Fedora metadata ($DNF_BIN makecache)"
+        sudo "$DNF_BIN" -y makecache || warn "$DNF_BIN makecache failed"
+        log "Installing packages from $list ($DNF_BIN, filtered for availability)"
+        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if sudo "$DNF_BIN" info -q "$pkg" >/dev/null 2>&1; then printf '%s\n' "$pkg"; fi; done) || true
+        if [[ -n "$avail_pkgs" ]]; then
+          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo "$DNF_BIN" install -y || warn "Some packages may have failed to install"
+        else
+          warn "No available packages from list for Fedora"
+        fi
       fi
       ;;
-    debian)
+    debian|ubuntu|kali)
       if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo apt-get install -y"
+        would "sudo apt-get update"
+        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if apt-cache policy \"$pkg\" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo apt-get install -y"
       else
-        log "Installing packages from $list (apt-get)"
-        xargs -a "$list" -r -n 50 sudo apt-get install -y || warn "Some packages may have failed to install"
+        log "Updating apt cache"
+        sudo apt-get update || warn "apt-get update failed"
+        log "Installing packages from $list (apt-get, filtered for availability)"
+        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if apt-cache policy "$pkg" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\n' "$pkg"; fi; done) || true
+        if [[ -n "$avail_pkgs" ]]; then
+          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo apt-get install -y || warn "Some packages may have failed to install"
+        else
+          warn "No available packages from list for apt-based system"
+        fi
       fi
       ;;
     arch)

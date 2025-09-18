@@ -48,7 +48,7 @@ export const DynamicTransparency = class {
   }
 
   updateExternalStyle() {
-    this._setBackground()
+    this._setStyle()
   }
 
   _bindSignals() {
@@ -85,6 +85,16 @@ export const DynamicTransparency = class {
       [
         SETTINGS,
         [
+          'changed::trans-use-border',
+          'changed::trans-border-use-custom-color',
+          'changed::trans-border-custom-color',
+          'changed::trans-border-width',
+        ],
+        () => this._updateBorderAndSet(),
+      ],
+      [
+        SETTINGS,
+        [
           'changed::trans-dynamic-behavior',
           'changed::trans-use-dynamic-opacity',
           'changed::trans-dynamic-distance',
@@ -103,7 +113,7 @@ export const DynamicTransparency = class {
     this._proximityManager.removeWatch(this._proximityWatchId)
 
     if (SETTINGS.get_boolean('trans-use-dynamic-opacity')) {
-      let isVertical = this._dtpPanel.checkIfVertical()
+      let isVertical = this._dtpPanel.geom.vertical
       let threshold = SETTINGS.get_int('trans-dynamic-distance')
 
       this._windowOverlap = false
@@ -133,24 +143,32 @@ export const DynamicTransparency = class {
 
     this._updateColor(themeBackground)
     this._updateAlpha(themeBackground)
+    this._updateBorder()
+    this._updateBackground()
     this._updateGradient()
-    this._setBackground()
-    this._setGradient()
+    this._setStyle()
   }
 
   _updateColorAndSet() {
     this._updateColor()
-    this._setBackground()
+    this._updateBackground()
+    this._setStyle()
   }
 
   _updateAlphaAndSet() {
     this._updateAlpha()
-    this._setBackground()
+    this._updateBackground()
+    this._setStyle()
+  }
+
+  _updateBorderAndSet() {
+    this._updateBorder()
+    this._setStyle()
   }
 
   _updateGradientAndSet() {
     this._updateGradient()
-    this._setGradient()
+    this._setStyle()
   }
 
   _updateColor(themeBackground) {
@@ -173,13 +191,46 @@ export const DynamicTransparency = class {
     }
   }
 
+  _updateBorder() {
+    let rgba = this._dtpPanel._getDefaultLineColor(
+      Utils.checkIfColorIsBright(this.backgroundColorRgb),
+    ) // supply parameter manually or else an exception (something is undefined) will arise
+    const isLineCustom = SETTINGS.get_boolean('trans-border-use-custom-color')
+    rgba = isLineCustom
+      ? SETTINGS.get_string('trans-border-custom-color')
+      : rgba
+
+    const showBorder = SETTINGS.get_boolean('trans-use-border')
+    const borderWidth = SETTINGS.get_int('trans-border-width')
+
+    const position = this._dtpPanel.getPosition()
+    let borderPosition = ''
+    if (position == St.Side.LEFT) {
+      borderPosition = 'right'
+    }
+    if (position == St.Side.RIGHT) {
+      borderPosition = 'left'
+    }
+    if (position == St.Side.TOP) {
+      borderPosition = 'bottom'
+    }
+    if (position == St.Side.BOTTOM) {
+      borderPosition = 'top'
+    }
+
+    const style = `border: 0 solid ${rgba}; border-${borderPosition}-width:${borderWidth}px; `
+    this._borderStyle = showBorder ? style : ''
+  }
+
   _updateGradient() {
     this._gradientStyle = ''
 
     if (SETTINGS.get_boolean('trans-use-custom-gradient')) {
+      this._backgroundStyle =
+        'background: none; border-image: none; background-image: none;'
       this._gradientStyle +=
         'background-gradient-direction: ' +
-        (this._dtpPanel.checkIfVertical() ? 'horizontal;' : 'vertical;') +
+        (this._dtpPanel.geom.vertical ? 'horizontal;' : 'vertical;') +
         'background-gradient-start: ' +
         Utils.getrgbaColor(
           SETTINGS.get_string('trans-gradient-top-color'),
@@ -190,30 +241,28 @@ export const DynamicTransparency = class {
           SETTINGS.get_string('trans-gradient-bottom-color'),
           SETTINGS.get_double('trans-gradient-bottom-opacity'),
         )
+    } else {
+      this._updateBackground()
     }
   }
 
-  _setBackground() {
+  _updateBackground() {
     this.currentBackgroundColor = Utils.getrgbaColor(
       this.backgroundColorRgb,
       this.alpha,
     )
 
-    let transition = 'transition-duration:' + this.animationDuration
-
-    this._dtpPanel.set_style(
-      'background-color: ' + this.currentBackgroundColor + transition,
-    )
+    this._backgroundStyle = `background-color: ${this.currentBackgroundColor}`
   }
 
-  _setGradient() {
+  _setStyle() {
+    const transition = 'transition-duration:' + this.animationDuration
+
     this._dtpPanel.panel.set_style(
-      'background: none; ' +
-        'border-image: none; ' +
-        'background-image: none; ' +
+      transition +
+        this._backgroundStyle +
         this._gradientStyle +
-        'transition-duration:' +
-        this.animationDuration,
+        this._borderStyle,
     )
   }
 

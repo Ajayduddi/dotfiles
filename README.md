@@ -63,10 +63,10 @@ Not stowed / helpers:
 
 1) Install Stow
 ```bash
-# Fedora
-sudo dnf install -y stow
+# Fedora (dnf5 or dnf)
+sudo dnf5 install -y stow || sudo dnf install -y stow
 
-# Debian/Ubuntu
+# Debian/Ubuntu/Kali
 sudo apt-get update && sudo apt-get install -y stow
 
 # Arch
@@ -100,7 +100,7 @@ stow -D -t "$HOME" zsh
 
 > One‑liner bootstrap (fresh machine):
 ```bash
-bash -lc 'sudo dnf -y install stow || true; git clone https://github.com/Ajayduddi/dotfiles.git ~/.dotfiles && cd ~/.dotfiles && stow -R -t "$HOME" .'
+bash -lc 'command -v dnf5 >/dev/null && sudo dnf5 -y install stow || command -v dnf >/dev/null && sudo dnf -y install stow || (sudo apt-get update && sudo apt-get -y install stow) || sudo pacman -Sy --noconfirm stow; git clone https://github.com/Ajayduddi/dotfiles.git ~/.dotfiles && cd ~/.dotfiles && stow -R -t "$HOME" .'
 ```
 
 ---
@@ -122,6 +122,8 @@ bash backup-dotfiles.sh            # run
 restore-dotfiles.sh
 - Ensures Stow is present, stows packages, installs packages, restores DE settings
 - Package restore: prefers `non_stow/packages/<os>-packages.txt`, falls back to `non_stow/packages/universal-packages.txt` if OS file is missing/empty
+- Fedora: uses `dnf5` when available (falls back to `dnf`), refreshes metadata, installs only packages that exist in repos
+- Debian/Ubuntu/Kali: updates apt cache and installs only packages that are available in APT (filters list)
 - Restores developer environments when backups exist:
   - Python: installs user-site packages from `non_stow/dev/python/global-requirements-python3.txt`; recreates venvs under `~/.venvs/<name>` (or existing roots) from `non_stow/dev/python/venvs/*-requirements.txt`
   - Node: installs Node versions (if nvm/fnm/asdf present) from `non_stow/dev/node/node-installed-versions.txt`; installs global npm packages from `non_stow/dev/node/npm-global-packages.txt`
@@ -131,8 +133,11 @@ cp -f ~/.dotfiles/non_stow/packages/.generated/universal-candidate.txt ~/.dotfil
 ```
 - Usage:
 ```bash
-bash restore-dotfiles.sh --dry-run # preview
-bash restore-dotfiles.sh           # run
+# Preview all actions
+bash restore-dotfiles.sh --dry-run
+
+# Apply, and adopt pre-existing files in $HOME into the repo if stow conflicts occur
+STOW_ADOPT=true bash restore-dotfiles.sh
 ```
 
 Only reinstall packages (Fedora example):
@@ -153,6 +158,9 @@ xargs -a ~/.dotfiles/non_stow/packages/fedora-packages.txt -r sudo dnf install -
 - Idempotent: `stow -R -t "$HOME" .` is safe any time.
 - Ignore extras via `.stowignore` / `.stow-global-ignore`.
 - Before deleting a package dir: `stow -D -t "$HOME" <pkg>`.
+- If stow fails due to existing files, either:
+  - Run with adoption to absorb files into the repo: `STOW_ADOPT=true bash restore-dotfiles.sh`
+  - Or manually move/backup the conflicting files, then re-run `stow -R`.
 
 ---
 

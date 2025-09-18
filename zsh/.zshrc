@@ -45,6 +45,55 @@ autoload -U compinit && compinit -u
 # Enable colors
 autoload -U colors && colors
 
+# LS_COLORS: improved palette with distinct colors per file type
+# - Directories/link/executables are clear; no bright backgrounds on dirs
+# - Many common extensions mapped for quick visual scanning
+if command -v dircolors >/dev/null 2>&1; then
+  eval "$(dircolors -b)"
+fi
+# Prefer vivid (256-color) if available; fallback to static LS_COLORS above
+if command -v vivid >/dev/null 2>&1; then
+  export LS_COLORS="$(vivid -m 8-bit generate molokai)"
+else
+  export LS_COLORS="${LS_COLORS}:no=00:fi=00:di=01;34:ln=01;36:ex=01;32:so=01;35:pi=01;33:bd=01;33:cd=01;33:su=01;41:sg=01;43:tw=01;34:ow=01;34:st=01;34:or=01;31:mi=01;31:\
+*.sh=01;32:*.bash=01;32:*.zsh=01;32:*.py=01;32:*.rb=01;31:*.pl=01;33:*.js=01;33:*.ts=01;36:*.jsx=01;33:*.tsx=01;36:*.go=01;36:*.rs=01;33:*.c=01;36:*.h=36:*.cpp=01;36:*.hpp=36:*.java=01;33:*.kt=01;33:*.swift=01;33:\
+*.md=01;35:*.txt=00;37:*.rst=00;37:*.org=00;37:\
+*.json=36:*.yaml=36:*.yml=36:*.toml=36:*.ini=36:*.conf=36:\
+*.jpg=01;33:*.jpeg=01;33:*.png=01;33:*.gif=01;33:*.bmp=01;33:*.tiff=01;33:*.svg=01;33:*.ico=01;33:*.webp=01;33:\
+*.mp3=00;36:*.wav=00;36:*.flac=00;36:*.ogg=00;36:*.m4a=00;36:*.aac=00;36:*.opus=00;36:\
+*.mp4=01;35:*.mkv=01;35:*.webm=01;35:*.avi=01;35:*.mov=01;35:*.wmv=01;35:*.flv=01;35:\
+*.zip=01;31:*.tar=01;31:*.gz=01;31:*.bz2=01;31:*.xz=01;31:*.7z=01;31:*.rar=01;31:*.tgz=01;31:*.tbz=01;31:*.tbz2=01;31:*.txz=01;31:*.zst=01;31:\
+*.pdf=01;31:*.doc=01;31:*.docx=01;31:*.xls=01;31:*.xlsx=01;31:*.ppt=01;31:*.pptx=01;31"
+fi
+
+# Colored ls defaults and helpers
+alias ls='ls --color=auto'
+alias ll='ls -lh --color=auto --group-directories-first'
+alias la='ls -A --color=auto --group-directories-first'
+
+# Show a quick legend of key LS_COLORS categories
+lscolor-legend() {
+  local -a rows=(
+    "01;34 [dir]        folder/"
+    "01;36 [link]       link -> target"
+    "01;32 [exec]       run.sh*"
+    "01;31 [archive]    archive.zip"
+    "01;33 [image]      image.png"
+    "01;35 [video]      video.mkv"
+    "00;36 [audio]      song.mp3"
+    "36    [json]       config.json"
+    "36    [yaml]       config.yaml"
+    "01;35 [markdown]   README.md"
+    "01;32 [python]     script.py"
+    "01;33 [javascript] app.js"
+    "01;36 [c/c++]      main.c"
+  )
+  echo "LS_COLORS legend (sample):"
+  for row in "${rows[@]}"; do
+    printf "\e[%sm%s\e[0m\n" ${row%% *} "${row#* }"
+  done
+}
+
 # Autosuggestions
 if [ -f "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
     source "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
@@ -229,16 +278,17 @@ setopt hist_save_no_dups        # Avoid saving duplicates
 setopt extended_history         # Add timestamps
 
 ############################################
-# Security & Environment
-############################################
-[ -f "$HOME/.dotfiles/shell/history_security.sh" ] && source "$HOME/.dotfiles/shell/history_security.sh"
-[ -f "$HOME/.dotfiles/shell/secure_env.sh" ] && source "$HOME/.dotfiles/shell/secure_env.sh"
-
-############################################
 # Editor
 ############################################
 export VISUAL=nano
 export EDITOR="$VISUAL"
+
+############################################
+# zoxide (smarter cd)
+############################################
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init --cmd cd zsh)"
+fi
 
 ############################################
 # Aliases

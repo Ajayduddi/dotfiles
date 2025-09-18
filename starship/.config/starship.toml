@@ -1,162 +1,112 @@
-"$schema" = "https://starship.rs/config-schema.json"
-
-command_timeout = 1500
-
+# Single-line prompt with RGB colors
 format = """
-[](fg:color_bg1)\
-$os\
-$username\
-$hostname\
-[ ](fg:color_bg1 bg:color_bg2)\
-$directory\
-[ ](fg:color_bg2 bg:color_bg3)\
-$git_branch\
-$git_status\
-[ ](fg:color_bg3 bg:color_bg4)\
-$c\
-$dotnet\
-$java\
-$kotlin\
-$nodejs\
-[ ](fg:color_bg4 bg:color_bg5)\
-$cmd_duration\
-[ ](fg:color_bg5)\
-\n$character\
+$os$directory$git_branch$git_status$package$java$nodejs$python$golang$rust$docker_context$kubernetes$battery$fill$custom$time
+$character
 """
 
-palette = "ccswe_dark"
-
-[palettes.ccswe_dark]
-color_bg1 = "#336699"
-color_bg2 = "#2f5783"
-color_bg3 = "#294262"
-color_bg4 = "#232f44"
-color_bg5 = "#1d2230"
-
-color_blue = "#769ff0"
-color_gray = "#999999"
-color_red = "#eb4d28"
-color_white = "#f2f2f2"
-
+# Prompt character
 [character]
-error_symbol = "[❯](bold color_red)"
-success_symbol = "[❯](bold color_blue)"
+success_symbol = "[❯](fg:#39ff14) "
+error_symbol = "[❯](fg:#ff3366) "
 
-[cmd_duration]
-format = "[$duration](bg:color_bg5 fg:color_gray)"
-min_time = 500
+# OS Module with per-distro RGB colors
+[os]
+disabled = false
+format = "[$symbol]($style) "
 
+[os.symbols]
+Windows = "[ ](fg:#0078D6 bold)"   # Windows Blue
+Ubuntu = "[ ](fg:#E95420 bold)"    # Ubuntu Orange
+Debian = "[ ](fg:#D70A53 bold)"    # Debian Magenta
+Fedora = "[ ](fg:#A2AAAD bold)"    # Fedora Blue  #294172 
+Arch = "[ ](fg:#1793D1 bold)"      # Arch Cyan
+Macos = "[ ](fg:#A2AAAD bold)"     # macOS Grey
+Linux = "[ ](fg:#FFCC00 bold)"     # Generic Linux Yellow
+
+
+# Directory (Aqua Cyan)
 [directory]
-style = "bg:color_bg2 fg:color_white"
-format = "[$path]($style)"
+style = "fg:#66ccff bold"
 truncation_length = 3
-truncation_symbol = "…/"
+truncate_to_repo = true
+format = "[$path]($style) "
 
-[directory.substitutions]
-"Documents" = "󰈙 "
-"Downloads" = " "
-"Music" = " "
-"Pictures" = " "
-
+# Git branch (Purple Pink)
 [git_branch]
-symbol = ""
-style = "bg:color_bg3 fg:color_blue"
-format = "[$symbol $branch]($style)"
+symbol = "🌱 "
+style = "fg:#d291ff bold"
+format = "[$symbol$branch]($style) "
 
 [git_status]
-ahead = "⇡${count}"
-behind = "⇣${count}"
-deleted = ""
-diverged = "⇕⇡${ahead_count}⇣${behind_count}"
-format = '[( $all_status$ahead_behind)]($style)'
-style = "bold bg:color_bg3 fg:color_red"
+style = "fg:#ff6666 bold"
+format = '([\[$all_status$ahead_behind\]]($style)) '
 
-[hostname]
-format = "[@$hostname]($style)"
-ssh_only = true
-ssh_symbol = " "
-style = "bg:color_bg1 fg:color_white"
+# Package versions (Amber Yellow)
+[package]
+symbol = "📦 "
+style = "fg:#ffcc66 bold"
+format = "via [$symbol$version]($style) "
 
-[os]
-format = "[$symbol]($style)"
-style = "bg:color_bg1 fg:color_white"
-disabled = false
-
-[username]
-disabled = false
-format = "[$user]($style)"
-show_always = false
-style_root = "bg:color_bg1 fg:color_red"
-style_user = "bg:color_bg1 fg:color_white"
-
-# Code symbols
-[c]
-format = '[$symbol]($style)'
-style = "bg:color_bg4 fg:#6295CB"
-symbol = " "
-
-[dotnet]
-format = '[$symbol]($style)'
-style = "bg:color_bg4 fg:#1180C3"
-symbol = " "
-
+# Java / Node / Python / Go / Rust (reuse amber yellow)
 [java]
-format = '[$symbol]($style)'
-style = "bg:color_bg4 fg:#F7901E"
-symbol = " "
-
-[kotlin]
-format = '[$symbol]($style)'
-style = "bg:color_bg4 fg:#C017E4"
-symbol = " "
+symbol = "☕ "
+style = "fg:#ff9966 bold"
+format = "via [$symbol$version]($style) "
 
 [nodejs]
-style = "bg:color_bg4 fg:#5FA04E"
-format = '[$symbol($version)]($style)'
-symbol = " "
+symbol = "⬢ "
+style = "fg:#66ff66 bold"
+format = "via [$symbol$version]($style) "
 
-# OS Symbols
-[os.symbols]
-Alpaquita = " "
-Alpine = " "
-AlmaLinux = " "
-Amazon = " "
-Android = " "
-Arch = " "
-Artix = " "
-CentOS = " "
-Debian = " "
-DragonFly = " "
-Emscripten = " "
-EndeavourOS = " "
-Fedora = " "
-FreeBSD = " "
-Garuda = "󰛓 "
-Gentoo = " "
-HardenedBSD = "󰞌 "
-Illumos = "󰈸 "
-Kali = " "
-Linux = " "
-Mabox = " "
-Macos = " "
-Manjaro = " "
-Mariner = " "
-MidnightBSD = " "
-Mint = " "
-NetBSD = " "
-NixOS = " "
-OpenBSD = "󰈺 "
-openSUSE = " "
-OracleLinux = "󰌷 "
-Pop = " "
-Raspbian = " "
-Redhat = " "
-RedHatEnterprise = " "
-RockyLinux = " "
-Redox = "󰀘 "
-Solus = "󰠳 "
-SUSE = " "
-Ubuntu = " "
-Unknown = " "
-Void = " "
-Windows = "󰍲 "
+[python]
+symbol = "🐍 "
+style = "fg:#66ccff bold"
+format = "via [$symbol$version]($style) "
+
+[golang]
+symbol = " "
+style = "fg:#00ccff bold"
+format = "via [$symbol$version]($style) "
+
+[rust]
+symbol = "🦀 "
+style = "fg:#ff5050 bold"
+format = "via [$symbol$version]($style) "
+
+[docker_context]
+symbol = "🐳 "
+style = "fg:#00aaff bold"
+format = "via [$symbol$context]($style) "
+
+[kubernetes]
+symbol = "⎈ "
+style = "fg:#ff66ff bold"
+format = 'on [$symbol$context ($namespace)]($style) '
+
+# Battery
+[battery]
+disabled = false
+full_symbol = "🔋"
+charging_symbol = "⚡"
+discharging_symbol = "🔌"
+unknown_symbol = "❓"
+format = " [$symbol$percentage] "
+
+# Right filler
+[fill]
+symbol = " " # ⦁
+
+# System Info (Lime Green)
+[custom.sysinfo]
+command = "echo   RAM:$(free -m | awk '/Mem:/ {printf \"%.1f/%.1fGB\", $3/1024,$2/1024}')"
+shell = ["bash"]
+when = "true"
+format = "[$output](fg:#66ccff bold) "
+
+# Time (Electric Blue)
+[time]
+disabled = false
+time_format = "%H:%M:%S"
+style = "fg:#66ccff bold"
+format = " 🕒 [$time]($style)"
+
