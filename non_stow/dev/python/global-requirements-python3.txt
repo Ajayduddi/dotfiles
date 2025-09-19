@@ -54,6 +54,7 @@ magic-wormhole==0.20.0
 Mako==1.2.3
 Markdown==3.7
 MarkupSafe==3.0.2
+meson==1.7.2
 mutagen==1.47.0
 mysqlclient==2.2.5
 nftables==0.1
@@ -128,7 +129,7 @@ soupsieve==2.7
 spake2==0.9
 systemd-python==235
 termcolor==2.5.0
-tldr==3.4.0
+tldr==3.4.2
 tqdm==4.67.1
 Twisted==25.5.0
 txaio==25.6.1

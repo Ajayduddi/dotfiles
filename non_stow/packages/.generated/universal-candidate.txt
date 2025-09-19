@@ -290,6 +290,7 @@ megasync
 mesa-dri-drivers
 mesa-libEGL
 mesa-vulkan-drivers
+meson
 microcode_ctl
 ModemManager
 mozilla-openh264
@@ -422,6 +423,7 @@ rygel
 rzip
 samba-client
 sane-backends-drivers-scanners
+sassc
 sdl2-compat
 SDL3
 selinux-policy-targeted
