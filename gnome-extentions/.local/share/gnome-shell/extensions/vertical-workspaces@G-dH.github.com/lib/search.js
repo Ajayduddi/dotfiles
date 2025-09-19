@@ -152,7 +152,9 @@ const AppSearchProvider = {
             });
         }
 
-        let pattern = terms.join(' ');
+        let _terms = [];
+        terms.forEach(t => _terms.push(t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()));
+
 
         let appInfoList = Shell.AppSystem.get_default().get_installed();
 
@@ -176,12 +178,16 @@ const AppSearchProvider = {
                 if (shouldShow) {
                     let id = appInfo.get_id().split('.');
                     id = id[id.length - 2] || '';
-                    let baseName = appInfo.get_string('Name') || '';
+                    let baseName = appInfo.get_name() || '';
                     let dispName = appInfo.get_display_name() || '';
-                    let gName = appInfo.get_generic_name() || '';
+                    // Since GNOME 49.beta Gio.DesktopAppInfo is missing some methods
+                    // get_generic_name(), get_string(), ...
+                    let gName = (appInfo.get_generic_name ? appInfo.get_generic_name() : '') || '';
                     let description = appInfo.get_description() || '';
-                    let categories = appInfo.get_string('Categories')?.replace(/;/g, ' ') || '';
-                    let keywords = appInfo.get_string('Keywords')?.replace(/;/g, ' ') || '';
+                    // eslint-disable-next-line no-useless-call
+                    let categories = appInfo.get_categories?.call(appInfo)?.replace(/;/g, ' ') || '';
+                    // eslint-disable-next-line no-useless-call
+                    let keywords = appInfo.get_keywords?.call(appInfo)?.join(' ') || '';
                     name = `${dispName} ${id}`;
                     let packageType = '';
                     if (cmd?.includes('snapd'))
@@ -196,10 +202,10 @@ const AppSearchProvider = {
 
             let m = -1;
             if (shouldShow && opt.SEARCH_FUZZY) {
-                m = Me.Util.fuzzyMatch(pattern, name);
-                m = (m + Me.Util.strictMatch(pattern, string)) / 2;
+                m = Me.Util.fuzzyMatch(_terms, name);
+                m = (m + Me.Util.strictMatch(_terms, string)) / 2;
             } else if (shouldShow) {
-                m = Me.Util.strictMatch(pattern, string);
+                m = Me.Util.strictMatch(_terms, string);
             }
 
             if (m !== -1)
@@ -211,10 +217,10 @@ const AppSearchProvider = {
         appInfoList.sort((a, b) => weightList[a.get_id()] > weightList[b.get_id()]);
 
         const usage = Shell.AppUsage.get_default();
-        // sort apps by usage list
+        // Sort apps by usage list
         appInfoList.sort((a, b) => usage.compare(a.get_id(), b.get_id()));
-        // prefer apps where any word in their name starts with the pattern
-        appInfoList.sort((a, b) => Me.Util.isMoreRelevant(a.get_display_name(), b.get_display_name(), pattern));
+        // Prefer apps where any word in their name starts with the terms
+        appInfoList.sort((a, b) => Me.Util.isMoreRelevant(a.get_display_name(), b.get_display_name(), _terms));
 
         let results = appInfoList.map(app => app.get_id());
 
@@ -223,14 +229,14 @@ const AppSearchProvider = {
 
         let sysActionList = Array.from(this._systemActions._actions.keys());
         const match = opt.SEARCH_FUZZY ? Me.Util.fuzzyMatch : Me.Util.strictMatch;
-        pattern = pattern.replace(/^\.\./, '');
+        _terms[0] = _terms[0].replace(/^\.\./, '');
         sysActionList = sysActionList.filter(id =>
-            match(pattern, `${this._systemActions.getName(id)} ${this._systemActions._actions.get(id).keywords.join(' ')}`) > -1
+            match(_terms, `${this._systemActions.getName(id)} ${this._systemActions._actions.get(id).keywords.join(' ')}`) > -1
         );
         sysActionList.sort((a, b) => Me.Util.isMoreRelevant(
             `${this._systemActions.getName(a)} ${this._systemActions._actions.get(a).keywords.join(' ')}`,
             `${this._systemActions.getName(b)} ${this._systemActions._actions.get(a).keywords.join(' ')}`,
-            pattern)
+            _terms)
         );
 
         results = results.concat(sysActionList);
@@ -274,7 +280,7 @@ const AppSearchProvider = {
 
 const SystemActionIcon = GObject.registerClass({
     // Registered name should be unique
-    GTypeName: `SystemAction${Math.floor(Math.random() * 1000)}`,
+    GTypeName: `SystemAction${Math.floor(Math.random() * 100000)}`,
 }, class SystemActionIcon extends Search.GridSearchResult {
     _init(provider, metaInfo, resultsView) {
         super._init(provider, metaInfo, resultsView);
@@ -370,13 +376,19 @@ const SearchResultsView = {
         });
 
         this._scrollView.visible = haveResults;
-        this._statusBin.visible = !haveResults;
+        if (this._statusContainer) // Since GS 49
+            this._statusContainer.visible = !haveResults;
+        else
+            this._statusBin.visible = !haveResults;
 
         if (!haveResults) {
-            if (this.searchInProgress)
+            if (this.searchInProgress) {
+                this._statusSpinner?.play(); // Since GS 49
                 this._statusText.set_text(_('Searching…'));
-            else
+            } else {
+                this._statusSpinner?.stop(); // Since GS 49
                 this._statusText.set_text(_('No results.'));
+            }
         }
     },
 

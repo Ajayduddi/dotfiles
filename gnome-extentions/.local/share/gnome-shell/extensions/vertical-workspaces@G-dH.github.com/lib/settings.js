@@ -75,7 +75,6 @@ export const Options = class Options {
             searchBgBrightness: ['int', 'search-bg-brightness'],
             overviewBgBlurSigma: ['int', 'overview-bg-blur-sigma'],
             appGridBgBlurSigma: ['int', 'app-grid-bg-blur-sigma'],
-            smoothBlurTransitions: ['boolean', 'smooth-blur-transitions'],
             appGridAnimation: ['int', 'app-grid-animation'],
             searchViewAnimation: ['int', 'search-view-animation'],
             searchResultsBgStyle: ['int', 'search-results-bg-style'],
@@ -313,8 +312,9 @@ export const Options = class Options {
         this.DASH_BG_ALPHA = this.get('dashBgOpacity') / 100;
         this.DASH_BG_OPACITY = this.get('dashBgOpacity') * 2.5;
         this.DASH_BG_COLOR = this.get('dashBgColor');
-        this.DASH_BG_RADIUS = this.get('dashBgRadius');
         this.DASH_BG_LIGHT = this.DASH_BG_COLOR === 1;
+        this.DASH_BG_DARK = this.DASH_BG_COLOR === 2;
+        this.DASH_BG_RADIUS = this.get('dashBgRadius');
         this.DASH_BG_GS3_STYLE = this.get('dashBgGS3Style');
         this.DASH_POSITION = this.get('dashModule') ? this.get('dashPosition') : 2;
         this.DASH_TOP = this.DASH_POSITION === 0;
@@ -442,7 +442,7 @@ export const Options = class Options {
         this.SEARCH_MAX_ROWS = this.get('searchMaxResultsRows');
         this.SEARCH_FUZZY = this.get('searchFuzzy');
         this.SEARCH_DELAY = this.SEARCH_VIEW_ANIMATION ? 100 : 0;
-        this.SEARCH_APP_GRID_MODE = this.get('searchAppGridMode') && this.get('appDisplayModule');
+        this.SEARCH_APP_GRID_MODE = this.get('searchAppGridMode') && this.get('appDisplayModule') && this.get('searchModule');
         this.SEARCH_INCLUDE_SETTINGS = this.get('searchIncludeSettings');
 
         this.APP_GRID_ALLOW_INCOMPLETE_PAGES = this.get('appGridIncompletePages');
@@ -474,6 +474,8 @@ export const Options = class Options {
         this.APP_GRID_DASH_FIRST = this.APP_GRID_INCLUDE_DASH === 1;
 
         this.APP_GRID_NAMES_MODE = this.get('appGridNamesMode');
+        // Estimated space for 3 line title and default font
+        this.APP_GRID_RESERVED_BOTTOM_SPACE = 60;
 
         this.APP_GRID_FOLDER_ICON_SIZE = this.get('appGridFolderIconSize');
         this.APP_GRID_FOLDER_ICON_GRID = this.get('appGridFolderIconGrid');
@@ -491,11 +493,6 @@ export const Options = class Options {
         this.APP_GRID_PAGE_HEIGHT_SCALE = this.get('appGridPageHeightScale') / 100;
         // Reserve space for the search entry, if needed, to prevent it from being overlapped by the grid icons
         this.spaceReservedForSearchEntry = 0;
-        const heightThreshold = 0.8;
-        if (!this.SHOW_SEARCH_ENTRY && this.SEARCH_APP_GRID_MODE && this.APP_GRID_PAGE_HEIGHT_SCALE > heightThreshold) {
-            const scale = (this.APP_GRID_PAGE_HEIGHT_SCALE - heightThreshold) / (1 - heightThreshold);
-            this.spaceReservedForSearchEntry = Math.round(scale * 72);
-        }
         this.APP_GRID_SHOW_PAGE_ARROWS = this.get('appGridShowPageArrows');
         this.APP_GRID_REMEMBER_PAGE = this.get('appGridRememberPage');
 
@@ -573,7 +570,7 @@ export const Options = class Options {
 
         this.DELAY_STARTUP = this.get('delayStartup');
         this.DELAY_OVERVIEW_ANIMATION = true;
-        this.DELAY_PER_WINDOW = 5;
+        this.DELAY_PER_WINDOW = 4;
     }
 
     _getAnimationDirection() {

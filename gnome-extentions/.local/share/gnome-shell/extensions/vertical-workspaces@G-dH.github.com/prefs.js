@@ -109,7 +109,7 @@ export default class VShell extends ExtensionPreferences {
 
         optionList.push(itemFactory.getRowWidget(
             _('Save your configurations'),
-            _("The predefined sets of settings, which can help you with the initial configuration and exploring V-Shell's possibilities, can be renamed and overridden by your own configurations"),
+            _('Predefined sets of settings that may help you with the initial setup and exploration of V-Shell options can be overridden by your own configurations'),
             itemFactory.newLabel()
         ));
 
@@ -662,6 +662,7 @@ export default class VShell extends ExtensionPreferences {
                 [
                     [_('Default'), 0],
                     [_('Light'), 1],
+                    [_('Dark'), 2],
                 ],
                 'dashModule'
             )
@@ -1649,12 +1650,12 @@ export default class VShell extends ExtensionPreferences {
         optionList.push(
             itemFactory.getRowWidget(
                 _('Workspace Switcher Popup Mode'),
-                _('This popup shows up when you switch workspace using a keyboard shortcut or gesture outside of the overview. You can to disable the popup at all, or show it on the current monitor (the one with mouse pointer) instead of the primary.'),
+                _('This popup shows up when you switch workspace using a keyboard shortcut or gesture outside of the overview. You can disable the popup at all, or show it on the current monitor (the one with mouse pointer) instead of the primary.'),
                 itemFactory.newDropDown(),
                 'wsSwPopupMode',
                 [
                     [_('Disable'), 0],
-                    [_('Show on Primary Monitor (Default)'), 1],
+                    [_('Show on All Monitors (Default)'), 1],
                     [_('Show on Current Monitor'), 2],
                 ],
                 'workspaceSwitcherPopupModule'

@@ -164,67 +164,45 @@ const WindowPreviewCommon = {
 
         this._updateAttachedDialogs();
 
-        let clickAction = new Clutter.ClickAction();
-        clickAction.connect('clicked', act => {
-            const button = act.get_button();
-            if (button === Clutter.BUTTON_SECONDARY) {
-                if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 1) {
-                    this._closeWinAction();
-                    return Clutter.EVENT_STOP;
-                } else if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 2) {
-                    this._searchAppWindowsAction();
-                    return Clutter.EVENT_STOP;
-                } else if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 3 && global.windowThumbnails) {
-                    this._removeLaters();
-                    global.windowThumbnails?.createThumbnail(metaWindow);
-                    return Clutter.EVENT_STOP;
-                }
-            } else if (button === Clutter.BUTTON_MIDDLE) {
-                if (opt.WIN_PREVIEW_MID_BTN_ACTION === 1) {
-                    this._closeWinAction();
-                    return Clutter.EVENT_STOP;
-                } else if (opt.WIN_PREVIEW_MID_BTN_ACTION === 2) {
-                    this._searchAppWindowsAction();
-                    return Clutter.EVENT_STOP;
-                } else if (opt.WIN_PREVIEW_MID_BTN_ACTION === 3 && global.windowThumbnails) {
-                    this._removeLaters();
-                    global.windowThumbnails?.createThumbnail(metaWindow);
-                    return Clutter.EVENT_STOP;
-                }
-            }
-            return this._activate();
-        });
-
-
-        if (this._onLongPress) {
-            clickAction.connect('long-press', this._onLongPress.bind(this));
-        } else {
-            clickAction.connect('long-press', (action, actor, state) => {
-                if (state === Clutter.LongPressState.ACTIVATE)
-                    this.showOverlay(true);
-                return true;
-            });
-        }
-
-        this.connect('destroy', this._onDestroy.bind(this));
-
         this._draggable = DND.makeDraggable(this, {
             restoreOnSuccess: true,
-            manualMode: !!this._onLongPress,
+            // manualMode: !!this._onLongPress,
             dragActorMaxSize: WINDOW_DND_SIZE,
             dragActorOpacity: DRAGGING_WINDOW_OPACITY,
         });
-
-        // _draggable.addClickAction is new in GS45
-        if (this._draggable.addClickAction)
-            this._draggable.addClickAction(clickAction);
-        else
-            this.add_action(clickAction);
 
         this._draggable.connect('drag-begin', this._onDragBegin.bind(this));
         this._draggable.connect('drag-cancelled', this._onDragCancelled.bind(this));
         this._draggable.connect('drag-end', this._onDragEnd.bind(this));
         this.inDrag = false;
+
+        if (Clutter.ClickAction) {
+            const clickAction = new Clutter.ClickAction();
+            clickAction.connect('clicked', act => this._onWindowClicked(act.get_button()));
+
+            if (this._onLongPress) {
+                clickAction.connect('long-press', this._onLongPress.bind(this));
+            } else {
+                clickAction.connect('long-press', (action, actor, state) => {
+                    if (state === Clutter.LongPressState.ACTIVATE)
+                        this.showOverlay(true);
+                    return true;
+                });
+            }
+
+            // _draggable.addClickAction is new in GS45
+            this._draggable.addClickAction(clickAction);
+        } else { // Since GNOME 49.rc
+            const clickAction = new Clutter.ClickGesture();
+            clickAction.connect('recognize', gesture => this._onWindowClicked(gesture.get_button()));
+            this.add_action(clickAction);
+
+            const longPressGesture = new Clutter.LongPressGesture();
+            longPressGesture.connect('recognize', () => this.showOverlay(true));
+            this.add_action(longPressGesture);
+        }
+
+        this.connect('destroy', this._onDestroy.bind(this));
 
         this._selected = false;
         this._overlayEnabled = true;
@@ -257,22 +235,14 @@ const WindowPreviewCommon = {
         }));
 
         if (opt.WINDOW_ICON_CLICK_ACTION) {
-            const iconClickAction = new Clutter.ClickAction();
-            iconClickAction.connect('clicked', act => {
-                if (act.get_button() === Clutter.BUTTON_PRIMARY) {
-                    if (opt.WINDOW_ICON_CLICK_ACTION === 1) {
-                        this._searchAppWindowsAction();
-                        return Clutter.EVENT_STOP;
-                    } else if (opt.WINDOW_ICON_CLICK_ACTION === 2 && global.windowThumbnails) {
-                        this._removeLaters();
-                        global.windowThumbnails?.createThumbnail(metaWindow);
-                        return Clutter.EVENT_STOP;
-                    }
-                } /* else if (act.get_button() === Clutter.BUTTON_SECONDARY) {
-                    return Clutter.EVENT_STOP;
-                }*/
-                return Clutter.EVENT_PROPAGATE;
-            });
+            let iconClickAction;
+            if (Clutter.ClickAction) {
+                iconClickAction = new Clutter.ClickAction();
+                iconClickAction.connect('clicked', act => this._onWindowIconClicked(act.get_button()));
+            } else {
+                iconClickAction = new Clutter.ClickGesture();
+                iconClickAction.connect('recognize', gesture => this._onWindowClicked(gesture.get_button()));
+            }
             this._icon.add_action(iconClickAction);
         }
         const { scaleFactor } = St.ThemeContext.get_for_stage(global.stage);
@@ -292,7 +262,7 @@ const WindowPreviewCommon = {
 
         let offset, pivotY;
         const spacing = 4;
-        if (this.WIN_TITLES_POSITION_BELOW) {
+        if (opt.WIN_TITLES_POSITION_BELOW) {
             offset = scaleFactor * (ICON_SIZE * (1 - ICON_OVERLAP) + spacing);
             pivotY = 0;
         } else if (opt.WIN_TITLES_POSITION_TOP) {
@@ -387,6 +357,7 @@ const WindowPreviewCommon = {
             this._icon.scale_x = 0;
             this._icon.scale_y = 0;
             this._title.opacity = 0;
+            this._title.scale_y = 0;
         }
 
         if (opt.ALWAYS_SHOW_WIN_TITLES)
@@ -404,6 +375,61 @@ const WindowPreviewCommon = {
         } else if (!opt.DASH_ISOLATE_WS && metaWin._wsChangedConId) {
             metaWin.disconnect(metaWin._wsChangedConId);
         }
+
+        // After a new window is created
+        // the windowCenter property needs to be updated
+        this._windowCreatedSigId = global.display.connectObject(
+            'window-created',
+            () => {
+                this._windowCenter = undefined;
+            },
+            this
+        );
+    },
+
+    _onWindowClicked(button) {
+        if (button === Clutter.BUTTON_SECONDARY) {
+            if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 1) {
+                this._closeWinAction();
+                return Clutter.EVENT_STOP;
+            } else if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 2) {
+                this._searchAppWindowsAction();
+                return Clutter.EVENT_STOP;
+            } else if (opt.WIN_PREVIEW_SEC_BTN_ACTION === 3 && global.windowThumbnails) {
+                this._removeLaters();
+                global.windowThumbnails?.createThumbnail(this.metaWindow);
+                return Clutter.EVENT_STOP;
+            }
+        } else if (button === Clutter.BUTTON_MIDDLE) {
+            if (opt.WIN_PREVIEW_MID_BTN_ACTION === 1) {
+                this._closeWinAction();
+                return Clutter.EVENT_STOP;
+            } else if (opt.WIN_PREVIEW_MID_BTN_ACTION === 2) {
+                this._searchAppWindowsAction();
+                return Clutter.EVENT_STOP;
+            } else if (opt.WIN_PREVIEW_MID_BTN_ACTION === 3 && global.windowThumbnails) {
+                this._removeLaters();
+                global.windowThumbnails?.createThumbnail(this.metaWindow);
+                return Clutter.EVENT_STOP;
+            }
+        }
+        return this._activate();
+    },
+
+    _onWindowIconClicked(button) {
+        if (button === Clutter.BUTTON_PRIMARY) {
+            if (opt.WINDOW_ICON_CLICK_ACTION === 1) {
+                this._searchAppWindowsAction();
+                return Clutter.EVENT_STOP;
+            } else if (opt.WINDOW_ICON_CLICK_ACTION === 2 && global.windowThumbnails) {
+                this._removeLaters();
+                global.windowThumbnails?.createThumbnail(this._metaWindow);
+                return Clutter.EVENT_STOP;
+            }
+        } /* else if (act.get_button() === Clutter.BUTTON_SECONDARY) {
+            return Clutter.EVENT_STOP;
+        }*/
+        return Clutter.EVENT_PROPAGATE;
     },
 
     _closeWinAction() {
@@ -495,8 +521,7 @@ const WindowPreviewCommon = {
             break;
         case Clutter.KEY_Tab:
         case Clutter.KEY_ISO_Left_Tab:
-            if (isSuperPressed &&
-                !isCtrlPressed &&
+            if (isAltPressed && !(isSuperPressed || isCtrlPressed) &&
                 global.display.get_n_monitors() > 1
             ) {
                 this._switchMonitorFocus();
@@ -506,27 +531,57 @@ const WindowPreviewCommon = {
             if (Me.Util.handleOverviewTabKeyPress(event))
                 return Clutter.EVENT_STOP;
             break;
-        case Clutter.KEY_Left:
-        case Clutter.KEY_Right:
-        case Clutter.KEY_Up:
         case Clutter.KEY_Down:
-            if (isShiftPressed && !isSuperPressed && !isAltPressed) {
-                this._moveWindowToWs(symbol);
+            if (isSuperPressed && !isCtrlPressed && !isShiftPressed && !isAltPressed) {
+                Me.Util.switchWorkspace(Meta.MotionDirection.DOWN);
                 return Clutter.EVENT_STOP;
             }
+            // falls through
+        case Clutter.KEY_Left:
+            if (isSuperPressed && !isCtrlPressed && !isShiftPressed && !isAltPressed) {
+                Me.Util.switchWorkspace(Meta.MotionDirection.LEFT);
+                return Clutter.EVENT_STOP;
+            }
+            // falls through
+        case Clutter.KEY_Right:
+            if (isSuperPressed && !isCtrlPressed && !isShiftPressed && !isAltPressed) {
+                Me.Util.switchWorkspace(Meta.MotionDirection.RIGHT);
+                return Clutter.EVENT_STOP;
+            }
+            // falls through
+        case Clutter.KEY_Up:
+            if (isSuperPressed && !isCtrlPressed && !isShiftPressed && !isAltPressed) {
+                Me.Util.switchWorkspace(Meta.MotionDirection.UP);
+                return Clutter.EVENT_STOP;
+            }
+
+            // The following code is common for all Arrow keys
+            if (isShiftPressed && !(isSuperPressed || isAltPressed)) {
+                this._moveWindowToWs(symbol, isCtrlPressed);
+                return Clutter.EVENT_STOP;
+            } else if (isShiftPressed && isSuperPressed && !(isCtrlPressed || isAltPressed)) {
+                const direction = [Clutter.KEY_Up, Clutter.KEY_Down, Clutter.KEY_Left, Clutter.KEY_Right].indexOf(symbol);
+                Me.Util.moveWindowsToMonitor(this.metaWindow, false, direction);
+                return Clutter.EVENT_STOP;
+            }
+
             break;
         }
 
         return Shell.WindowPreview.prototype.vfunc_key_press_event.bind(this)(event);
     },
 
-    _moveWindowToWs(symbol) {
+    _moveWindowToWs(symbol, newWorkspace = false) {
+        const supportedDirections = opt.ORIENTATION
+            ? [Clutter.KEY_Up, Clutter.KEY_Down]
+            : [Clutter.KEY_Left, Clutter.KEY_Right];
+        if (!supportedDirections.includes(symbol))
+            return;
         const direction = [Clutter.KEY_Left, Clutter.KEY_Up].includes(symbol) ? -1 : 1;
         let wsIndex = this.metaWindow.get_workspace().index() + direction;
-        let createNewWS = Me.Util.isCtrlPressed();
-        if (wsIndex === -1 || createNewWS) {
+        if (wsIndex === -1 || newWorkspace) {
             wsIndex = wsIndex === -1 ? 0 : wsIndex;
-            createNewWS = true;
+            newWorkspace = true;
         }
 
         this.hideOverlay(false);
@@ -535,7 +590,7 @@ const WindowPreviewCommon = {
             this.metaWindow,
             this.metaWindow.get_monitor(),
             wsIndex,
-            createNewWS,
+            newWorkspace,
             false // don't create new workspace if it doesn't exist and workspaces are set to fixed number
         );
     },
@@ -608,10 +663,12 @@ const WindowPreviewCommon = {
             this._title.ease({
                 duration: 100,
                 opacity: 255,
+                scale_y: 1,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             });
         } else {
             this._title.opacity = 0;
+            this._title.scale_y = 0;
             this._icon.set({
                 scale_x: scale,
                 scale_y: scale,
@@ -625,6 +682,12 @@ const WindowPreviewCommon = {
 
         if (this._overlayShown)
             return;
+
+        // Skip the overlay animation when switching workspaces,
+        // as it may affect the smoothness of the workspace switch animation
+        // if window titles are shown at the top
+        if (Main.overview._overview.controls._workspaceAdjustment.value % 1)
+            animate = false;
 
         this._overlayShown = true;
         this._restack();
@@ -666,19 +729,26 @@ const WindowPreviewCommon = {
             duration: animate ? WINDOW_SCALE_TIME : 0,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
-
         this.emit('show-chrome');
+        this.grab_key_focus();
     },
 
     hideOverlay(animate) {
         if (!this._overlayShown)
             return;
+
+        // Skip the overlay animation when switching workspaces,
+        // as it may affect the smoothness of the workspace switch animation
+        // if window titles are shown at the top
+        if (Main.overview._overview.controls._workspaceAdjustment.value % 1)
+            animate = false;
+
         this._overlayShown = false;
 
         // When leaving overview, mark the window for activation if needed
         // The marked window is activated during _onDestroy()
         const leavingOverview = Main.overview._overview.controls._stateAdjustment.value < 1;
-        if (opt.ALWAYS_ACTIVATE_SELECTED_WINDOW && leavingOverview)
+        if ((opt.ALWAYS_ACTIVATE_SELECTED_WINDOW || opt._activateSelectedWindow) && leavingOverview)
             this._activateSelected = true;
 
         if (this._destroyed)
@@ -686,7 +756,7 @@ const WindowPreviewCommon = {
 
         // Prevent restacking the preview if it should remain on top
         // while leaving overview
-        if (!(opt.ALWAYS_ACTIVATE_SELECTED_WINDOW && leavingOverview))
+        if (!this._activateSelected)
             this._restack();
 
         // If we're supposed to animate and an animation in our direction
@@ -765,24 +835,34 @@ const WindowPreviewCommon = {
 
     property_windowCenter: {
         get() {
-            // This the easiest way to change the default window sorting in the overview
+            // This is the easiest way to change the default window sorting in the overview
             // which uses position of the windows on the screen to minimize travel
+
+            // Minimize load by caching the windowCenter
+            if (this._windowCenter !== undefined)
+                return this._windowCenter;
+
             if (opt.SORT_OVERVIEW_WINDOWS_MRU) {
-                return {
-                    x: global.display.get_tab_list(0, null).indexOf(this.metaWindow),
-                    y: global.display.get_tab_list(0, null).indexOf(this.metaWindow),
+                // global.display.get_tab_list() is relatively slow
+                // and windowCenter is called too often (needs further investigation)
+                const center = global.display.get_tab_list(0, null).indexOf(this.metaWindow);
+                this._windowCenter = {
+                    x: center,
+                    y: center,
                 };
             } else if (opt.SORT_OVERVIEW_WINDOWS_STABLE) {
-                return {
+                this._windowCenter = {
                     x: this.metaWindow.get_stable_sequence(),
                     y: this.metaWindow.get_stable_sequence(),
                 };
             } else {
-                return {
+                this._windowCenter = {
                     x: this._cachedBoundingBox.x + this._cachedBoundingBox.width / 2,
                     y: this._cachedBoundingBox.y + this._cachedBoundingBox.height / 2,
                 };
             }
+
+            return this._windowCenter;
         },
     },
 
@@ -807,6 +887,9 @@ const WindowPreviewCommon = {
 
     _onDestroy() {
         this._destroyed = true;
+
+        global.display.disconnectObject(this);
+
         if (this._activateSelected && !opt.CANCEL_ALWAYS_ACTIVATE_SELECTED)
             this._activate();
 

@@ -192,6 +192,7 @@ export const AppDisplayModule = class {
                 global.settings.disconnect(this._appGridLayoutConId);
                 this._appGridLayoutConId = 0;
             }
+            _appDisplay._pageIndicators.set_style('');
             this._repopulateAppDisplay(reset);
         } else {
             _appDisplay._grid._currentMode = -1;
@@ -211,6 +212,10 @@ export const AppDisplayModule = class {
                 });
             }
             _appDisplay.setGridPageNulling(!opt.APP_GRID_REMEMBER_PAGE);
+            _appDisplay._pageIndicators.set_style(
+                orientation
+                    ? `margin-bottom: ${opt.APP_GRID_RESERVED_BOTTOM_SPACE}px;`
+                    : '');
         }
     }
 
@@ -402,7 +407,7 @@ const AppDisplayCommon = {
                         this._savePages();
                     });
                     icon.connect('notify::pressed', () => {
-                        if (icon.pressed)
+                        if (this.updateDragFocus && icon.pressed)
                             this.updateDragFocus(icon);
                     });
                 } else if (this._updateFolderIcons && opt.APP_GRID_EXCLUDE_RUNNING) {
@@ -445,7 +450,7 @@ const AppDisplayCommon = {
                 let app = appSys.lookup_app(appId);
                 icon = new AppDisplay.AppIcon(app, { isDraggable });
                 icon.connect('notify::pressed', () => {
-                    if (icon.pressed)
+                    if (this.updateDragFocus && icon.pressed)
                         this.updateDragFocus(icon);
                 });
             }
@@ -510,7 +515,7 @@ const AppDisplayCommon = {
 
         this._placeholder = new AppDisplay.AppIcon(app, { isDraggable });
         this._placeholder.connect('notify::pressed', () => {
-            if (this._placeholder?.pressed)
+            if (this.updateDragFocus && this._placeholder?.pressed)
                 this.updateDragFocus(this._placeholder);
         });
         this._placeholder.scaleAndFade();
@@ -958,7 +963,11 @@ const BaseAppViewGridLayoutHorizontal = {
         this._pageWidth = box.get_width();
 
         // Center page arrow buttons
-        const arrowOffset = this._grid._isFolder ? -pageIndicatorsHeight : pageIndicatorsHeight / 2;
+        const arrowOffset = Math.round(
+            this._grid._isFolder
+                ? -pageIndicatorsHeight
+                : (pageIndicatorsHeight - opt.APP_GRID_RESERVED_BOTTOM_SPACE) / 2
+        );
         this._previousPageArrow.translationY = arrowOffset;
         this._nextPageArrow.translationY = arrowOffset;
         // Reset page indicators vertical position
@@ -1117,7 +1126,8 @@ const AppGridCommon = {
         padding.left += rowSpacing;
         padding.right += rowSpacing;
         padding.top += columnSpacing;
-        padding.bottom += columnSpacing;
+        // Reserve space for long app names
+        padding.bottom += columnSpacing + opt.APP_GRID_RESERVED_BOTTOM_SPACE;
 
         this.layoutManager.pagePadding = padding;
     },
@@ -1343,7 +1353,7 @@ const FolderView = {
 
 const FolderGrid = GObject.registerClass({
     // Registered name should be unique
-    GTypeName: `FolderGrid${Math.floor(Math.random() * 1000)}`,
+    GTypeName: `FolderGrid${Math.floor(Math.random() * 100000)}`,
 }, class FolderGrid extends AppDisplay.AppGrid {
     _init() {
         super._init({
@@ -1404,17 +1414,31 @@ const AppFolderDialog = {
 
         // right click into the folder popup should close it
         this.child.reactive = true;
-        const clickAction = new Clutter.ClickAction();
-        clickAction.connect('clicked', act => {
-            if (act.get_button() === Clutter.BUTTON_PRIMARY)
+
+        let clickAction;
+        if (Clutter.ClickAction) {
+            clickAction = new Clutter.ClickAction();
+            clickAction.connect('clicked', act => {
+                if (act.get_button() === Clutter.BUTTON_PRIMARY)
+                    return Clutter.EVENT_STOP;
+                let [x, y] = clickAction.get_coords();
+                [, x, y] = this.child.transform_stage_point(x, y);
+                if (!this._entryBox.allocation.contains(x, y))
+                    this.popdown();
                 return Clutter.EVENT_STOP;
-            const [x, y] = clickAction.get_coords();
-            const actor = global.stage.get_actor_at_pos(Clutter.PickMode.ALL, x, y);
-            // if it's not entry for editing folder title
-            if (actor !== this._entry)
-                this.popdown();
-            return Clutter.EVENT_STOP;
-        });
+            });
+        } else {
+            const clickGesture = new Clutter.ClickGesture({
+                required_button: Clutter.BUTTON_SECONDARY,
+            });
+            clickGesture.connect('may-recognize', () => {
+                const coords = clickGesture.get_coords_abs();
+                const [, x, y] = this.child.transform_stage_point(coords.x, coords.y);
+                return !this._entryBox.allocation.contains(x, y);
+            });
+            clickGesture.connect('recognize', () => this.popdown());
+            clickAction = clickGesture;
+        }
 
         this.child.add_action(clickAction);
         // Redundant, added just because of extensions.gnome.org rules
@@ -1610,7 +1634,9 @@ const AppFolderDialog = {
     _getFolderAreaBox() {
         const appDisplay = this._source._parentView;
         const folderAreaBox = appDisplay.get_allocation_box().copy();
-        const searchEntryHeight = opt.SHOW_SEARCH_ENTRY ? Main.overview._overview.controls._searchEntryBin.height : 0;
+        const searchEntryHeight = opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE
+            ? Main.overview._overview.controls._searchEntryBin.height
+            : 0;
         folderAreaBox.y1 -= searchEntryHeight;
 
         // _zoomAndFadeIn() needs an absolute position within a multi-monitor workspace
@@ -1899,7 +1925,7 @@ const AppFolderDialog = {
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
 
-        if (opt.SHOW_SEARCH_ENTRY) {
+        if (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) {
             Main.overview.searchEntry.ease({
                 opacity: 0,
                 duration: FOLDER_DIALOG_ANIMATION_TIME,
@@ -1968,7 +1994,7 @@ const AppFolderDialog = {
             mode: Clutter.AnimationMode.EASE_IN_QUAD,
         });
 
-        if (opt.SHOW_SEARCH_ENTRY) {
+        if (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) {
             Main.overview.searchEntry.ease({
                 opacity: 255,
                 duration: FOLDER_DIALOG_ANIMATION_TIME,

@@ -86,10 +86,16 @@ export const DashModule = class {
     }
 
     updateStyle(dash) {
-        if (opt.DASH_BG_LIGHT)
+        if (opt.DASH_BG_LIGHT) {
             dash._background.add_style_class_name('dash-background-light');
-        else
+            dash._background.remove_style_class_name('dash-background-dark');
+        } else if (opt.DASH_BG_DARK) {
+            dash._background.add_style_class_name('dash-background-dark');
             dash._background.remove_style_class_name('dash-background-light');
+        } else {
+            dash._background.remove_style_class_name('dash-background-light');
+            dash._background.remove_style_class_name('dash-background-dark');
+        }
 
         dash._background.opacity = opt.DASH_BG_OPACITY;
         let radius = opt.DASH_BG_RADIUS;
@@ -949,12 +955,22 @@ const AppIconCommon = {
     },
 
     _moveAppToCurrentWorkspace() {
-        this.app.get_windows().forEach(w => w.change_workspace(global.workspace_manager.get_active_workspace()));
+        const currentMonitor = global.display.get_current_monitor();
+        const wsIndex = global.workspaceManager.get_active_workspace().index();
+        this.app.get_windows().forEach(window =>
+            Main.moveWindowToMonitorAndWorkspace(
+                window,
+                currentMonitor,
+                wsIndex,
+                false
+            )
+        );
     },
 
     popupMenu(side = St.Side.LEFT) {
         this.setForcedHighlight(true);
-        this._removeMenuTimeout();
+        if (this._removeMenuTimeout) // Removed in GNOME 49
+            this._removeMenuTimeout();
         this.fake_release();
 
         if (!this._getWindowsOnCurrentWs) {

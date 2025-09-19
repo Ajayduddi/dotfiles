@@ -317,7 +317,7 @@ const WorkspaceThumbnailCommon = {
         Me.Util.closeWorkspace(this.metaWorkspace, this.monitorIndex);
     },
 
-    activate(time) {
+    activate() {
         if (this.state > ThumbnailState.NORMAL)
             return;
 
@@ -332,7 +332,9 @@ const WorkspaceThumbnailCommon = {
                 // if searchActive, hide it immediately
                 Main.overview.searchEntry.set_text('');
             } else {
-                this.metaWorkspace.activate(time);
+                // this.metaWorkspace.activate(time);
+                // Support opt.WS_SWITCHER_CURRENT_MONITOR option workaround:
+                Main.wm.actionMoveWorkspace(this.metaWorkspace, this.monitorIndex);
             }
         } else if (opt.OVERVIEW_MODE2 && !opt.WORKSPACE_MODE && wsIndex <= lastWsIndex) {
             if (stateAdjustment.value > 1)
@@ -342,13 +344,17 @@ const WorkspaceThumbnailCommon = {
                 Me.Util.exposeWindowsWithOverviewTransition();
             } else {
                 // switch ws
-                this.metaWorkspace.activate(time);
+                // this.metaWorkspace.activate(time);
+                // Support opt.WS_SWITCHER_CURRENT_MONITOR option workaround:
+                Main.wm.actionMoveWorkspace(this.metaWorkspace, this.monitorIndex);
             }
             // a click on the current workspace should go back to the main view
         } else if (this.metaWorkspace.active) {
             Main.overview.hide();
         } else {
-            this.metaWorkspace.activate(time);
+            // this.metaWorkspace.activate(time);
+            // Support opt.WS_SWITCHER_CURRENT_MONITOR option workaround:
+            Main.wm.actionMoveWorkspace(this.metaWorkspace, this.monitorIndex);
         }
     },
 
@@ -435,14 +441,18 @@ const ThumbnailsBoxCommon = {
         this._createThumbnails();
     },
 
-    _activateThumbnailAtPoint(stageX, stageY, time, activateCurrent = false) {
+    _activateThumbnailAtPoint(x, y, time, activateCurrent = false) {
         if (activateCurrent) {
             const thumbnail = this._thumbnails.find(t => t.metaWorkspace.active);
             if (thumbnail)
                 thumbnail.activate(time);
             return;
         }
-        const [r_, x, y] = this.transform_stage_point(stageX, stageY);
+
+        // Since GS 49.rc the coordinates don't need to be transformed
+        // as they come from ClickGesture instead of ClickAction
+        if (Clutter.ClickAction)
+            [, x, y] = this.transform_stage_point(x, y);
 
         let thumbnail;
 

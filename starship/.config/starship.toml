@@ -1,6 +1,6 @@
 # Single-line prompt with RGB colors
 format = """
-$os$directory$git_branch$git_status$package$java$nodejs$python$golang$rust$docker_context$kubernetes$battery$fill$custom$time
+$os$directory$git_branch$git_status$package$java$nodejs$python$golang$c$rust$docker_context$kubernetes$battery$fill$custom$time
 $character
 """
 
@@ -22,7 +22,11 @@ Fedora = "[ ](fg:#A2AAAD bold)"    # Fedora Blue  #294172
 Arch = "[ ](fg:#1793D1 bold)"      # Arch Cyan
 Macos = "[ ](fg:#A2AAAD bold)"     # macOS Grey
 Linux = "[ ](fg:#FFCC00 bold)"     # Generic Linux Yellow
-
+Amazon = ""
+Android = ""
+CentOS = ""
+Redhat = "󱄛"
+RedHatEnterprise = "󱄛"
 
 # Directory (Aqua Cyan)
 [directory]
@@ -33,7 +37,7 @@ format = "[$path]($style) "
 
 # Git branch (Purple Pink)
 [git_branch]
-symbol = "🌱 "
+symbol = " "
 style = "fg:#d291ff bold"
 format = "[$symbol$branch]($style) "
 
@@ -82,6 +86,11 @@ format = "via [$symbol$context]($style) "
 symbol = "⎈ "
 style = "fg:#ff66ff bold"
 format = 'on [$symbol$context ($namespace)]($style) '
+
+[c]
+symbol = " "
+style = "fg:#00aaff bold"
+format = 'via [$symbol$version]($style)'
 
 # Battery
 [battery]
