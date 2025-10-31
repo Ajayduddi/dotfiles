@@ -102,6 +102,7 @@ var Settings = class _Settings {
   static KEY_SPAN_MULTIPLE_TILES = "enable-span-multiple-tiles";
   static KEY_RESTORE_WINDOW_ORIGINAL_SIZE = "restore-window-original-size";
   static KEY_WRAPAROUND_FOCUS = "enable-wraparound-focus";
+  static KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY = "enable-directional-focus-tiled-only";
   static KEY_RESIZE_COMPLEMENTING_WINDOWS = "resize-complementing-windows";
   static KEY_ENABLE_BLUR_SNAP_ASSISTANT = "enable-blur-snap-assistant";
   static KEY_ENABLE_BLUR_SELECTED_TILEPREVIEW = "enable-blur-selected-tilepreview";
@@ -110,6 +111,7 @@ var Settings = class _Settings {
   static KEY_ACTIVE_SCREEN_EDGES = "active-screen-edges";
   static KEY_TOP_EDGE_MAXIMIZE = "top-edge-maximize";
   static KEY_OVERRIDE_WINDOW_MENU = "override-window-menu";
+  static KEY_OVERRIDE_ALT_TAB = "override-alt-tab";
   static KEY_SNAP_ASSISTANT_THRESHOLD = "snap-assistant-threshold";
   static KEY_ENABLE_WINDOW_BORDER = "enable-window-border";
   static KEY_INNER_GAPS = "inner-gaps";
@@ -121,6 +123,7 @@ var Settings = class _Settings {
   static KEY_WINDOW_BORDER_WIDTH = "window-border-width";
   static KEY_ENABLE_SMART_WINDOW_BORDER_RADIUS = "enable-smart-window-border-radius";
   static KEY_QUARTER_TILING_THRESHOLD = "quarter-tiling-threshold";
+  static KEY_EDGE_TILING_OFFSET = "edge-tiling-offset";
   static KEY_ENABLE_TILING_SYSTEM_WINDOWS_SUGGESTIONS = "enable-tiling-system-windows-suggestions";
   static KEY_ENABLE_SNAP_ASSISTANT_WINDOWS_SUGGESTIONS = "enable-snap-assistant-windows-suggestions";
   static KEY_ENABLE_SCREEN_EDGES_WINDOWS_SUGGESTIONS = "enable-screen-edges-windows-suggestions";
@@ -142,6 +145,7 @@ var Settings = class _Settings {
   static SETTING_FOCUS_WINDOW_NEXT = "focus-window-next";
   static SETTING_FOCUS_WINDOW_PREV = "focus-window-prev";
   static SETTING_HIGHLIGHT_CURRENT_WINDOW = "highlight-current-window";
+  static SETTING_CYCLE_LAYOUTS = "cycle-layouts";
   static initialize(settings) {
     if (this._is_initialized)
       return;
@@ -247,6 +251,12 @@ var Settings = class _Settings {
   static set WRAPAROUND_FOCUS(val) {
     set_boolean(_Settings.KEY_WRAPAROUND_FOCUS, val);
   }
+  static get ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY() {
+    return get_boolean(_Settings.KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY);
+  }
+  static set ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY(val) {
+    set_boolean(_Settings.KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY, val);
+  }
   static get RESIZE_COMPLEMENTING_WINDOWS() {
     return get_boolean(_Settings.KEY_RESIZE_COMPLEMENTING_WINDOWS);
   }
@@ -295,6 +305,12 @@ var Settings = class _Settings {
   static set OVERRIDE_WINDOW_MENU(val) {
     set_boolean(_Settings.KEY_OVERRIDE_WINDOW_MENU, val);
   }
+  static get OVERRIDE_ALT_TAB() {
+    return get_boolean(_Settings.KEY_OVERRIDE_ALT_TAB);
+  }
+  static set OVERRIDE_ALT_TAB(val) {
+    set_boolean(_Settings.KEY_OVERRIDE_ALT_TAB, val);
+  }
   static get SNAP_ASSISTANT_THRESHOLD() {
     return get_number(_Settings.KEY_SNAP_ASSISTANT_THRESHOLD);
   }
@@ -306,6 +322,12 @@ var Settings = class _Settings {
   }
   static set QUARTER_TILING_THRESHOLD(val) {
     set_unsigned_number(_Settings.KEY_QUARTER_TILING_THRESHOLD, val);
+  }
+  static get EDGE_TILING_OFFSET() {
+    return get_unsigned_number(_Settings.KEY_EDGE_TILING_OFFSET);
+  }
+  static set EDGE_TILING_OFFSET(val) {
+    set_unsigned_number(_Settings.KEY_EDGE_TILING_OFFSET, val);
   }
   static get WINDOW_BORDER_COLOR() {
     return get_string(_Settings.KEY_WINDOW_BORDER_COLOR);
@@ -966,6 +988,14 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
       )
     );
     behaviourGroup.add(overrideWindowMenuRow);
+    const overrideAltTabRow = this._buildSwitchRow(
+      Settings.KEY_OVERRIDE_ALT_TAB,
+      _("Add tiled windows to ALT+TAB menu"),
+      _(
+        "Add the tiled windows to the ALT+TAB menu to open all the tiled windows at once"
+      )
+    );
+    behaviourGroup.add(overrideAltTabRow);
     const activeScreenEdgesGroup = new Adw.PreferencesGroup({
       title: _("Screen Edges"),
       description: _(
@@ -1009,6 +1039,23 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
       "sensitive"
     );
     activeScreenEdgesGroup.add(quarterTiling);
+    const edgeTilingOffset = this._buildScaleRow(
+      _("Edge tiling offset"),
+      _("Offset from the screen edge to trigger edge tiling (in pixels)"),
+      (sc) => {
+        Settings.EDGE_TILING_OFFSET = sc.get_value();
+      },
+      Settings.EDGE_TILING_OFFSET,
+      1,
+      250,
+      1
+    );
+    Settings.bind(
+      Settings.KEY_ACTIVE_SCREEN_EDGES,
+      edgeTilingOffset,
+      "sensitive"
+    );
+    activeScreenEdgesGroup.add(edgeTilingOffset);
     prefsPage.add(activeScreenEdgesGroup);
     const windowsSuggestionsGroup = new Adw.PreferencesGroup({
       title: _("Windows suggestions"),
@@ -1335,6 +1382,13 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
         ),
         false,
         false
+      ],
+      [
+        Settings.SETTING_CYCLE_LAYOUTS,
+        _("Cycle layouts"),
+        _("Cycle through available workspace layouts"),
+        false,
+        false
       ]
     ];
     for (let i = 0; i < keybindings.length; i++) {
@@ -1416,6 +1470,14 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
       )
     );
     keybindingsGroup.add(wrapAroundRow);
+    const directionalFocusTiledWindows = this._buildSwitchRow(
+      Settings.KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY,
+      _("Restrict directional focus to tiled windows"),
+      _(
+        "When using directional focus navigation, only consider tiled windows"
+      )
+    );
+    keybindingsGroup.add(directionalFocusTiledWindows);
     const importExportGroup = new Adw.PreferencesGroup({
       title: _("Import, export and reset"),
       description: _(
@@ -1923,3 +1985,23 @@ var ShortcutSettingButton = (_a = class extends Gtk.Button {
 export {
   TilingShellExtensionPreferences as default
 };
+/*!
+ * Tiling Shell: advanced and modern window management for GNOME
+ *
+ * Copyright (C) 2025 Domenico Ferraro
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */

@@ -244,9 +244,9 @@ export function moveWindowsToMonitor(metaWindow, allAppWindows = false, directio
                 win.move_to_monitor(targetMonitor);
                 // Some windows move slower than others so give it some time
                 _removeMoveWinPreviewTimeout();
-                Me.opt._moveWindowPreviewTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, 100, () => {
+                Me.run.moveWindowPreviewTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, 100, () => {
                     selectWindowPreview(metaWindow.get_compositor_private(), targetMonitor);
-                    Me.opt._moveWindowPreviewTimeout = 0;
+                    Me.run.moveWindowPreviewTimeout = 0;
                     return GLib.SOURCE_REMOVE;
                 });
                 return GLib.SOURCE_REMOVE;
@@ -256,9 +256,9 @@ export function moveWindowsToMonitor(metaWindow, allAppWindows = false, directio
 }
 
 function _removeMoveWinPreviewTimeout() {
-    if (Me.opt._moveWindowPreviewTimeout)
-        GLib.source_remove(Me.opt._moveWindowPreviewTimeout);
-    Me.opt._moveWindowPreviewTimeout = 0;
+    if (Me.run.moveWindowPreviewTimeout)
+        GLib.source_remove(Me.run.moveWindowPreviewTimeout);
+    Me.run.moveWindowPreviewTimeout = 0;
 }
 
 // Handle common actions for WorkspacesView and WindowPreview
@@ -270,17 +270,18 @@ export function handleOverviewTabKeyPress(event) {
         focusDash();
         return Clutter.EVENT_STOP;
     }
-    Me.opt._activateSelectedWindow = true;
+    Me.run.activateSelectedWindow = true;
     return Clutter.EVENT_PROPAGATE;
 }
 
 // In WINDOW_PICKER mode, enable keyboard navigation
 // by focusing on the active window's preview
-export function activateKeyboardForWorkspaceView(monitorIndex = Me.opt._activeMonitor) {
+export function activateKeyboardForWorkspaceView(monitorIndex = Me.run.activeMonitor) {
+    // Me.run.activeMonitor is set to undefined when overview is closed
+
     if (!Main.overview._shown || !Me.opt.WORKSPACE_MODE)
         return;
 
-    // Me.opt._activeMonitor is set to undefined when overview is closed
     const initialSelection = monitorIndex === undefined;
     const activeWorkspace = global.workspace_manager.get_active_workspace();
     const activeWorkspaceIndex = activeWorkspace.index();
@@ -288,8 +289,12 @@ export function activateKeyboardForWorkspaceView(monitorIndex = Me.opt._activeMo
             !Me.opt.OVERVIEW_SELECT_WINDOW ||
             Me.opt.OVERVIEW_SELECT_FIRST_WINDOW;
 
-    // Get meta windows for the current workspace in the MRU order
-    let wsWindows = global.display.get_tab_list(0, activeWorkspace);
+    // Get MetaWindows for the current workspace in MRU order.
+    // get_tab_list(Meta.WindowType.NORMAL, workspace) returns an incorrect order for modal windows,
+    // because the list is sorted by the timestamp of the modal window's parent.
+    // The complete list, however, is sorted correctly - by the modal window's own timestamp.
+    let wsWindows = global.display.get_tab_list(Meta.WindowType.NORMAL, null);
+    wsWindows = wsWindows.filter(win => win.get_workspace() === activeWorkspace);
 
     // If monitorIndex is undefined, set it to the monitor of the last used window
     monitorIndex = monitorIndex ?? wsWindows[0]?.get_monitor();
@@ -319,7 +324,7 @@ export function activateKeyboardForWorkspaceView(monitorIndex = Me.opt._activeMo
         // Store the current monitor to opt
         // so we can prefer this monitor
         // after the workspace is switched
-        Me.opt._activeMonitor = monitorIndex;
+        Me.run.activeMonitor = monitorIndex;
         return;
     }
 
@@ -403,17 +408,15 @@ export function switchToNextWorkspace(event) {
         direction = Me.opt.ORIENTATION ? Meta.MotionDirection.DOWN : Meta.MotionDirection.RIGHT;
     const wsWrapAround = Me.opt.WS_WRAPAROUND;
     Me.opt.WS_WRAPAROUND = true;
-    Me.opt.forceIgnoreLast = true;
     const currentWorkspace = global.workspace_manager.get_active_workspace();
     const nextWorkspace = currentWorkspace.get_neighbor(direction);
     Main.wm.actionMoveWorkspace(nextWorkspace);
     Me.opt.WS_WRAPAROUND = wsWrapAround;
-    Me.opt.forceIgnoreLast = false;
 }
 
 export function resetInitialPointerX() {
     if (Me.opt.OVERVIEW_SELECT_WINDOW || Me.opt.OVERVIEW_MODE)
-        Me.opt.initialPointerX = global.get_pointer()[0];
+        Me.run.initialPointerX = global.get_pointer()[0];
 }
 
 export function moveWindowToMonitorAndWorkspace(metaWindow, monitorIndex, wsIndex, insertNewWs, append = false) {
@@ -463,31 +466,30 @@ function _removeWorkspaceKeepAliveTimeout(workspace) {
 }
 
 export function exposeWindows() {
-    Main.overview._overview.controls._workspacesDisplay._workspacesViews.forEach(
+    const controlsManager = Main.overview._overview.controls;
+    controlsManager._workspacesDisplay._workspacesViews.forEach(
         view => {
             view.exposeWindows();
         }
     );
-    // eslint-disable-next-line no-useless-call
-    Main.overview._overview.controls._updateSearchStyle?.call(Main.overview._overview.controls);
+    controlsManager._updateSearchStyle?.bind(controlsManager)();
 }
 
 export function exposeWindowsWithOverviewTransition() {
+    const controlsManager = Main.overview._overview.controls;
     // in OVERVIEW MODE 2 windows are not spread and workspace is not scaled
     // we need to repeat transition to the overview state 1 (window picker), but with spreading windows animation
-    const stateAdjustment = Main.overview._overview.controls._stateAdjustment;
+    const stateAdjustment = controlsManager._stateAdjustment;
     Me.opt.WORKSPACE_MODE = 1;
-    Me.opt.enableOverviewTransitionAnimations = false;
+    Me.run.enableOverviewTransitionAnimations = false;
     // setting value to 0 would reset WORKSPACE_MODE
     stateAdjustment.value = 0.01;
-    // eslint-disable-next-line no-useless-call
-    Main.overview._overview.controls._updateSearchStyle?.call(Main.overview._overview.controls);
+    controlsManager._updateSearchStyle?.bind(controlsManager)();
     stateAdjustment.ease(1, {
         duration: 200,
         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         onStopped: () => {
-            // eslint-disable-next-line no-useless-call
-            Main.overview._overview.controls._enableOverviewTransitionAnimationsIfNeeded?.call(Main.overview._overview.controls);
+            controlsManager._enableOverviewTransitionAnimationsIfNeeded?.bind(controlsManager)();
             activateKeyboardForWorkspaceView();
         },
     });

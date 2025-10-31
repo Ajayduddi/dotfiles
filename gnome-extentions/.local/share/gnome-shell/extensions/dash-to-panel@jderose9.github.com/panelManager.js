@@ -35,7 +35,6 @@ import * as Utils from './utils.js'
 import * as DesktopIconsIntegration from './desktopIconsIntegration.js'
 import { DTP_EXTENSION, SETTINGS, tracker } from './extension.js'
 
-import Gio from 'gi://Gio'
 import GLib from 'gi://GLib'
 import GObject from 'gi://GObject'
 import Clutter from 'gi://Clutter'
@@ -79,6 +78,14 @@ export const PanelManager = class {
       AppDisplay.AppIcon.prototype._setPopupTimeout =
         AppDisplay.AppIcon.prototype._removeMenuTimeout = this._emptyFunc
 
+    Main.layoutManager.findIndexForActor = (actor) =>
+      '_dtpIndex' in actor
+        ? actor._dtpIndex
+        : Layout.LayoutManager.prototype.findIndexForActor.call(
+            Main.layoutManager,
+            actor,
+          )
+
     if (this.dtpPrimaryMonitor) {
       this.primaryPanel = this._createPanel(
         this.dtpPrimaryMonitor,
@@ -107,8 +114,6 @@ export const PanelManager = class {
 
     if (reset) return
 
-    this._syncAppSwitcherWorkspaceIsolation()
-
     this.notificationsMonitor = new NotificationsMonitor()
 
     this._desktopIconsUsableArea =
@@ -129,14 +134,6 @@ export const PanelManager = class {
       Main.layoutManager,
     )
     Main.layoutManager._updateHotCorners()
-
-    Main.layoutManager.findIndexForActor = (actor) =>
-      '_dtpIndex' in actor
-        ? actor._dtpIndex
-        : Layout.LayoutManager.prototype.findIndexForActor.call(
-            Main.layoutManager,
-            actor,
-          )
 
     this._forceHotCornerId = SETTINGS.connect(
       'changed::stockgs-force-hotcorner',
@@ -273,11 +270,6 @@ export const PanelManager = class {
             return GLib.SOURCE_REMOVE
           })
         },
-      ],
-      [
-        SETTINGS,
-        'changed::isolate-workspaces',
-        this._syncAppSwitcherWorkspaceIsolation,
       ],
       [
         Utils.DisplayWrapper.getMonitorManager(),
@@ -426,18 +418,6 @@ export const PanelManager = class {
     this._desktopIconsUsableArea = null
   }
 
-  _syncAppSwitcherWorkspaceIsolation() {
-    // alt-tab menu
-    let appSwitcherSettings = new Gio.Settings({
-      schema_id: 'org.gnome.shell.app-switcher',
-    })
-
-    appSwitcherSettings.set_boolean(
-      'current-workspace-only',
-      SETTINGS.get_boolean('isolate-workspaces'),
-    )
-  }
-
   _emptyFunc() {}
 
   _setDesktopIconsMargins() {
@@ -515,7 +495,9 @@ export const PanelManager = class {
     }
 
     let isolateWorkspaces = SETTINGS.get_boolean('isolate-workspaces')
-    let isolateMonitors = SETTINGS.get_boolean('isolate-monitors')
+    let isolateMonitors =
+      !SETTINGS.get_boolean('multi-monitors') ||
+      SETTINGS.get_boolean('isolate-monitors')
 
     this.focusedApp = app
 
@@ -690,10 +672,6 @@ export const PanelManager = class {
 
     Main.layoutManager.addChrome(clipContainer, { affectsInputRegion: false })
     clipContainer.add_child(panelBox)
-    Main.layoutManager.trackChrome(panelBox, {
-      trackFullscreen: true,
-      affectsStruts: true,
-    })
 
     panel = new Panel.Panel(
       this,
@@ -705,14 +683,22 @@ export const PanelManager = class {
     panelBox.add_child(panel)
     panel.enable()
 
+    panelBox._dtpIndex = monitor.index
+    panelBox.set_position(0, 0)
+    panelBox.set_width(-1)
+
     Main.layoutManager.trackChrome(panel, {
       affectsInputRegion: true,
       affectsStruts: false,
     })
 
-    panelBox._dtpIndex = monitor.index
-    panelBox.set_position(0, 0)
-    panelBox.set_width(-1)
+    Main.layoutManager.trackChrome(panelBox, {
+      trackFullscreen: true,
+      affectsStruts: true,
+    })
+
+    // intellihide changes the chrome when enabled, so init after setting initial chrome params
+    panel.intellihide.init()
 
     this._findPanelMenuButtons(panelBox).forEach((pmb) =>
       this._adjustPanelMenuButton(pmb, monitor, panel.geom.position),

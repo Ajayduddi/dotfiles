@@ -7,9 +7,10 @@
   "shell-version": [
     "46",
     "47",
-    "48"
+    "48",
+    "49"
   ],
   "url": "https://github.com/SUPERCILEX/gnome-clipboard-history",
   "uuid": "clipboard-history@alexsaveau.dev",
-  "version": 46
+  "version": 47
 }

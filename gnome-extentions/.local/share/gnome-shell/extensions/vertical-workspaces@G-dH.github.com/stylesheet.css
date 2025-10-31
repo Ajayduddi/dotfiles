@@ -213,7 +213,7 @@
 
 /* for static ws mode */
 .search-results-bg-dark {
-	border-radius: 20px;
+	border-radius: 30px;
 	border: 1px, rgb(60, 60, 60);
 	padding-top: 68px;
 	padding-left: 6px;
@@ -225,7 +225,7 @@
 /*.vfade { -st-vfade-offset: 30px; }
 .hfade { -st-hfade-offset: 30px; }*/
 
-StButton#vhandle,
+StButton#vhandle, StWidget .vhandle,
 .search-section-content {
 	background-color: rgba(200, 200, 200, 0.08);
 	border: solid 1px rgba(150, 150, 150, 0.3);
@@ -343,8 +343,8 @@ StButton#vhandle,
 }
 
 /* GS 47 removed the top margin that V-Shell expects */
-#dash.dash-46 {
-	 margin-top: 12px;
+.dash-top-margin {
+	margin-top: 12px;
 }
 
 #dash.dash-46 .overview-tile:hover .overview-icon,
@@ -391,7 +391,6 @@ StButton#vhandle,
 	background-color: rgba(200, 200, 200, 0.08);
 }
 
-
 #dash.vertical-46 {
 	margin: 0px;
 	padding: 0px;
@@ -421,6 +420,11 @@ StButton#vhandle,
 	margin-left: 2px;
 	margin-top: 4px;
 	margin-bottom: 4px;
+}
+
+/* compensate dot offset by 1px compared to default 2*$base_padding*/
+#dash .app-grid-running-dot-offset {
+	offset-y: -13px;
 }
 
 #dash.vertical-46 .app-grid-running-dot {

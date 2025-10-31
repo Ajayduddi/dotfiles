@@ -139,20 +139,6 @@ function buildRectangle(params = {}) {
     height: params.height || 0
   });
 }
-function getEventCoords(event) {
-  return event.get_coords ? event.get_coords() : [event.x, event.y];
-}
-function buildBlurEffect(sigma) {
-  const effect = new Shell.BlurEffect();
-  effect.set_mode(Shell.BlurMode.BACKGROUND);
-  effect.set_brightness(1);
-  if (effect.set_radius) {
-    effect.set_radius(sigma * 2);
-  } else {
-    effect.set_sigma(sigma);
-  }
-  return effect;
-}
 function getTransientOrParent(window) {
   const transient = window.get_transient_for();
   return window.is_attached_dialog() && transient !== null ? transient : window;
@@ -176,14 +162,6 @@ function getWindowsOfMonitor(monitor) {
 }
 function squaredEuclideanDistance(pointA, pointB) {
   return (pointA.x - pointB.x) * (pointA.x - pointB.x) + (pointA.y - pointB.y) * (pointA.y - pointB.y);
-}
-function widgetOrientation(vertical) {
-  if (St.BoxLayout.prototype.get_orientation !== void 0) {
-    return {
-      orientation: vertical ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL
-    };
-  }
-  return { vertical };
 }
 
 // src/utils/gjs.ts
@@ -293,6 +271,7 @@ var Settings = class _Settings {
   static KEY_SPAN_MULTIPLE_TILES = "enable-span-multiple-tiles";
   static KEY_RESTORE_WINDOW_ORIGINAL_SIZE = "restore-window-original-size";
   static KEY_WRAPAROUND_FOCUS = "enable-wraparound-focus";
+  static KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY = "enable-directional-focus-tiled-only";
   static KEY_RESIZE_COMPLEMENTING_WINDOWS = "resize-complementing-windows";
   static KEY_ENABLE_BLUR_SNAP_ASSISTANT = "enable-blur-snap-assistant";
   static KEY_ENABLE_BLUR_SELECTED_TILEPREVIEW = "enable-blur-selected-tilepreview";
@@ -301,6 +280,7 @@ var Settings = class _Settings {
   static KEY_ACTIVE_SCREEN_EDGES = "active-screen-edges";
   static KEY_TOP_EDGE_MAXIMIZE = "top-edge-maximize";
   static KEY_OVERRIDE_WINDOW_MENU = "override-window-menu";
+  static KEY_OVERRIDE_ALT_TAB = "override-alt-tab";
   static KEY_SNAP_ASSISTANT_THRESHOLD = "snap-assistant-threshold";
   static KEY_ENABLE_WINDOW_BORDER = "enable-window-border";
   static KEY_INNER_GAPS = "inner-gaps";
@@ -312,6 +292,7 @@ var Settings = class _Settings {
   static KEY_WINDOW_BORDER_WIDTH = "window-border-width";
   static KEY_ENABLE_SMART_WINDOW_BORDER_RADIUS = "enable-smart-window-border-radius";
   static KEY_QUARTER_TILING_THRESHOLD = "quarter-tiling-threshold";
+  static KEY_EDGE_TILING_OFFSET = "edge-tiling-offset";
   static KEY_ENABLE_TILING_SYSTEM_WINDOWS_SUGGESTIONS = "enable-tiling-system-windows-suggestions";
   static KEY_ENABLE_SNAP_ASSISTANT_WINDOWS_SUGGESTIONS = "enable-snap-assistant-windows-suggestions";
   static KEY_ENABLE_SCREEN_EDGES_WINDOWS_SUGGESTIONS = "enable-screen-edges-windows-suggestions";
@@ -333,6 +314,7 @@ var Settings = class _Settings {
   static SETTING_FOCUS_WINDOW_NEXT = "focus-window-next";
   static SETTING_FOCUS_WINDOW_PREV = "focus-window-prev";
   static SETTING_HIGHLIGHT_CURRENT_WINDOW = "highlight-current-window";
+  static SETTING_CYCLE_LAYOUTS = "cycle-layouts";
   static initialize(settings) {
     if (this._is_initialized)
       return;
@@ -438,6 +420,12 @@ var Settings = class _Settings {
   static set WRAPAROUND_FOCUS(val) {
     set_boolean(_Settings.KEY_WRAPAROUND_FOCUS, val);
   }
+  static get ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY() {
+    return get_boolean(_Settings.KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY);
+  }
+  static set ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY(val) {
+    set_boolean(_Settings.KEY_ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY, val);
+  }
   static get RESIZE_COMPLEMENTING_WINDOWS() {
     return get_boolean(_Settings.KEY_RESIZE_COMPLEMENTING_WINDOWS);
   }
@@ -486,6 +474,12 @@ var Settings = class _Settings {
   static set OVERRIDE_WINDOW_MENU(val) {
     set_boolean(_Settings.KEY_OVERRIDE_WINDOW_MENU, val);
   }
+  static get OVERRIDE_ALT_TAB() {
+    return get_boolean(_Settings.KEY_OVERRIDE_ALT_TAB);
+  }
+  static set OVERRIDE_ALT_TAB(val) {
+    set_boolean(_Settings.KEY_OVERRIDE_ALT_TAB, val);
+  }
   static get SNAP_ASSISTANT_THRESHOLD() {
     return get_number(_Settings.KEY_SNAP_ASSISTANT_THRESHOLD);
   }
@@ -497,6 +491,12 @@ var Settings = class _Settings {
   }
   static set QUARTER_TILING_THRESHOLD(val) {
     set_unsigned_number(_Settings.KEY_QUARTER_TILING_THRESHOLD, val);
+  }
+  static get EDGE_TILING_OFFSET() {
+    return get_unsigned_number(_Settings.KEY_EDGE_TILING_OFFSET);
+  }
+  static set EDGE_TILING_OFFSET(val) {
+    set_unsigned_number(_Settings.KEY_EDGE_TILING_OFFSET, val);
   }
   static get WINDOW_BORDER_COLOR() {
     return get_string(_Settings.KEY_WINDOW_BORDER_COLOR);
@@ -1019,6 +1019,25 @@ var GlobalState = class extends GObject.Object {
   }
   set tilePreviewAnimationTime(value) {
     this._tilePreviewAnimationTime = value;
+  }
+  setSelectedLayoutOfMonitor(layoutToSelectId, monitorIndex) {
+    const selected = Settings.get_selected_layouts();
+    selected[global.workspaceManager.get_active_workspace_index()][monitorIndex] = layoutToSelectId;
+    const n_workspaces = global.workspaceManager.get_n_workspaces();
+    if (global.workspaceManager.get_active_workspace_index() === n_workspaces - 2) {
+      const lastWs = global.workspaceManager.get_workspace_by_index(
+        n_workspaces - 1
+      );
+      if (!lastWs)
+        return;
+      const tiledWindows = getWindows(lastWs).find(
+        (win) => win.assignedTile && win.get_monitor() === monitorIndex
+      );
+      if (!tiledWindows) {
+        selected[lastWs.index()][monitorIndex] = layoutToSelectId;
+      }
+    }
+    Settings.save_selected_layouts(selected);
   }
 };
 __publicField(GlobalState, "metaInfo", {
@@ -1624,6 +1643,16 @@ var KeyBindings = class extends GObject.Object {
         this.emit("highlight-current-window", display);
       }
     );
+    const action = Main3.wm.addKeybinding(
+      Settings.SETTING_CYCLE_LAYOUTS,
+      extensionSettings,
+      Meta.KeyBindingFlags.NONE,
+      Shell.ActionMode.NORMAL,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (display, _2, event) => {
+        this.emit("cycle-layouts", display, action, event.get_mask());
+      }
+    );
   }
   _overrideNatives(extensionSettings) {
     const mutterKeybindings = new Gio.Settings({
@@ -1707,6 +1736,7 @@ var KeyBindings = class extends GObject.Object {
     Main3.wm.removeKeybinding(Settings.SETTING_FOCUS_WINDOW_NEXT);
     Main3.wm.removeKeybinding(Settings.SETTING_FOCUS_WINDOW_PREV);
     Main3.wm.removeKeybinding(Settings.SETTING_HIGHLIGHT_CURRENT_WINDOW);
+    Main3.wm.removeKeybinding(Settings.SETTING_CYCLE_LAYOUTS);
   }
   _restoreNatives() {
     const mutterKeybindings = new Gio.Settings({
@@ -1763,7 +1793,15 @@ __publicField(KeyBindings, "metaInfo", {
     },
     "highlight-current-window": {
       param_types: [Meta.Display.$gtype]
-      // Meta.Display,
+      // Meta.Display
+    },
+    "cycle-layouts": {
+      param_types: [
+        Meta.Display.$gtype,
+        GObject.TYPE_INT,
+        GObject.TYPE_INT
+      ]
+      // Meta.Display, number, number
     }
   }
 });
@@ -2257,6 +2295,36 @@ SnapAssistLayout = __decorateClass([
   registerGObjectClass
 ], SnapAssistLayout);
 
+// src/utils/gnomesupport.ts
+function widgetOrientation(vertical) {
+  if (St.BoxLayout.prototype.get_orientation !== void 0) {
+    return {
+      orientation: vertical ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL
+    };
+  }
+  return { vertical };
+}
+function buildBlurEffect(sigma) {
+  const effect = new Shell.BlurEffect();
+  effect.set_mode(Shell.BlurMode.BACKGROUND);
+  effect.set_brightness(1);
+  if (effect.set_radius) {
+    effect.set_radius(sigma * 2);
+  } else {
+    effect.set_sigma(sigma);
+  }
+  return effect;
+}
+function getEventCoords(event) {
+  return event.get_coords ? event.get_coords() : [event.x, event.y];
+}
+function maximizeWindow(window) {
+  window.get_maximized ? window.maximize(Meta.MaximizeFlags.BOTH) : window.maximize();
+}
+function unmaximizeWindow(window) {
+  window.get_maximized ? window.unmaximize(Meta.MaximizeFlags.BOTH) : window.unmaximize();
+}
+
 // src/components/snapassist/snapAssist.ts
 var SNAP_ASSIST_SIGNAL = "snap-assist";
 var GAPS = 4;
@@ -2659,12 +2727,12 @@ SelectionTilePreview = __decorateClass([
 ], SelectionTilePreview);
 
 // src/components/tilingsystem/edgeTilingManager.ts
-var EDGE_TILING_OFFSET = 16;
 var TOP_EDGE_TILING_OFFSET = 8;
 var QUARTER_PERCENTAGE = 0.5;
 var EdgeTilingManager = class extends GObject.Object {
   _workArea;
   _quarterActivationPercentage;
+  _edgeTilingOffset;
   // activation zones
   _topLeft;
   _topRight;
@@ -2693,10 +2761,19 @@ var EdgeTilingManager = class extends GObject.Object {
       this,
       "quarterActivationPercentage"
     );
+    this._edgeTilingOffset = Settings.EDGE_TILING_OFFSET;
+    Settings.bind(
+      Settings.KEY_EDGE_TILING_OFFSET,
+      this,
+      "edgeTilingOffset"
+    );
   }
   set quarterActivationPercentage(value) {
     this._quarterActivationPercentage = value / 100;
     this._updateActivationZones();
+  }
+  set edgeTilingOffset(value) {
+    this._edgeTilingOffset = value;
   }
   set workarea(newWorkArea) {
     this._workArea.x = newWorkArea.x;
@@ -2742,7 +2819,7 @@ var EdgeTilingManager = class extends GObject.Object {
     this._rightCenter.width = this._topRight.width;
   }
   canActivateEdgeTiling(pointerPos) {
-    return pointerPos.x <= this._workArea.x + EDGE_TILING_OFFSET || pointerPos.y <= this._workArea.y + TOP_EDGE_TILING_OFFSET || pointerPos.x >= this._workArea.x + this._workArea.width - EDGE_TILING_OFFSET || pointerPos.y >= this._workArea.y + this._workArea.height - EDGE_TILING_OFFSET;
+    return pointerPos.x <= this._workArea.x + this._edgeTilingOffset || pointerPos.y <= this._workArea.y + TOP_EDGE_TILING_OFFSET || pointerPos.x >= this._workArea.x + this._workArea.width - this._edgeTilingOffset || pointerPos.y >= this._workArea.y + this._workArea.height - this._edgeTilingOffset;
   }
   isPerformingEdgeTiling() {
     return this._activeEdgeTile !== null;
@@ -2824,6 +2901,15 @@ __publicField(EdgeTilingManager, "metaInfo", {
       1,
       50,
       40
+    ),
+    edgeTilingOffset: GObject.ParamSpec.uint(
+      "edgeTilingOffset",
+      "edgeTilingOffset",
+      "Offset to trigger edge tiling",
+      GObject.ParamFlags.READWRITE,
+      1,
+      250,
+      16
     )
   }
 });
@@ -3785,7 +3871,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
       winClone.connect("button-press-event", () => {
         this._lastTiledWindow = nonTiledWin;
         if (nonTiledWin.maximizedHorizontally || nonTiledWin.maximizedVertically)
-          nonTiledWin.unmaximize(Meta.MaximizeFlags.BOTH);
+          unmaximizeWindow(nonTiledWin);
         if (nonTiledWin.is_fullscreen())
           nonTiledWin.unmake_fullscreen();
         if (nonTiledWin.minimized)
@@ -4131,7 +4217,8 @@ var TilingManager = class {
   }
   onKeyboardMoveWindow(window, direction, force, spanFlag, clamp) {
     let destination;
-    if (spanFlag && window.get_maximized())
+    const isMaximized = window.maximizedHorizontally || window.maximizedVertically;
+    if (spanFlag && isMaximized)
       return false;
     const currentWs = window.get_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
@@ -4139,21 +4226,21 @@ var TilingManager = class {
       return false;
     const windowRectCopy = window.get_frame_rect().copy();
     const extWin = window;
-    if (window.get_maximized()) {
+    if (isMaximized) {
       switch (direction) {
         case 1 /* NODIRECTION */:
         case 4 /* LEFT */:
         case 5 /* RIGHT */:
           break;
         case 3 /* DOWN */:
-          window.unmaximize(Meta.MaximizeFlags.BOTH);
+          unmaximizeWindow(window);
           return true;
         case 2 /* UP */:
           return false;
       }
     }
     if (direction === 2 /* UP */ && extWin.assignedTile && extWin.assignedTile?.y === 0) {
-      window.maximize(Meta.MaximizeFlags.BOTH);
+      maximizeWindow(window);
       return true;
     }
     if (direction === 1 /* NODIRECTION */) {
@@ -4191,12 +4278,11 @@ var TilingManager = class {
       if (spanFlag)
         return false;
       if (direction === 2 /* UP */ && window.can_maximize()) {
-        window.maximize(Meta.MaximizeFlags.BOTH);
+        maximizeWindow(window);
         return true;
       }
       return false;
     }
-    const isMaximized = window.maximizedHorizontally || window.maximizedVertically;
     if (!window.assignedTile && !isMaximized)
       window.originalSize = windowRectCopy;
     if (spanFlag) {
@@ -4207,7 +4293,7 @@ var TilingManager = class {
       );
     }
     if (isMaximized)
-      window.unmaximize(Meta.MaximizeFlags.BOTH);
+      unmaximizeWindow(window);
     this._easeWindowRect(window, destination.rect, false, force);
     if (direction !== 1 /* NODIRECTION */) {
       window.assignedTile = new Tile2({
@@ -4462,7 +4548,7 @@ var TilingManager = class {
     ) : void 0;
     this._snapAssistingInfo.update(void 0);
     if (this._edgeTilingManager.isPerformingEdgeTiling() && this._edgeTilingManager.needMaximize() && window.can_maximize())
-      window.maximize(Meta.MaximizeFlags.BOTH);
+      maximizeWindow(window);
     const wasEdgeTiling = this._edgeTilingManager.isPerformingEdgeTiling();
     this._edgeTilingManager.abortEdgeTiling();
     const canShowTilingSuggestions = wasSnapAssistingLayout && Settings.ENABLE_SNAP_ASSISTANT_WINDOWS_SUGGESTIONS || wasEdgeTiling && Settings.ENABLE_SCREEN_EDGES_WINDOWS_SUGGESTIONS || isTilingSystemActivated && Settings.ENABLE_TILING_SYSTEM_WINDOWS_SUGGESTIONS;
@@ -4470,7 +4556,7 @@ var TilingManager = class {
       return;
     if (desiredWindowRect.width <= 0 || desiredWindowRect.height <= 0)
       return;
-    if (window.get_maximized())
+    if (window.maximizedHorizontally || window.maximizedVertically)
       return;
     window.originalSize = window.get_frame_rect().copy();
     window.assignedTile = new Tile2({
@@ -4710,9 +4796,10 @@ var TilingManager = class {
     });
     if (destinationRect.width <= 0 || destinationRect.height <= 0)
       return;
-    const rememberOriginalSize = !window.get_maximized();
-    if (window.get_maximized())
-      window.unmaximize(Meta.MaximizeFlags.BOTH);
+    const isMaximized = window.maximizedHorizontally || window.maximizedVertically;
+    const rememberOriginalSize = !isMaximized;
+    if (isMaximized)
+      unmaximizeWindow(window);
     if (rememberOriginalSize && !window.assignedTile) {
       window.originalSize = window.get_frame_rect().copy();
     }
@@ -6353,23 +6440,10 @@ var Indicator3 = class extends PanelMenu.Button {
     this._currentMenu = new DefaultMenu(this, this._enableScaling);
   }
   selectLayoutOnClick(monitorIndex, layoutToSelectId) {
-    const selected = Settings.get_selected_layouts();
-    selected[global.workspaceManager.get_active_workspace_index()][monitorIndex] = layoutToSelectId;
-    const n_workspaces = global.workspaceManager.get_n_workspaces();
-    if (global.workspaceManager.get_active_workspace_index() === n_workspaces - 2) {
-      const lastWs = global.workspaceManager.get_workspace_by_index(
-        n_workspaces - 1
-      );
-      if (!lastWs)
-        return;
-      const tiledWindows = getWindows(lastWs).find(
-        (win) => win.assignedTile && win.get_monitor() === monitorIndex
-      );
-      if (!tiledWindows) {
-        selected[lastWs.index()][monitorIndex] = layoutToSelectId;
-      }
-    }
-    Settings.save_selected_layouts(selected);
+    GlobalState.get().setSelectedLayoutOfMonitor(
+      layoutToSelectId,
+      monitorIndex
+    );
     this.menu.toggle();
   }
   newLayoutOnClick(showLegendOnly) {
@@ -6481,8 +6555,6 @@ var Indicator3 = class extends PanelMenu.Button {
         break;
       case 2 /* CREATE_NEW */:
       case 3 /* EDITING_LAYOUT */:
-        this._currentMenu = new EditingMenu(this);
-        this.show();
         if (this._keyPressEvent)
           global.stage.disconnect(this._keyPressEvent);
         this._keyPressEvent = global.stage.connect_after(
@@ -6494,6 +6566,8 @@ var Indicator3 = class extends PanelMenu.Button {
             return Clutter.EVENT_PROPAGATE;
           }
         );
+        this._currentMenu = new EditingMenu(this);
+        this.show();
         break;
     }
   }
@@ -7492,9 +7566,341 @@ var WindowBorderManager = class {
   }
 };
 
-// src/extension.ts
+// src/components/altTab/tilePreviewWithWindow.ts
+var TilePreviewWithWindow = class extends TilePreview {
+  constructor(params) {
+    super(params);
+    if (params.parent)
+      params.parent.add_child(this);
+    this._showing = false;
+    this._rect = params.rect || buildRectangle({});
+    this._gaps = new Clutter.Margin();
+    this.gaps = params.gaps || new Clutter.Margin();
+    this._tile = params.tile || new Tile2({ x: 0, y: 0, width: 0, height: 0, groups: [] });
+  }
+  set gaps(gaps) {
+    this._gaps = gaps.copy();
+    if (this._gaps.top === 0 && this._gaps.bottom === 0 && this._gaps.right === 0 && this._gaps.left === 0)
+      this.remove_style_class_name("custom-tile-preview");
+    else
+      this.add_style_class_name("custom-tile-preview");
+  }
+  _init() {
+    super._init();
+    this.remove_style_class_name("tile-preview");
+  }
+};
+TilePreviewWithWindow = __decorateClass([
+  registerGObjectClass
+], TilePreviewWithWindow);
+
+// src/components/altTab/MetaWindowGroup.ts
+var debug14 = logger("MetaWindowGroup");
+var MetaWindowGroup = class {
+  _windows;
+  _unmanagedCounter;
+  // count how many windows are unmanaged
+  _unmanagedEventHandler;
+  /**
+   * Initializes a WindowsGroup with a list of Meta.Window instances.
+   * @param windows - An array of Meta.Window objects to manage as a group.
+   */
+  constructor(windows) {
+    this._windows = windows;
+    this._unmanagedCounter = 0;
+    this._unmanagedEventHandler = null;
+    this._windows.forEach(
+      (win) => win.connect("unmanaged", () => {
+        this._unmanagedCounter++;
+        if (this._unmanagedEventHandler && this._unmanagedCounter === this._windows.length)
+          this._unmanagedEventHandler();
+      })
+    );
+    return new Proxy(this, {
+      get: (target, prop, receiver) => {
+        if (prop in target)
+          return Reflect.get(target, prop, receiver);
+        if (typeof this._windows[0]?.[prop] === "function") {
+          return (...args) => {
+            this._windows.forEach(
+              (win) => (
+                // @ts-expect-error "This is expected"
+                // eslint-disable-next-line @typescript-eslint/ban-types
+                win[prop](...args)
+              )
+            );
+          };
+        }
+        return this._windows[0]?.[prop];
+      }
+    });
+  }
+  get_workspace() {
+    return this._windows[0].get_workspace();
+  }
+  activate(time) {
+    this._windows.forEach((win) => {
+      win.activate(time);
+      time = global.get_current_time();
+    });
+  }
+  connect(...args) {
+    return this._windows[0].connect(...args);
+  }
+  connectObject(...args) {
+    return this._windows[0].connectObject(...args);
+  }
+  onAllWindowsUnmanaged(fn) {
+    this._unmanagedEventHandler = fn;
+  }
+};
+
+// src/components/altTab/MultipleWindowsIcon.ts
+var debug15 = logger("MultipleWindowsIcon");
+var OUTER_GAPS = 2;
+var MultipleWindowsIcon = class extends LayoutWidget {
+  _label;
+  _window;
+  constructor(params) {
+    super({
+      layout: new Layout(params.tiles, ""),
+      innerGaps: params.innerGaps.copy(),
+      outerGaps: buildMarginOf(OUTER_GAPS)
+    });
+    this.set_size(params.width, params.height);
+    super.relayout({
+      containerRect: buildRectangle({
+        x: 0,
+        y: 0,
+        width: params.width,
+        height: params.height
+      })
+    });
+    this._previews.forEach((preview, index) => {
+      const window = params.windows[index];
+      if (!window) {
+        preview.hide();
+        return;
+      }
+      const winClone = new Clutter.Clone({
+        source: window.get_compositor_private(),
+        width: preview.innerWidth,
+        height: preview.innerHeight
+      });
+      preview.add_child(winClone);
+    });
+    this._label = new St.Label({
+      text: _("Tiled windows")
+    });
+    this._window = new MetaWindowGroup(params.windows);
+    let rightMostPercentage = 0;
+    params.tiles.forEach((t) => {
+      if (t.x + t.width > rightMostPercentage)
+        rightMostPercentage = t.x + t.width;
+    });
+    this.set_width(params.width * rightMostPercentage);
+  }
+  buildTile(parent, rect, gaps, tile) {
+    return new TilePreviewWithWindow({ parent, rect, gaps, tile });
+  }
+  get window() {
+    return this._window;
+  }
+  get label() {
+    return this._label;
+  }
+};
+MultipleWindowsIcon = __decorateClass([
+  registerGObjectClass
+], MultipleWindowsIcon);
+
+// src/components/altTab/overriddenAltTab.ts
+import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
+var GAPS2 = 3;
+var debug16 = logger("OverriddenAltTab");
+var OverriddenAltTab = class _OverriddenAltTab {
+  static _instance = null;
+  static _old_show;
+  static _enabled = false;
+  // AltTab has these private fields
+  _switcherList;
+  _items;
+  static get() {
+    if (this._instance === null)
+      this._instance = new _OverriddenAltTab();
+    return this._instance;
+  }
+  static enable() {
+    if (this._enabled)
+      return;
+    const owm = this.get();
+    _OverriddenAltTab._old_show = AltTab.WindowSwitcherPopup.prototype.show;
+    AltTab.WindowSwitcherPopup.prototype.show = owm.newShow;
+    this._enabled = true;
+  }
+  static disable() {
+    if (!this._enabled)
+      return;
+    AltTab.WindowSwitcherPopup.prototype.show = _OverriddenAltTab._old_show;
+    this._old_show = null;
+    this._enabled = false;
+  }
+  static destroy() {
+    this.disable();
+    this._instance = null;
+  }
+  // the function will be treated as a method of class WindowMenu
+  newShow(backward, binding, mask) {
+    this._switcherList._list.get_layout_manager().homogeneous = false;
+    this._switcherList._squareItems = false;
+    const oldFunction = _OverriddenAltTab._old_show?.bind(this);
+    const res = !oldFunction || oldFunction(backward, binding, mask);
+    const tiledWindows = this._getWindowList().filter((win) => win.assignedTile);
+    if (tiledWindows.length <= 1)
+      return res;
+    const tiles = tiledWindows.map((win) => win.assignedTile).filter((tile) => tile !== void 0);
+    const inner_gaps = Settings.get_inner_gaps();
+    const height = this._items[0].height;
+    const width = Math.floor(height * 16 / 9);
+    const gaps = GAPS2 * St.ThemeContext.get_for_stage(global.stage).scale_factor;
+    const groupWindowsIcon = new MultipleWindowsIcon({
+      tiles,
+      width,
+      height,
+      innerGaps: buildMargin({
+        top: inner_gaps.top === 0 ? 0 : gaps,
+        bottom: inner_gaps.bottom === 0 ? 0 : gaps,
+        left: inner_gaps.left === 0 ? 0 : gaps,
+        right: inner_gaps.right === 0 ? 0 : gaps
+      }),
+      windows: tiledWindows
+    });
+    this._switcherList.addItem(groupWindowsIcon, groupWindowsIcon.label);
+    this._items.push(groupWindowsIcon);
+    groupWindowsIcon.window.onAllWindowsUnmanaged(() => {
+      this._switcherList._removeWindow(groupWindowsIcon.window);
+    });
+    return res;
+  }
+  _getWindowList() {
+    return getWindows();
+  }
+};
+
+// src/components/layoutSwitcher/layoutSwitcher.ts
+import * as SwitcherPopup from "resource:///org/gnome/shell/ui/switcherPopup.js";
 import * as Main12 from "resource:///org/gnome/shell/ui/main.js";
-var debug14 = logger("extension");
+var LAYOUT_HEIGHT = 72;
+var LAYOUT_WIDTH = 128;
+var GAPS3 = 3;
+var LayoutSwitcherList = class extends SwitcherPopup.SwitcherList {
+  // those are defined in the parent but we lack them in the type definition
+  
+  
+  _buttons;
+  constructor(items, parent, monitorScalingFactor) {
+    super(false);
+    this.add_style_class_name("layout-switcher-list");
+    this._buttons = [];
+    parent.add_child(this);
+    enableScalingFactorSupport(this, monitorScalingFactor);
+    items.forEach((lay) => this._addLayoutItem(lay));
+    parent.remove_child(this);
+  }
+  _addLayoutItem(layout) {
+    const box = new St.BoxLayout({
+      style_class: "alt-tab-app",
+      ...widgetOrientation(true)
+    });
+    this.addItem(box, new St.Widget());
+    this._buttons.push(
+      new LayoutButton(
+        box,
+        layout,
+        Settings.get_inner_gaps(1).top > 0 ? GAPS3 : 0,
+        LAYOUT_HEIGHT,
+        LAYOUT_WIDTH
+      )
+    );
+  }
+  highlight(index, justOutline) {
+    this._buttons[index].set_checked(true);
+    super.highlight(index, justOutline);
+    this._items[this._highlighted].remove_style_pseudo_class("outlined");
+    this._items[this._highlighted].remove_style_pseudo_class("selected");
+  }
+  unhighlight(index) {
+    this._buttons[index].set_checked(false);
+  }
+};
+LayoutSwitcherList = __decorateClass([
+  registerGObjectClass
+], LayoutSwitcherList);
+var LayoutSwitcherPopup = class extends SwitcherPopup.SwitcherPopup {
+  // those are defined in the parent but we lack them in the type definition
+  
+  
+  
+  _action;
+  constructor(action, enableScaling) {
+    super(GlobalState.get().layouts);
+    this._action = action;
+    const monitorScalingFactor = enableScaling ? getMonitorScalingFactor(this._getCurrentMonitorIndex()) : void 0;
+    this._switcherList = new LayoutSwitcherList(
+      this._items,
+      this,
+      monitorScalingFactor
+    );
+  }
+  _initialSelection(backward, _binding) {
+    const selectedLay = GlobalState.get().getSelectedLayoutOfMonitor(
+      this._getCurrentMonitorIndex(),
+      global.workspaceManager.get_active_workspace_index()
+    );
+    this._selectedIndex = GlobalState.get().layouts.findIndex(
+      (lay) => lay.id === selectedLay.id
+    );
+    if (backward)
+      this._select(this._previous());
+    else
+      this._select(this._next());
+  }
+  _keyPressHandler(keysym, action) {
+    if (keysym === Clutter.KEY_Left)
+      this._select(this._previous());
+    else if (keysym === Clutter.KEY_Right)
+      this._select(this._next());
+    else if (action !== this._action)
+      return Clutter.EVENT_PROPAGATE;
+    else
+      this._select(this._next());
+    return Clutter.EVENT_STOP;
+  }
+  _select(num) {
+    this._switcherList.unhighlight(this._selectedIndex);
+    super._select(num);
+  }
+  _finish(timestamp) {
+    super._finish(timestamp);
+    GlobalState.get().setSelectedLayoutOfMonitor(
+      this._items[this._selectedIndex].id,
+      this._getCurrentMonitorIndex()
+    );
+  }
+  _getCurrentMonitorIndex() {
+    const focusWindow = global.display.focus_window;
+    if (focusWindow)
+      return focusWindow.get_monitor();
+    return Main12.layoutManager.primaryIndex;
+  }
+};
+LayoutSwitcherPopup = __decorateClass([
+  registerGObjectClass
+], LayoutSwitcherPopup);
+
+// src/extension.ts
+import * as Main13 from "resource:///org/gnome/shell/ui/main.js";
+var debug17 = logger("extension");
 var TilingShellExtension = class extends Extension {
   _indicator;
   _tilingManagers;
@@ -7522,7 +7928,7 @@ var TilingShellExtension = class extends Extension {
   }
   _validateSettings() {
     if (Settings.LAST_VERSION_NAME_INSTALLED === "14.0") {
-      debug14("apply compatibility changes");
+      debug17("apply compatibility changes");
       Settings.save_selected_layouts([]);
     }
     if (this.metadata["version-name"]) {
@@ -7549,9 +7955,9 @@ var TilingShellExtension = class extends Extension {
         new GLib.Variant("b", false)
       );
     }
-    if (Main12.layoutManager._startingUp) {
+    if (Main13.layoutManager._startingUp) {
       this._signals.connect(
-        Main12.layoutManager,
+        Main13.layoutManager,
         "startup-complete",
         () => {
           this._createTilingManagers();
@@ -7577,13 +7983,15 @@ var TilingShellExtension = class extends Extension {
     this._dbus.enable(this);
     if (Settings.OVERRIDE_WINDOW_MENU)
       OverriddenWindowMenu.enable();
-    debug14("extension is enabled");
+    if (Settings.OVERRIDE_ALT_TAB)
+      OverriddenAltTab.enable();
+    debug17("extension is enabled");
   }
   openLayoutEditor() {
     this._indicator?.openLayoutEditor();
   }
   _createTilingManagers() {
-    debug14("building a tiling manager for each monitor");
+    debug17("building a tiling manager for each monitor");
     this._tilingManagers.forEach((tm) => tm.destroy());
     this._tilingManagers = getMonitors().map(
       (monitor) => new TilingManager(monitor, !this._fractionalScalingEnabled)
@@ -7600,7 +8008,7 @@ var TilingShellExtension = class extends Extension {
         this._createTilingManagers();
       } else {
         this._tilingManagers.forEach((tm, index) => {
-          tm.workArea = Main12.layoutManager.getWorkAreaForMonitor(index);
+          tm.workArea = Main13.layoutManager.getWorkAreaForMonitor(index);
         });
       }
     });
@@ -7693,10 +8101,22 @@ var TilingShellExtension = class extends Extension {
             if (win !== focus_window && win.can_minimize())
               win.minimize();
           });
-          Main12.activateWindow(
+          Main13.activateWindow(
             focus_window,
             global.get_current_time()
           );
+        }
+      );
+      this._signals.connect(
+        this._keybindings,
+        "cycle-layouts",
+        (_2, dp, action, mask) => {
+          const switcher = new LayoutSwitcherPopup(
+            action,
+            !this._fractionalScalingEnabled
+          );
+          if (!switcher.show(false, "", mask))
+            switcher.destroy();
         }
       );
     }
@@ -7708,14 +8128,14 @@ var TilingShellExtension = class extends Extension {
           schemaId: "org.gnome.mutter"
         });
         if (Settings.ACTIVE_SCREEN_EDGES) {
-          debug14("disable native edge tiling");
+          debug17("disable native edge tiling");
           SettingsOverride.get().override(
             gioSettings,
             "edge-tiling",
             new GLib.Variant("b", false)
           );
         } else {
-          debug14("bring back native edge tiling");
+          debug17("bring back native edge tiling");
           SettingsOverride.get().restoreKey(
             gioSettings,
             "edge-tiling"
@@ -7743,6 +8163,12 @@ var TilingShellExtension = class extends Extension {
           manager.onTileFromWindowMenu(tile, window);
       }
     );
+    this._signals.connect(Settings, Settings.KEY_OVERRIDE_ALT_TAB, () => {
+      if (Settings.OVERRIDE_ALT_TAB)
+        OverriddenAltTab.enable();
+      else
+        OverriddenAltTab.disable();
+    });
   }
   /* todo private _moveMaximizedToWorkspace(
           wm: Shell.WM,
@@ -7753,7 +8179,7 @@ var TilingShellExtension = class extends Extension {
           if (
               window.wmClass === null ||
               change !== Meta.SizeChange.MAXIMIZE || // handle maximize changes only
-              window.get_maximized() !== Meta.MaximizeFlags.BOTH || // handle maximized window only
+              (window.maximizedHorizontally && window.maximizedVertically) || // handle maximized window only
               window.is_attached_dialog() || // skip dialogs
               window.is_on_all_workspaces() ||
               window.windowType !== Meta.WindowType.NORMAL || // handle normal windows only
@@ -7824,14 +8250,14 @@ var TilingShellExtension = class extends Extension {
     if ((focus_window.maximizedHorizontally || focus_window.maximizedVertically) && spanFlag)
       return;
     if ((focus_window.maximizedHorizontally || focus_window.maximizedVertically) && direction === 3 /* DOWN */) {
-      focus_window.unmaximize(Meta.MaximizeFlags.BOTH);
+      unmaximizeWindow(focus_window);
       return;
     }
     const monitorTilingManager = this._tilingManagers[focus_window.get_monitor()];
     if (!monitorTilingManager)
       return;
     if (Settings.ENABLE_AUTO_TILING && (focus_window.maximizedHorizontally || focus_window.maximizedVertically)) {
-      focus_window.unmaximize(Meta.MaximizeFlags.BOTH);
+      unmaximizeWindow(focus_window);
       return;
     }
     let displayDirection = Meta.DisplayDirection.DOWN;
@@ -7861,8 +8287,8 @@ var TilingShellExtension = class extends Extension {
     if (success || direction === 1 /* NODIRECTION */ || neighborMonitorIndex === -1)
       return;
     if ((focus_window.maximizedHorizontally || focus_window.maximizedVertically) && direction === 2 /* UP */) {
-      Main12.wm.skipNextEffect(focus_window.get_compositor_private());
-      focus_window.unmaximize(Meta.MaximizeFlags.BOTH);
+      Main13.wm.skipNextEffect(focus_window.get_compositor_private());
+      unmaximizeWindow(focus_window);
       focus_window.assignedTile = void 0;
     }
     const neighborTilingManager = this._tilingManagers[neighborMonitorIndex];
@@ -7890,8 +8316,11 @@ var TilingShellExtension = class extends Extension {
     const windowList = filterUnfocusableWindows(
       focus_window.get_workspace().list_windows()
     );
+    const onlyTiledWindows = Settings.ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY;
     windowList.filter((win) => {
       if (win === focus_window || win.minimized)
+        return false;
+      if (onlyTiledWindows && win.assignedTile === void 0)
         return false;
       const winRect = win.get_frame_rect();
       switch (direction) {
@@ -7959,8 +8388,8 @@ var TilingShellExtension = class extends Extension {
     const focus_window = display.get_focus_window();
     if (!focus_window || !focus_window.has_focus() || focus_window.windowType !== Meta.WindowType.NORMAL || focus_window.get_wm_class() && focus_window.get_wm_class() === "gjs")
       return;
-    if (focus_window.get_maximized())
-      focus_window.unmaximize(Meta.MaximizeFlags.BOTH);
+    if (focus_window.maximizedHorizontally || focus_window.maximizedVertically)
+      unmaximizeWindow(focus_window);
     const monitorTilingManager = this._tilingManagers[focus_window.get_monitor()];
     if (!monitorTilingManager)
       return;
@@ -7988,13 +8417,34 @@ var TilingShellExtension = class extends Extension {
     this._dbus = null;
     this._fractionalScalingEnabled = false;
     OverriddenWindowMenu.destroy();
+    OverriddenAltTab.destroy();
     SettingsOverride.destroy();
     GlobalState.destroy();
     Settings.destroy();
     TilingShellWindowManager.destroy();
-    debug14("extension is disabled");
+    debug17("extension is disabled");
   }
 };
 export {
   TilingShellExtension as default
 };
+/*!
+ * Tiling Shell: advanced and modern window management for GNOME
+ *
+ * Copyright (C) 2025 Domenico Ferraro
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */

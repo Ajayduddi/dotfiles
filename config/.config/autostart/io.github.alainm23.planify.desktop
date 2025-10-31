@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=io.github.alainm23.planify
+X-XDP-Autostart=io.github.alainm23.planify
+Exec=flatpak run --command=io.github.alainm23.planify io.github.alainm23.planify --background
+X-Flatpak=io.github.alainm23.planify

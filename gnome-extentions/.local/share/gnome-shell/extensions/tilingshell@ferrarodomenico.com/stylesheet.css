@@ -202,3 +202,7 @@
   border-radius: 8px;
   padding: 6px;
 }
+.layout-switcher-list .snap-assist-tile {
+  border-radius-value: 6px;
+  border-width-value: 1px;
+}

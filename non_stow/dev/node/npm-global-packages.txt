@@ -1,3 +1,4 @@
+cli
 corepack
 gemini-cli
 npm

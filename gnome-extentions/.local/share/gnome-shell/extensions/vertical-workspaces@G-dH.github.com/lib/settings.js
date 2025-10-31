@@ -110,7 +110,6 @@ export const Options = class Options {
             appFolderRemoveButton: ['int', 'app-folder-remove-button'],
             appFolderCloseButton: ['boolean', 'app-folder-close-button'],
             appGridShowPageArrows: ['boolean', 'app-grid-show-page-arrows'],
-            searchWindowsOrder: ['int', 'search-windows-order'],
             searchFuzzy: ['boolean', 'search-fuzzy'],
             searchMaxResultsRows: ['int', 'search-max-results-rows'],
             searchAppGridMode: ['int', 'search-app-grid-mode'],
@@ -179,6 +178,7 @@ export const Options = class Options {
             profileName2: ['string', 'profile-name-2'],
             profileName3: ['string', 'profile-name-3'],
             profileName4: ['string', 'profile-name-4'],
+            profileName5: ['string', 'profile-name-5'],
         };
         this.cachedOptions = {};
         this._updateSettings();
@@ -336,8 +336,6 @@ export const Options = class Options {
         this.DASH_SHIFT_CLICK_MV = true;
 
         this.RUNNING_DOT_STYLE = this.get('runningDotStyle');
-
-        this.SEARCH_WINDOWS_ICON_SCROLL = this.get('searchWindowsIconScroll');
 
         this.DASH_POSITION_ADJUSTMENT = this.get('dashPositionAdjust');
         this.DASH_POSITION_ADJUSTMENT = this.DASH_POSITION_ADJUSTMENT * -1 / 100; // range 1 to -1
@@ -571,6 +569,9 @@ export const Options = class Options {
         this.DELAY_STARTUP = this.get('delayStartup');
         this.DELAY_OVERVIEW_ANIMATION = true;
         this.DELAY_PER_WINDOW = 4;
+
+        this.SEARCH_ENTRY_POSITION_TOP = true;
+        this.USE_THUMBNAILS_IN_APP_GRID = true;
     }
 
     _getAnimationDirection() {

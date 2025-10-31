@@ -6,9 +6,9 @@
   "name": "Status Icons",
   "settings-schema": "org.gnome.shell.extensions.status-icons",
   "shell-version": [
-    "48"
+    "49"
   ],
   "url": "https://gitlab.gnome.org/GNOME/gnome-shell-extensions",
   "uuid": "status-icons@gnome-shell-extensions.gcampax.github.com",
-  "version": 5
+  "version": 14
 }

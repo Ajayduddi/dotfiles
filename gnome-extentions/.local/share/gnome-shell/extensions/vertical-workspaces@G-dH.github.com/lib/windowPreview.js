@@ -235,19 +235,16 @@ const WindowPreviewCommon = {
         }));
 
         if (opt.WINDOW_ICON_CLICK_ACTION) {
-            let iconClickAction;
-            if (Clutter.ClickAction) {
-                iconClickAction = new Clutter.ClickAction();
-                iconClickAction.connect('clicked', act => this._onWindowIconClicked(act.get_button()));
-            } else {
-                iconClickAction = new Clutter.ClickGesture();
-                iconClickAction.connect('recognize', gesture => this._onWindowClicked(gesture.get_button()));
-            }
+            const clickActionConstructor = Clutter.ClickAction || Clutter.ClickGesture;
+            const clickedSignal = Clutter.ClickAction ? 'clicked' : 'recognize';
+            const iconClickAction = new clickActionConstructor();
+            iconClickAction.connect(clickedSignal,
+                gesture => this._onWindowIconClicked(gesture.get_button()));
             this._icon.add_action(iconClickAction);
         }
         const { scaleFactor } = St.ThemeContext.get_for_stage(global.stage);
         this._title = new St.Label({
-            visible: false,
+            visible: opt.ALWAYS_SHOW_WIN_TITLES,
             style_class: opt.WIN_TITLES_POSITION_TOP ? 'window-caption window-caption-top' : 'window-caption',
             text: this._getCaption(),
             reactive: true,
@@ -357,11 +354,7 @@ const WindowPreviewCommon = {
             this._icon.scale_x = 0;
             this._icon.scale_y = 0;
             this._title.opacity = 0;
-            this._title.scale_y = 0;
         }
-
-        if (opt.ALWAYS_SHOW_WIN_TITLES)
-            this._title.show();
 
         if (opt.OVERVIEW_MODE) {
             // show window icon and title on ws windows spread
@@ -458,7 +451,7 @@ const WindowPreviewCommon = {
 
     vfunc_enter_event(event) {
         // Ignore this event if the mouse hasn't been used since triggering the overview
-        if (global.get_pointer()[0] === opt.initialPointerX)
+        if (global.get_pointer()[0] === Me.run.initialPointerX)
             return Clutter.EVENT_PROPAGATE;
 
         if (opt.OVERVIEW_MODE === 1 && !opt.WORKSPACE_MODE && Main.overview._overview._controls._stateAdjustment.value === 1) {
@@ -473,7 +466,7 @@ const WindowPreviewCommon = {
     vfunc_leave_event(event) {
         // Ignore this event if the mouse hasn't been used since triggering the overview,
         // or when using keyboard to switch workspace
-        if (global.get_pointer()[0] === opt.initialPointerX)
+        if (global.get_pointer()[0] === Me.run.initialPointerX)
             return Clutter.EVENT_PROPAGATE;
         return WindowPreview.WindowPreview.prototype.vfunc_leave_event.bind(this)(event);
     },
@@ -615,64 +608,56 @@ const WindowPreviewCommon = {
         let { currentState, initialState, finalState } =
             this._overviewAdjustment.getStateTransitionParams();
 
-        // Current state - 0 - HIDDEN, 1 - WINDOW_PICKER, 2 - APP_GRID
         const primaryMonitor = this.metaWindow.get_monitor() === global.display.get_primary_monitor();
+        const staticWorkspace = !!opt.OVERVIEW_MODE && !opt.WORKSPACE_MODE;
 
-        const visible =
-            (initialState > ControlsState.HIDDEN || finalState > ControlsState.HIDDEN) &&
-            !(finalState === ControlsState.APP_GRID && opt.WS_ANIMATION && primaryMonitor);
-
-        let scale = 0;
-        if (visible)
-            scale = currentState >= 1 ? 1 : currentState % 1;
-
-        if (!primaryMonitor && opt.WORKSPACE_MODE &&
-            ((initialState === ControlsState.WINDOW_PICKER && finalState === ControlsState.APP_GRID) ||
-            (initialState === ControlsState.APP_GRID && finalState === ControlsState.WINDOW_PICKER))
-        )
-            scale = 1;
-        else if (!primaryMonitor && opt.OVERVIEW_MODE && !opt.WORKSPACE_MODE)
-            scale = 0;
-        /* } else if (primaryMonitor && ((initialState === ControlsState.WINDOW_PICKER && finalState === ControlsState.APP_GRID) ||
-            initialState === ControlsState.APP_GRID && finalState === ControlsState.HIDDEN)) {*/
-        else if (primaryMonitor && currentState > ControlsState.WINDOW_PICKER)
-            scale = 0;
-
-        // in static workspace mode show icon and title on windows expose
-        if (opt.OVERVIEW_MODE) {
-            if (currentState === 1)
-                scale = this._workspace._background._stateAdjustment.value;
-            else if ((finalState === 1 && !opt.WORKSPACE_MODE) || (finalState === 0 && !opt.WORKSPACE_MODE))
-                return;
+        let visible, doNotScale;
+        if (primaryMonitor) {
+            visible = !staticWorkspace &&
+                (initialState === ControlsState.WINDOW_PICKER ||
+                finalState === ControlsState.WINDOW_PICKER);
+            doNotScale = visible && !opt.WS_ANIMATION && currentState >= ControlsState.WINDOW_PICKER;
+        } else {
+            visible = !staticWorkspace;
+            doNotScale = visible && currentState >= ControlsState.WINDOW_PICKER;
         }
 
-        if (!opt.WS_ANIMATION && (Main.overview.searchController.searchActive ||
-            ((initialState === ControlsState.WINDOW_PICKER && finalState === ControlsState.APP_GRID) ||
-             (initialState === ControlsState.APP_GRID && finalState === ControlsState.WINDOW_PICKER)))
-        )
-            return;
+        let scale = 0;
+        if (doNotScale)
+            scale = 1;
+        else if (visible)
+            scale = 1 - Math.abs(ControlsState.WINDOW_PICKER - currentState);
 
-        // if titles are in 'always show' mode, we need to add transition between visible/invisible state
-        // but the transition is quite expensive,
-        // showing the titles at the end of the transition is good enough and workspace preview transition is much smoother
-        if (scale === 1) {
+        if (scale === 1 && this._icon.scale_x !== scale) {
             this._icon.set({
                 scale_x: 1,
                 scale_y: 1,
             });
+        } else if (this._icon.scale_x !== scale) {
+            this._icon.set({
+                scale_x: scale,
+                scale_y: scale,
+            });
+        }
+
+        if (!opt.ALWAYS_SHOW_WIN_TITLES)
+            return;
+
+        // If titles are set to 'always visible', we need to add a transition between the invisible and visible states.
+        // However, scaling many titles along with icons can be resource-intensive,
+        // so the transition is added after the overview animation finishes.
+        if (currentState === ControlsState.WINDOW_PICKER && !this._title.visible && !staticWorkspace) {
+            this._title.scale_y = 0;
+            this._title.opacity = 0;
+            this._title.show();
             this._title.ease({
                 duration: 100,
                 opacity: 255,
                 scale_y: 1,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             });
-        } else {
-            this._title.opacity = 0;
-            this._title.scale_y = 0;
-            this._icon.set({
-                scale_x: scale,
-                scale_y: scale,
-            });
+        } else if (scale < 1 && this._title.visible) {
+            this._title.hide();
         }
     },
 
@@ -748,7 +733,7 @@ const WindowPreviewCommon = {
         // When leaving overview, mark the window for activation if needed
         // The marked window is activated during _onDestroy()
         const leavingOverview = Main.overview._overview.controls._stateAdjustment.value < 1;
-        if ((opt.ALWAYS_ACTIVATE_SELECTED_WINDOW || opt._activateSelectedWindow) && leavingOverview)
+        if ((opt.ALWAYS_ACTIVATE_SELECTED_WINDOW || Me.run.activateSelectedWindow) && leavingOverview)
             this._activateSelected = true;
 
         if (this._destroyed)
@@ -873,7 +858,7 @@ const WindowPreviewCommon = {
 
             if (!enabled)
                 this.hideOverlay(false);
-            else if (global.get_pointer()[0] !== opt.initialPointerX && (this['has-pointer'] || global.stage.key_focus === this))
+            else if (global.get_pointer()[0] !== Me.run.initialPointerX && (this['has-pointer'] || global.stage.key_focus === this))
                 this.showOverlay(true);
         },
     },

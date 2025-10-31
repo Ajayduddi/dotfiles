@@ -10,10 +10,10 @@
   "original-author": "JasonLG1979@github.io",
   "settings-schema": "org.gnome.shell.extensions.weather-oclock",
   "shell-version": [
-    "48"
+    "49"
   ],
   "url": "https://github.com/CleoMenezesJr/weather-oclock",
   "uuid": "weatheroclock@CleoMenezesJr.github.io",
-  "version": 16,
-  "version-name": "48.0"
+  "version": 17,
+  "version-name": "49.0"
 }

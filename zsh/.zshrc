@@ -309,4 +309,8 @@ secure_clear() {
     fi
 }
 alias sclear='secure_clear'
+. "$HOME/.cargo/env"
 
+
+# Load Angular CLI autocompletion.
+source <(ng completion script)

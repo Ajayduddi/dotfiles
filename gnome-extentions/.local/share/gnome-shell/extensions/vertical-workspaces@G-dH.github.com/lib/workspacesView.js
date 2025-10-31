@@ -224,7 +224,11 @@ const WorkspacesViewCommon = {
 
             const scaleProgress = 1 - Math.clamp(distanceToCurrentWorkspace, 0, 1);
             if (opt.SHOW_WS_PREVIEW_BG && !(opt.OVERVIEW_MODE2 && !opt.WORKSPACE_MODE)) {
-                const scale = Util.lerp(0.94, 1, scaleProgress);
+                let scale = Util.lerp(0.94, 1, scaleProgress);
+                // If all workspaces should align with ws thumbnails at the end of the transition to the APP_GRID state,
+                // the scale of all of them should be 1 at that time
+                if (primaryMonitor && opt.USE_THUMBNAILS_IN_APP_GRID && opt.WS_ANIMATION_ALL && currentState !== ControlsState.WINDOW_PICKER)
+                    scale += Math.abs(1 - currentState) * (1 - scale);
                 w.set_scale(scale, scale);
             }
 
@@ -254,7 +258,7 @@ const WorkspacesViewCommon = {
                 w.visible = true;
                 const directionNext = distance > 0;
 
-                if (opt.ORIENTATION) {
+                 if (opt.ORIENTATION) {
                     const height = w.height * 0.6 * opt.WS_PREVIEW_SCALE;
                     w.translation_y = directionNext ? -height : height;
                 } else {
@@ -279,7 +283,7 @@ const WorkspacesViewCommon = {
 
 
             // hide workspace background
-            if (!opt.SHOW_WS_PREVIEW_BG && w._background.opacity)
+            if (!opt.SHOW_WS_PREVIEW_BG && currentState <= ControlsState.WINDOW_PICKER && w._background.opacity)
                 w._background.opacity = 0;
         });
     },
@@ -319,10 +323,10 @@ const SecondaryMonitorDisplayCommon = {
 const SecondaryMonitorDisplayVertical = {
     _getThumbnailParamsForState(state) {
         const spacing = opt.SPACING;
-        let opacity, scale, translationX;
+        let scale, translationX;
+        const opacity = opt.SEC_MAX_THUMBNAIL_SCALE > 0.01 ? 255 : 0;
         switch (state) {
         case ControlsState.HIDDEN:
-            opacity = 255;
             scale = 1;
             translationX = 0;
             if (!Main.layoutManager._startingUp && (!opt.SHOW_WS_PREVIEW_BG || opt.OVERVIEW_MODE2))
@@ -331,12 +335,10 @@ const SecondaryMonitorDisplayVertical = {
             break;
         case ControlsState.WINDOW_PICKER:
         case ControlsState.APP_GRID:
-            opacity = 255;
             scale = 1;
             translationX = 0;
             break;
         default:
-            opacity = 255;
             scale = 1;
             translationX = 0;
             break;
@@ -500,6 +502,7 @@ const SecondaryMonitorDisplayVertical = {
         const initialParams = this._getThumbnailParamsForState(initialState);
         const finalParams = this._getThumbnailParamsForState(finalState);
 
+        const opacity = finalParams.opacity;
         /* const opacity =
             Util.lerp(initialParams.opacity, finalParams.opacity, progress);
         const scale =
@@ -512,7 +515,7 @@ const SecondaryMonitorDisplayVertical = {
             : 0;
 
         this._thumbnails.set({
-            opacity: 255,
+            opacity,
             // scale_x: scale,
             // scale_y: scale,
             translation_x: translationX,
@@ -553,10 +556,11 @@ const SecondaryMonitorDisplayVertical = {
 const SecondaryMonitorDisplayHorizontal = {
     _getThumbnailParamsForState(state) {
         const spacing = opt.SPACING;
-        let opacity, scale, translationY;
+        let scale, translationY;
+        const opacity = opt.SEC_MAX_THUMBNAIL_SCALE > 0.01 ? 255 : 0;
+
         switch (state) {
         case ControlsState.HIDDEN:
-            opacity = 255;
             scale = 1;
             translationY = 0;
             if (!Main.layoutManager._startingUp && (!opt.SHOW_WS_PREVIEW_BG || opt.OVERVIEW_MODE2))
@@ -565,12 +569,10 @@ const SecondaryMonitorDisplayHorizontal = {
             break;
         case ControlsState.WINDOW_PICKER:
         case ControlsState.APP_GRID:
-            opacity = 255;
             scale = 1;
             translationY = 0;
             break;
         default:
-            opacity = 255;
             scale = 1;
             translationY = 0;
             break;
@@ -704,6 +706,7 @@ const SecondaryMonitorDisplayHorizontal = {
         const initialParams = this._getThumbnailParamsForState(initialState);
         const finalParams = this._getThumbnailParamsForState(finalState);
 
+        const opacity = finalParams.opacity;
         /* const opacity =
             Util.lerp(initialParams.opacity, finalParams.opacity, progress);
         const scale =
@@ -716,7 +719,7 @@ const SecondaryMonitorDisplayHorizontal = {
             : 0;
 
         this._thumbnails.set({
-            opacity: 255,
+            opacity,
             // scale_x: scale,
             // scale_y: scale,
             translation_y: translationY,
@@ -828,21 +831,17 @@ const WorkspacesDisplayCommon = {
                 if (opt.CLICK_EMPTY_CLOSE) {
                     // Allow users to close the overview by clicking on an empty space on the secondary monitor
                     // The primary monitor overview is handled in the overviewControls
-                    if (Clutter.ClickAction) {
-                        const clickAction = new Clutter.ClickAction();
-                        clickAction.connect('clicked', () => {
-                            Main.overview.hide();
-                        });
-                        view.reactive = true;
-                        view.add_action(clickAction);
-                    } else { // Since GS 49.rc
-                        const clickAction = new Clutter.ClickGesture({
-                            required_button: Clutter.BUTTON_PRIMARY,
-                        });
-                        clickAction.connect('recognize', () => {
-                            Main.overview.hide();
-                        });
-                    }
+                    const clickActionConstructor = Clutter.ClickAction || Clutter.ClickGesture;
+                    const clickedSignal = Clutter.ClickAction ? 'clicked' : 'recognize';
+                    const clickAction = new clickActionConstructor();
+                    clickAction.connect(clickedSignal,
+                        action => {
+                            if (action.get_button() === Clutter.BUTTON_PRIMARY)
+                                Main.overview.hide();
+                        }
+                    );
+                    view.reactive = true;
+                    view.add_action(clickAction);
                 }
             }
 
@@ -892,6 +891,7 @@ const WorkspacesDisplayCommon = {
     },
 
     _onKeyPressEvent(actor, event) {
+        const controlsManager = Main.overview._overview.controls;
         const symbol = event.get_key_symbol();
         /* const { ControlsState } = OverviewControls;
         if (this._overviewAdjustment.value !== ControlsState.WINDOW_PICKER && symbol !== Clutter.KEY_space)
@@ -981,7 +981,7 @@ const WorkspacesDisplayCommon = {
                 which = Meta.MotionDirection.UP;
                 break;
             }
-        // falls through
+            // falls through
         case Clutter.KEY_Tab:
         case Clutter.KEY_ISO_Left_Tab:
             if ((symbol === Clutter.KEY_Tab || symbol === Clutter.KEY_ISO_Left_Tab) &&
@@ -993,14 +993,17 @@ const WorkspacesDisplayCommon = {
                 Main.overview.searchEntry.grab_key_focus();
             } else if (!opt.WORKSPACE_MODE && state <= 1) {
                 /* if (opt.OVERVIEW_MODE2)
-                    Main.overview._overview.controls._updateSearchStyle(true);*/
+                    controlsManager._updateSearchStyle(true);*/
                 // spread windows in OVERVIEW_MODE
-                if (state < 1)
+                if (state < 1) {
                     opt.WORKSPACE_MODE = 1;
-                else if (opt.OVERVIEW_MODE2)
+
+                    controlsManager._updateSearchStyle?.bind(controlsManager)();
+                } else if (opt.OVERVIEW_MODE2) {
                     Me.Util.exposeWindowsWithOverviewTransition();
-                else
+                } else {
                     Me.Util.exposeWindows();
+                }
             } else {
                 if (state === 2)
                     return Clutter.EVENT_PROPAGATE;

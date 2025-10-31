@@ -352,7 +352,6 @@
 <item oor:path="/org.openoffice.Office.Recovery/AutoSave"><prop oor:name="UserAutoSaveEnabled" oor:op="fuse"><value>true</value></prop></item>
 <item oor:path="/org.openoffice.Office.Recovery/RecoveryInfo"><prop oor:name="Crashed" oor:op="fuse"><value>false</value></prop></item>
 <item oor:path="/org.openoffice.Office.Recovery/RecoveryInfo"><prop oor:name="SessionData" oor:op="fuse"><value>false</value></prop></item>
-<item oor:path="/org.openoffice.Office.Recovery/RecoveryList"><node oor:name="recovery_item_1" oor:op="remove"/></item>
 <item oor:path="/org.openoffice.Office.UI/ColorScheme/ColorSchemes/org.openoffice.Office.UI:ColorScheme['COLOR_SCHEME_LIBREOFFICE_AUTOMATIC']/AccentColor"><prop oor:name="Dark" oor:op="fuse"><value xsi:nil="true"/></prop></item>
 <item oor:path="/org.openoffice.Office.UI/ColorScheme/ColorSchemes/org.openoffice.Office.UI:ColorScheme['COLOR_SCHEME_LIBREOFFICE_AUTOMATIC']/AccentColor"><prop oor:name="Light" oor:op="fuse"><value xsi:nil="true"/></prop></item>
 <item oor:path="/org.openoffice.Office.UI/ColorScheme/ColorSchemes/org.openoffice.Office.UI:ColorScheme['COLOR_SCHEME_LIBREOFFICE_AUTOMATIC']/ActiveBorderColor"><prop oor:name="Dark" oor:op="fuse"><value xsi:nil="true"/></prop></item>

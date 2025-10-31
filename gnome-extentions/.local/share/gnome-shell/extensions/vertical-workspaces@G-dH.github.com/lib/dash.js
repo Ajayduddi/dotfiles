@@ -5,7 +5,7 @@
  * @author     GdH <G-dH@github.com>
  * @copyright  2022-2025
  * @license    GPL-3.0
-  */
+*/
 
 'use strict';
 
@@ -150,6 +150,7 @@ export const DashModule = class {
             this._setOrientation(Clutter.Orientation.VERTICAL);
         } else {
             this._setOrientation(Clutter.Orientation.HORIZONTAL);
+            dash.add_style_class_name('dash-top-margin');
         }
 
         if (opt.DASH_VERTICAL && opt.DASH_BG_GS3_STYLE) {
@@ -177,7 +178,6 @@ export const DashModule = class {
         this._connectShowAppsIcon();
 
         dash.visible = opt.DASH_VISIBLE;
-        // dash._background.add_style_class_name('dash-background-reduced');
         dash._queueRedisplay();
 
         if (opt.DASH_ISOLATE_WS && !this._wmSwitchWsConId) {
@@ -229,8 +229,9 @@ export const DashModule = class {
         dash.remove_style_class_name('vertical-46-gs3-right');
         dash.remove_style_class_name('vertical-left');
         dash.remove_style_class_name('vertical-right');
+        dash.remove_style_class_name('dash-top-margin');
         dash._background.remove_style_class_name('dash-background-light');
-        dash._background.remove_style_class_name('dash-background-reduced');
+        dash._background.remove_style_class_name('dash-background-dark');
         dash._background.set_style('');
     }
 
@@ -1112,6 +1113,11 @@ const DashIconCommon = {
         else
             this._dot.remove_style_class_name('app-grid-running-dot-custom');
 
+        if (opt.DASH_BG_COLOR)
+            this._dot.add_style_class_name('app-grid-running-dot-offset');
+        else
+            this._dot.remove_style_class_name('app-grid-running-dot-offset');
+
         this._dot.translation_x = 0;
         // _updateDotStyle() has been added in GS 46.2 to apply translation_y value from the CSS on style change
         if (shellVersion46 && !this._updateDotStyle && !opt.DASH_VERTICAL)
@@ -1137,7 +1143,7 @@ const DashIconCommon = {
 
 const DashExtensions = {
     onScrollEvent(source, event) {
-        if ((this.app && !opt.DASH_ICON_SCROLL) || (this._isSearchWindowsIcon && !opt.SEARCH_WINDOWS_ICON_SCROLL)) {
+        if (this.app && !opt.DASH_ICON_SCROLL) {
             if (this._scrollConId) {
                 this.disconnect(this._scrollConId);
                 this._scrollConId = 0;
@@ -1201,12 +1207,6 @@ const DashExtensions = {
 
                 // sort windows by workspaces in MRU order
                 this._scrolledWindows.sort((a, b) => wsList.indexOf(a.get_workspace()) > wsList.indexOf(b.get_workspace()));
-                // source is Search Windows icon
-            } else if (this._isSearchWindowsIcon) {
-                if (opt.SEARCH_WINDOWS_ICON_SCROLL === 1) // all windows
-                    this._scrolledWindows = Me.Util.getWindows(null);
-                else
-                    this._scrolledWindows = Me.Util.getWindows(global.workspace_manager.get_active_workspace());
             }
         }
 
@@ -1242,16 +1242,15 @@ const DashExtensions = {
 
     showWindowPreview(metaWin) {
         const views = Main.overview._overview.controls._workspacesDisplay._workspacesViews;
-        const viewsIter = [views[0]];
-        // secondary monitors use different structure
+        const viewsIter = [];
+        // Secondary monitors use different structure
         views.forEach(v => {
-            if (v._workspacesView)
-                viewsIter.push(v._workspacesView);
+            viewsIter.push(v._workspacesView || v);
         });
 
         viewsIter.forEach(view => {
-        // if workspaces are on primary monitor only
-            if (!view || !view._workspaces)
+            // If workspaces are on primary monitor only
+            if (!view._workspaces)
                 return;
 
             view._workspaces.forEach(ws => {

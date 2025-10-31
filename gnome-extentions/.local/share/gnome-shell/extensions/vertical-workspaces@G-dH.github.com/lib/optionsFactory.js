@@ -294,34 +294,35 @@ export const ItemFactory = class ItemFactory {
 
         const resetProfile = this.newButton();
         resetProfile.set({
-            tooltip_text: _('Reset profile to defaults'),
             icon_name: 'document-revert-symbolic',
             hexpand: false,
             css_classes: ['destructive-action'],
         });
 
-        function setName() {
+        function setNameAndTooltip() {
             const ProfileNames = [
                 _('GNOME 3 Layout (Vertical WS)'),
                 _('GNOME 4x Layout, Bottom Hot Edge (Horizontal WS)'),
                 _('Top Left Hot Corner Centric (Vertical WS)'),
-                _('Dock-Like Overview, Bottom Hot Edge (Horizontal WS)'),
+                _('Static Overview, Bottom Hot Edge (Horizontal WS)'),
+                _('GNOME 4x as close to vanilla as currently possible'),
             ];
 
             let name = opt.get(`profileName${profileIndex}`, true);
             if (!name)
                 name = ProfileNames[profileIndex - 1];
             entry.set_text(name);
+            resetProfile.tooltip_text = `${_('Reset profile to defaults')}:\n${ProfileNames[profileIndex - 1]}`;
         }
 
-        setName();
+        setNameAndTooltip();
 
         entry.connect('icon-press', e => e.set_text(''));
         entry.connect('changed', e => opt.set(`profileName${profileIndex}`, e.get_text()));
 
         resetProfile.connect('clicked', () => {
             reset(profileIndex);
-            setName();
+            setNameAndTooltip();
         });
         resetProfile._activatable = false;
 
