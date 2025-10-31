@@ -73,6 +73,13 @@ copy_tree() { # src dest
     "$src/" "$dest/" 2>/dev/null || true
 }
 
+copy_file() {
+  local src="$1" dest="$2"
+  if [[ ! -e "$src" ]]; then echo "🟡 Source '$src' not found, skipping"; return 0; fi
+  mkdir_p "$(dirname "$dest")"
+  if [[ "$DRY_RUN" == true ]]; then echo "🔍 WOULD copy $src -> $dest"; else cp -f "$src" "$dest" 2>/dev/null || true; echo "💾 Copied $src -> $dest"; fi
+}
+
 # --- Detect OS / package manager ---
 detect_os() {
   if command -v rpm >/dev/null 2>&1; then
@@ -228,13 +235,18 @@ backup_xfce() {
   echo "💾 Xfce -> $outdir"
 }
 backup_kde() {
-  local src="$HOME/.local/share/plasma/plasmoids"
-  local outdir="$NON_STOW_DIR/kde/plasmoids"
-  if [[ ! -d "$src" ]]; then echo "🟡 KDE plasmoids not found, skipping"; return 0; fi
+  local plasmoids_src="$HOME/.local/share/plasma/plasmoids"
+  local plasmoids_out="$NON_STOW_DIR/kde/plasmoids"
   mkdir_p "$NON_STOW_DIR/kde"
-  mkdir_p "$outdir"
-  copy_tree "$src" "$outdir"
-  echo "💾 KDE plasmoids -> $outdir"
+  if [[ -d "$plasmoids_src" ]]; then
+    mkdir_p "$plasmoids_out"
+    copy_tree "$plasmoids_src" "$plasmoids_out"
+    echo "💾 KDE plasmoids -> $plasmoids_out"
+  else
+    echo "🟡 KDE plasmoids not found, skipping"
+  fi
+  copy_file "$HOME/.config/kglobalshortcutsrc" "$NON_STOW_DIR/kde/config/kglobalshortcutsrc"
+  copy_file "$HOME/.config/khotkeysrc" "$NON_STOW_DIR/kde/config/khotkeysrc"
 }
 
 # --- Dev backups: Python ---

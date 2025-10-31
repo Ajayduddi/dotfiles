@@ -73,17 +73,17 @@ REQUIREMENTS:
 EXAMPLES:
   bash restore-dotfiles.sh
   bash restore-dotfiles.sh --dry-run
-  REPO_URL="https://github.com/you/repo.git" BRANCH="linux_stow" bash restore-dotfiles.sh
+  REPO_URL="https://github.com/Ajayduddi/dotfiles.git" BRANCH="linux_stow" bash restore-dotfiles.sh
 HELP
     exit 0 ;;
   *) ;;
 esac
 
 # --- Logging helpers ---
-log()  { echo "\e[1;32m[INFO]\e[0m  $*"; }
-warn() { echo "\e[1;33m[WARN]\e[0m  $*"; }
-err()  { echo "\e[1;31m[ERROR]\e[0m $*"; }
-would() { echo "\e[1;34m[WOULD]\e[0m $*"; }
+log()  { echo "[INFO]  $*"; }
+warn() { echo "[WARN]  $*"; }
+err()  { echo "[ERROR]  $*"; }
+would() { echo "[WOULD]  $*"; }
 
 # Detect OS and DE
 _detect_os() {
@@ -183,7 +183,7 @@ run_stow_in() { # base_dir
   for d in "$base"/*; do
     [[ -d "$d" ]] || continue
     case "$(basename "$d")" in
-      .git|non_stow|wallpapers|.github|.zencoder) continue ;;
+      .git|non_stow|wallpapers|.github|.zencoder|scripts) continue ;;
     esac
     pkgs+=("$(basename "$d")")
   done

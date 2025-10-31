@@ -178,6 +178,7 @@ gnome-shell
 gnome-shell-common
 gnome-shell-extension-appindicator
 gnome-shell-extension-background-logo
+gnome-extensions-app
 gnome-shell-extension-gsconnect
 gnome-software
 gnome-system-monitor
