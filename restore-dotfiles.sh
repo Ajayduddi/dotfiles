@@ -1,28 +1,33 @@
 #!/usr/bin/env bash
 # Minimal Dotfiles Restore Script (stow-first workflow)
-# - Re-clone from linux_stow branch into $HOME/.dotfiles (configurable)
-# - Ensure GNU Stow is installed cross-distro
-# - Stow packages from repo root only (avoids non_stow). non_stow is for backups.
-# - Restore package lists and developer environment data from non_stow when present.
-# - Supports --dry-run to simulate all actions without making changes.
-# - Exits successfully with clear warnings unless critical failures in normal mode (clone/install stow) occur.
+# - Re-clone from configurable branch into $HOME/.dotfiles
+# - Ensure GNU Stow, Zsh, and nvm are installed cross-distro
+# - Stow packages from repo root only (avoids non_stow)
+# - Restore package lists and developer environment data from non_stow when present
+# - Supports --dry-run to simulate all actions without making changes
+# - Changes default shell to Zsh if not already set
 
 set -euo pipefail
 umask 077
 
-# Minimal emoji output (set NO_EMOJI=true to strip icons)
+# --- Emoji Handling ---
 NO_EMOJI=${NO_EMOJI:-true}
 strip_emojis() { sed -E 's/(✅|🔍|⚠️|❌|🟡|📝|🔧|💾|📦|🖥️|🚀|🌐|🗄️|🔒|🔗|🔄|➡️|🐱|☕|🛠️|📁|🔌|🛡️|🧪|🔎|📊|🧹|🟢|🟠|🔵)//g'; }
 echo() {
   local newline=true; local enable_escape=false; local args=()
   while [[ $# -gt 0 ]]; do case "$1" in -n) newline=false;; -e) enable_escape=true;; *) args+=("$1");; esac; shift; done
   local msg="${args[*]}"
-  if [[ "$NO_EMOJI" = "true" ]]; then msg=$(printf "%s" "$msg" | strip_emojis); fi
-  if $enable_escape; then if $newline; then builtin echo -e "$msg"; else builtin echo -ne "$msg"; fi
-  else if $newline; then builtin echo "$msg"; else builtin echo -n "$msg"; fi; fi
+  if [[ "$NO_EMOJI" == "true" ]]; then
+    msg=$(printf "%s" "$msg" | strip_emojis)
+  fi
+  if $enable_escape; then
+    $newline && builtin echo -e "$msg" || builtin echo -ne "$msg"
+  else
+    $newline && builtin echo "$msg" || builtin echo -n "$msg"
+  fi
 }
 
-# --- Defaults / Config (can override with env) ---
+# --- Default Config ---
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 REPO_URL="${REPO_URL:-https://github.com/Ajayduddi/dotfiles.git}"
 DEFAULT_BRANCH="${BRANCH:-cloud}"
@@ -36,44 +41,17 @@ case "${1:-}" in
   --dry-run|-n) DRY_RUN=true ;;
   --help|-h)
     cat <<'HELP'
-🔧 DOTFILES RESTORE (stow-first)
-- Re-clones your dotfiles repo (linux_stow branch) into $HOME/.dotfiles (replaces only .git)
-- Installs GNU Stow and stows package folders from repo root to $HOME
-- Restores package lists and developer environment data from $HOME/.dotfiles/non_stow when available
-- Use --dry-run to preview all actions without changing your system
-
+DOTFILES RESTORE (stow-first)
+- Re-clones your dotfiles repo into $HOME/.dotfiles (replace .git only)
+- Installs GNU Stow, Zsh, and optionally installs nvm
+- Stows package folders
+- Restores packages from non_stow
+- Sets default shell to Zsh
+- Use --dry-run to simulate actions
 USAGE:
   restore-dotfiles.sh [--dry-run|-n] [--help|-h]
-
-OPTIONS:
-  --dry-run, -n  Show what would be done without making changes
-  --help,   -h   Show this help message and exit
-
-ENVIRONMENT VARIABLES:
-  DOTFILES_DIR  Target dotfiles directory (default: $HOME/.dotfiles)
-  REPO_URL      Git repository URL (default: https://github.com/Ajayduddi/dotfiles.git)
-  BRANCH        Branch to clone (default: linux_stow)
-  NO_EMOJI      Set to false to show emoji icons (default: true)
-  DRY_RUN       true/false to force dry-run (default: false)
-  STOW_ADOPT    true/false to use 'stow --adopt' and absorb existing files into the repo (default: false)
-
-WHAT GETS STOWED:
-  - Every top-level directory in the repo root is considered a stow package, except:
-    .git, non_stow, .github, .zencoder, infra-backup
-
-WHAT GETS RESTORED FROM non_stow (if present):
-  - OS-specific or universal package lists
-  - Python requirements and virtualenv specs
-  - Node version metadata and npm global packages
-
-REQUIREMENTS:
-  - Network access to clone the repo (normal mode)
-  - sudo privileges to install GNU Stow (if it's missing in normal mode)
-
-EXAMPLES:
-  bash restore-dotfiles.sh
-  bash restore-dotfiles.sh --dry-run
-  REPO_URL="https://github.com/Ajayduddi/dotfiles.git" BRANCH="cloud" bash restore-dotfiles.sh
+ENV:
+  ... (same as previous)
 HELP
     exit 0 ;;
   *) ;;
@@ -85,7 +63,7 @@ warn() { echo "[WARN]  $*"; }
 err()  { echo "[ERROR]  $*"; }
 would() { echo "[WOULD]  $*"; }
 
-# Detect OS and DE
+# --- OS detection ---
 _detect_os() {
   if command -v dnf5 >/dev/null 2>&1; then echo fedora; return; fi
   if command -v dnf >/dev/null 2>&1; then echo fedora; return; fi
@@ -109,6 +87,7 @@ _detect_os() {
   echo unknown
 }
 OS_ID=$(_detect_os)
+OS_ID=$(echo "$OS_ID" | tr -d '[:space:]')
 log "OS: $OS_ID | Dry-run: $DRY_RUN"
 
 # --- Ensure base dir ---
@@ -118,88 +97,116 @@ else
   mkdir -p "$DOTFILES_DIR"
 fi
 
-# --- Reclone cloud branch (replace .git only) ---
+# --- Clone or Update repo ---
 if [[ "$DRY_RUN" == true ]]; then
   would "git clone --branch '$DEFAULT_BRANCH' --depth 1 '$REPO_URL' <temp>"
-  would "Replace $DOTFILES_DIR/.git with the one from clone (leave files intact)"
+  would "Replace $DOTFILES_DIR/.git with cloned one (leave files)"
 else
-  log "Re-cloning dotfiles from $REPO_URL (branch: $DEFAULT_BRANCH) -> $DOTFILES_DIR"
+  log "Re-cloning dotfiles from $REPO_URL (branch: $DEFAULT_BRANCH)"
   TMP_CLONE="$(mktemp -d)"
   trap 'rm -rf "$TMP_CLONE"' EXIT INT TERM
   if ! git clone --branch "$DEFAULT_BRANCH" --depth 1 "$REPO_URL" "$TMP_CLONE/repo"; then
-    err "Failed to clone repository. Aborting."; exit 1
+    err "Failed to clone repository"; exit 1
   fi
   rm -rf "$DOTFILES_DIR/.git" 2>/dev/null || true
   mv "$TMP_CLONE/repo/.git" "$DOTFILES_DIR/.git"
-  (
-    cd "$DOTFILES_DIR"
-    git reset --hard HEAD >/dev/null 2>&1 || true
-  )
-  log "Repository ready at $DOTFILES_DIR"
+  (cd "$DOTFILES_DIR" && git reset --hard HEAD >/dev/null 2>&1 || true)
+  log "Repo setup at $DOTFILES_DIR"
 fi
 
-# --- Install GNU Stow ---
-install_stow() {
+# --- Install GNU Stow, Zsh ---
+install_tools() {
+  log "Installing tools for OS: $OS_ID"
   case "$OS_ID" in
-    fedora)   sudo dnf -y install stow || sudo dnf -y groupinstall "Development Tools" && sudo dnf -y install stow ;;
-    debian)   sudo apt update && sudo apt -y install stow ;;
-    arch)     sudo pacman -Sy --noconfirm stow ;;
-    opensuse) sudo zypper --non-interactive install stow || { sudo zypper refresh && sudo zypper --non-interactive install stow; } ;;
-    mac)      brew install stow || true ;;
-    *)        warn "Unknown OS. Please install GNU Stow manually and re-run." ;;
+    fedora) sudo dnf -y install stow zsh ;;
+    debian|ubuntu|kali) sudo apt update && sudo apt -y install stow zsh ;;
+    arch) sudo pacman -Sy --noconfirm stow zsh ;;
+    opensuse) sudo zypper --non-interactive install stow zsh ;;
+    mac) brew install stow zsh || true ;;
+    *) warn "Unknown OS: install stow, zsh manually" ;;
   esac
 }
-if ! command -v stow >/dev/null 2>&1; then
+if ! command -v stow >/dev/null 2>&1 || ! command -v zsh >/dev/null 2>&1; then
   if [[ "$DRY_RUN" == true ]]; then
-    would "Install GNU Stow for OS '$OS_ID'"
-    log "Skipping stow installation in dry-run"
+    would "Install GNU Stow and Zsh for OS: $OS_ID"
   else
-    log "Installing GNU Stow..."; install_stow
-    if ! command -v stow >/dev/null 2>&1; then err "GNU Stow not found after install. Abort."; exit 1; fi
+    install_tools
+    if ! command -v stow >/dev/null 2>&1 || ! command -v zsh >/dev/null 2>&1; then
+      err "Failed to install stow or zsh"
+      exit 1
+    fi
   fi
 fi
-[[ "$DRY_RUN" == true ]] && log "GNU Stow ready (simulated)" || log "GNU Stow ready"
+log "Tools ready"
 
-# --- Stow packages (repo root only) ---
-run_stow_in() { # base_dir
+# --- Change default shell to zsh if needed ---
+if command -v zsh >/dev/null 2>&1; then
+  CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
+  ZSH_PATH=$(command -v zsh)
+  if [[ "$CURRENT_SHELL" != "$ZSH_PATH" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+      would "chsh -s $ZSH_PATH"
+      log "Log out and log back in after shell change."
+    else
+      chsh -s "$ZSH_PATH"
+      log "Shell changed to zsh. Log out/login to activate."
+    fi
+  fi
+else
+  warn "Zsh is not installed."
+fi
+
+# --- Install latest nvm (Node Version Manager) if missing ---
+install_nvm() {
+  if ! command -v nvm >/dev/null 2>&1; then
+    if [[ "$DRY_RUN" == true ]]; then
+      would "Install latest nvm by official script https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
+    else
+      log "Installing latest nvm..."
+      curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+      log "Latest nvm installed."
+    fi
+  else
+    log "nvm already installed."
+  fi
+}
+install_nvm
+
+# --- Stow top-level packages ---
+run_stow_in() {
   local base="$1"
-  [[ ! -d "$base" ]] && return 0
+  [[ ! -d "$base" ]] && return
   shopt -s dotglob nullglob
   local pkgs=()
   for d in "$base"/*; do
     [[ -d "$d" ]] || continue
     case "$(basename "$d")" in
-      .git|non_stow|.github|.zencoder|scripts|infra-backup) continue ;;
+      .git|non_stow|.github|.zencoder|infra-backup|scripts) continue ;;
     esac
     pkgs+=("$(basename "$d")")
   done
   shopt -u dotglob nullglob
-  if ((${#pkgs[@]}==0)); then log "No stow packages found at $base. Skipping stow."; return 0; fi
+  if ((${#pkgs[@]}==0)); then log "No packages to stow." && return; fi
   log "Stowing from $base: ${pkgs[*]}"
   (
     cd "$base"
     for p in "${pkgs[@]}"; do
-      # When files already exist in $HOME, stow may fail with conflicts.
-      # If STOW_ADOPT=true, we use --adopt to let stow move existing files into the repo tree.
       if [[ "$DRY_RUN" == true ]]; then
         if [[ "$STOW_ADOPT" == true ]]; then
-          would "mkdir -p '$BACKUP_DIR' && stow --adopt -R -v 1 -t '$HOME' '$p'"
+          would "stow --adopt -R -v 1 -t '$HOME' '$p'"
         else
           would "stow -R -v 1 -t '$HOME' '$p'"
         fi
       else
         if [[ "$STOW_ADOPT" == true ]]; then
-          log "Applying stow with --adopt for package: $p"
-          # Create a backup of any files that stow might modify by copying from HOME to BACKUP_DIR
           mkdir -p "$BACKUP_DIR"
-          # Note: stow --adopt relocates real files into repo; we rely on git status to review changes
-          if ! stow --adopt -R -v 1 -t "$HOME" "$p"; then
-            warn "Stow --adopt failed for package: $p"
-          fi
+          log "Stowing with --adopt: $p"
+          stow --adopt -R -v 1 -t "$HOME" "$p" || warn "stow --adopt failed for $p"
         else
-          if ! stow -R -v 1 -t "$HOME" "$p"; then
-            warn "Stow failed for package: $p (consider re-running with STOW_ADOPT=true)"
-          fi
+          stow -R -v 1 -t "$HOME" "$p" || warn "stow failed for $p"
         fi
       fi
     done
@@ -207,80 +214,68 @@ run_stow_in() { # base_dir
 }
 run_stow_in "$DOTFILES_DIR"
 
-# --- Restore packages from non_stow/packages/<os>-packages.txt with universal fallback ---
+# --- Restore packages from non_stow ---
 restore_packages() {
   local specific="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
   local universal="$NON_STOW_DIR/packages/universal-packages.txt"
-  local list="$specific"
+  local list=""
 
-  if [[ ! -s "$list" ]]; then
-    if [[ -s "$universal" ]]; then
-      warn "Package list missing or empty: $specific; falling back to universal list: $universal"
-      list="$universal"
-    else
-      warn "No package lists found (missing: $specific and $universal); skipping package restore"
-      return 0
-    fi
+  if [[ -f "$specific" && -s "$specific" ]]; then
+    list="$specific"
+  elif [[ -f "$universal" && -s "$universal" ]]; then
+    warn "Falling back to universal package list."
+    list="$universal"
+  else
+    warn "No package lists found; skipping package restore"
+    return 0
   fi
+
+  log "Installing packages from $list for OS $OS_ID"
 
   case "$OS_ID" in
     fedora)
-      # Pick dnf5 if present, else fallback to dnf
       local DNF_BIN="dnf"
       command -v dnf5 >/dev/null 2>&1 && DNF_BIN="dnf5"
       if [[ "$DRY_RUN" == true ]]; then
         would "sudo $DNF_BIN -y makecache"
-        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if sudo $DNF_BIN info -q \"$pkg\" >/dev/null 2>&1; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo $DNF_BIN install -y"
+        would "sudo $DNF_BIN install packages from $list"
       else
-        log "Refreshing Fedora metadata ($DNF_BIN makecache)"
-        sudo "$DNF_BIN" -y makecache || warn "$DNF_BIN makecache failed"
-        log "Installing packages from $list ($DNF_BIN, filtered for availability)"
-        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if sudo "$DNF_BIN" info -q "$pkg" >/dev/null 2>&1; then printf '%s\n' "$pkg"; fi; done) || true
-        if [[ -n "$avail_pkgs" ]]; then
-          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo "$DNF_BIN" install -y || warn "Some packages may have failed to install"
-        else
-          warn "No available packages from list for Fedora"
-        fi
+        sudo "$DNF_BIN" -y makecache
+        awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do
+          sudo "$DNF_BIN" info -q "$pkg" >/dev/null 2>&1 && printf '%s\n' "$pkg"
+        done | xargs -r -n 50 sudo "$DNF_BIN" install -y || warn "Some Fedora packages failed"
       fi
       ;;
     debian|ubuntu|kali)
       if [[ "$DRY_RUN" == true ]]; then
         would "sudo apt update"
-        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if apt-cache policy \"$pkg\" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo apt install -y"
+        would "sudo apt install packages from $list"
       else
-        log "Updating apt cache"
-        sudo apt update || warn "apt update failed"
-        log "Installing packages from $list (apt, filtered for availability)"
-        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if apt-cache policy "$pkg" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\n' "$pkg"; fi; done) || true
-        if [[ -n "$avail_pkgs" ]]; then
-          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo apt install -y || warn "Some packages may have failed to install"
-        else
-          warn "No available packages from list for apt-based system"
-        fi
+        sudo apt update
+        awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do
+          apt-cache policy "$pkg" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)' && printf '%s\n' "$pkg"
+        done | xargs -r -n 50 sudo apt install -y || warn "Some APT packages failed"
       fi
       ;;
     arch)
       if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo pacman -S --needed --noconfirm"
+        would "sudo pacman -S --needed --noconfirm packages from $list"
       else
-        log "Installing packages from $list (pacman --needed)"
-        xargs -a "$list" -r -n 50 sudo pacman -S --needed --noconfirm || warn "Some packages may have failed to install"
+        xargs -a "$list" -r -n 50 sudo pacman -S --needed --noconfirm || warn "Some Pacman packages failed"
       fi
       ;;
     opensuse)
       if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo zypper --non-interactive install"
+        would "sudo zypper --non-interactive install packages from $list"
       else
-        log "Installing packages from $list (zypper)"
-        xargs -a "$list" -r -n 50 sudo zypper --non-interactive install || warn "Some packages may have failed to install"
+        xargs -a "$list" -r -n 50 sudo zypper --non-interactive install || warn "Some Zypper packages failed"
       fi
       ;;
     mac)
       if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 brew install"
+        would "brew install packages from $list"
       else
-        log "Installing packages from $list (brew)"
-        xargs -a "$list" -r -n 50 brew install || warn "Some packages may have failed to install"
+        xargs -a "$list" -r -n 50 brew install || warn "Some brew packages failed"
       fi
       ;;
     *)
@@ -290,48 +285,43 @@ restore_packages() {
 }
 restore_packages
 
-# --- Restore developer environments ---
+# --- Restore Python environment ---
 restore_python() {
   local base="$NON_STOW_DIR/dev/python"
-  local venv_specs_dir="$base/venvs"
-
-  # Restore global Python packages (user site)
   local req="$base/global-requirements-python3.txt"
-  if [[ -f "$req" ]] && command -v python3 >/dev/null 2>&1 && python3 -m pip --version >/dev/null 2>&1; then
+  if [[ -f "$req" && "$(command -v python3 || true)" && python3 -m pip --version >/dev/null 2>&1 ]]; then
     if [[ "$DRY_RUN" == true ]]; then
       would "python3 -m pip install --user -r '$req'"
     else
-      log "Restoring Python3 user site packages from $req"
-      python3 -m pip install --user -r "$req" || warn "Some Python user packages failed"
+      log "Restoring Python packages"
+      python3 -m pip install --user -r "$req" || warn "Python packages installation failed"
     fi
   fi
 
-  # Restore virtualenvs (create if missing)
-  if [[ -d "$venv_specs_dir" ]]; then
+  # Virtualenvs
+  local venvs="$base/venvs"
+  if [[ -d "$venvs" ]]; then
     shopt -s nullglob
-    for f in "$venv_specs_dir"/*-requirements.txt; do
-      local bn; bn=$(basename "$f")
-      local name; name="${bn%-requirements.txt}"
+    for f in "$venvs"/*-requirements.txt; do
+      local bn=$(basename "$f")
+      local name="${bn%-requirements.txt}"
       local venv_path=""
-      local roots=("$HOME/.virtualenvs" "$HOME/.venvs" "$HOME/venvs")
-      for r in "${roots[@]}"; do
-        if [[ -d "$r/$name" ]]; then venv_path="$r/$name"; break; fi
+      for r in "$HOME/.virtualenvs" "$HOME/.venvs" "$HOME/venvs"; do
+        [[ -d "$r/$name" ]] && { venv_path="$r/$name"; break; }
       done
       [[ -n "$venv_path" ]] || venv_path="$HOME/.venvs/$name"
 
       if [[ "$DRY_RUN" == true ]]; then
-        if [[ ! -d "$venv_path" ]]; then would "python3 -m venv '$venv_path'"; fi
+        [[ ! -d "$venv_path" ]] && would "python3 -m venv '$venv_path'"
         would "'$venv_path/bin/pip' install -r '$f'"
       else
-        if [[ ! -d "$venv_path" ]]; then
+        [[ ! -d "$venv_path" ]] && {
           log "Creating venv: $venv_path"
-          python3 -m venv "$venv_path" || { warn "Failed to create venv $venv_path"; continue; }
-        fi
+          python3 -m venv "$venv_path" || { warn "Failed to create venv"; continue; }
+        }
         if [[ -x "$venv_path/bin/pip" ]]; then
-          log "Installing venv packages for '$name'"
-          "$venv_path/bin/pip" install -r "$f" || warn "Some packages failed for venv '$name'"
-        else
-          warn "pip not found in $venv_path"
+          log "Installing packages for venv: $name"
+          "$venv_path/bin/pip" install -r "$f" || warn "Failed virtual env install"
         fi
       fi
     done
@@ -339,49 +329,53 @@ restore_python() {
   fi
 }
 
+# --- Restore Node.js environment ---
 restore_node() {
   local base="$NON_STOW_DIR/dev/node"
   local versions="$base/node-installed-versions.txt"
   local npmlist="$base/npm-global-packages.txt"
 
-  # Try to load nvm if available but not in PATH
-  if ! command -v nvm >/dev/null 2>&1; then
-    if [[ -s "$HOME/.nvm/nvm.sh" ]]; then . "$HOME/.nvm/nvm.sh" 2>/dev/null || true; fi
-  fi
+  # Load/install nvm
+  install_nvm
 
-  # Restore Node versions via nvm/fnm/asdf if available
+  # Install node versions
   if [[ -f "$versions" ]]; then
-    while read -r ver; do
+    while IFS= read -r ver || [[ -n "$ver" ]]; do
       [[ -n "$ver" ]] || continue
       if [[ "$DRY_RUN" == true ]]; then
-        if command -v nvm >/dev/null 2>&1; then would "nvm install '$ver'"; fi
-        if command -v fnm >/dev/null 2>&1; then would "fnm install '$ver'"; fi
-        if command -v asdf >/dev/null 2>&1; then would "asdf plugin add nodejs || true; asdf install nodejs '$ver'"; fi
+        command -v nvm >/dev/null 2>&1 && would "nvm install '$ver'"
+        command -v fnm >/dev/null 2>&1 && would "fnm install '$ver'"
+        command -v asdf >/dev/null 2>&1 && would "asdf plugin add nodejs && asdf install nodejs '$ver'"
       else
-        if command -v nvm >/dev/null 2>&1; then nvm install "$ver" || warn "nvm install $ver failed"; 
-        elif command -v fnm >/dev/null 2>&1; then fnm install "$ver" || warn "fnm install $ver failed";
-        elif command -v asdf >/dev/null 2>&1; then asdf plugin add nodejs >/dev/null 2>&1 || true; asdf install nodejs "$ver" || warn "asdf install $ver failed";
-        else warn "No Node version manager (nvm/fnm/asdf) found to install $ver"; fi
+        if command -v nvm >/dev/null 2>&1; then
+          nvm install "$ver" || warn "nvm install $ver failed"
+        elif command -v fnm >/dev/null 2>&1; then
+          fnm install "$ver" || warn "fnm install $ver failed"
+        elif command -v asdf >/dev/null 2>&1; then
+          asdf plugin add nodejs >/dev/null 2>&1 || true
+          asdf install nodejs "$ver" || warn "asdf install $ver failed"
+        else
+          warn "No node version manager found to install $ver"
+        fi
       fi
     done < "$versions"
   fi
 
-  # Restore npm global packages
-  if [[ -f "$npmlist" && -s "$npmlist" ]]; then
-    if command -v npm >/dev/null 2>&1; then
-      if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$npmlist' -r npm -g install"
-      else
-        log "Installing npm global packages"
-        xargs -a "$npmlist" -r npm -g install || warn "Some npm globals failed"
-      fi
+  # Install npm global packages
+  if [[ -f "$npmlist" && -s "$npmlist" && "$(command -v npm || true)" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+      would "xargs -a '$npmlist' -r npm -g install"
     else
-      warn "npm not found; cannot restore global packages"
+      log "Installing npm global packages"
+      xargs -a "$npmlist" -r npm -g install || warn "npm global install failed"
     fi
+  elif [[ "$(command -v npm || true)" == "" ]]; then
+    warn "npm not found; cannot restore global packages"
   fi
 }
 
+# Run restores
 restore_python
 restore_node
 
-log "✅ Restore complete. Verify your session and applications as needed."
+log "✅ Restore complete. Verify your session and applications."
