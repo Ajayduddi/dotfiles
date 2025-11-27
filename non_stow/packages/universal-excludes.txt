@@ -1,0 +1,11 @@
+# Regex patterns (one per line) to EXCLUDE from universal candidates
+# Tweak to your preference. Examples below aim to drop OS/base/system bits.
+^(kernel|grub2|systemd|glibc|linux-firmware|microcode_ctl|dracut.*|anaconda.*)$
+^(NetworkManager(.*)?|firewalld|selinux-.*)$
+^(filesystem|setup|shadow-utils)$
+^(dnf5?|rpm|rpmfusion-.*-release|fedora-.*)$
+^(mesa-.*|xorg-.*)$
+^(gnome-.*|kde-.*|plasma-.*)$
+^(cups.*|plymouth.*)$
+.*firmware$
+# Add more lines to exclude additional packages

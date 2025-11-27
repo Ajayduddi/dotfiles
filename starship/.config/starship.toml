@@ -1,0 +1,121 @@
+# Single-line prompt with RGB colors
+format = """
+$os$directory$git_branch$git_status$package$java$nodejs$python$golang$c$rust$docker_context$kubernetes$battery$fill$custom$time
+$character
+"""
+
+# Prompt character
+[character]
+success_symbol = "[❯](fg:#39ff14) "
+error_symbol = "[❯](fg:#ff3366) "
+
+# OS Module with per-distro RGB colors
+[os]
+disabled = false
+format = "[$symbol]($style) "
+
+[os.symbols]
+Windows = "[ ](fg:#0078D6 bold)"   # Windows Blue
+Ubuntu = "[ ](fg:#E95420 bold)"    # Ubuntu Orange
+Debian = "[ ](fg:#D70A53 bold)"    # Debian Magenta
+Fedora = "[ ](fg:#A2AAAD bold)"    # Fedora Blue  #294172 
+Arch = "[ ](fg:#1793D1 bold)"      # Arch Cyan
+Macos = "[ ](fg:#A2AAAD bold)"     # macOS Grey
+Linux = "[ ](fg:#FFCC00 bold)"     # Generic Linux Yellow
+Amazon = ""
+Android = ""
+CentOS = ""
+Redhat = "󱄛"
+RedHatEnterprise = "󱄛"
+
+# Directory (Aqua Cyan)
+[directory]
+style = "fg:#66ccff bold"
+truncation_length = 3
+truncate_to_repo = true
+format = "[$path]($style) "
+
+# Git branch (Purple Pink)
+[git_branch]
+symbol = " "
+style = "fg:#d291ff bold"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "fg:#ff6666 bold"
+format = '([\[$all_status$ahead_behind\]]($style)) '
+
+# Package versions (Amber Yellow)
+[package]
+symbol = "📦 "
+style = "fg:#ffcc66 bold"
+format = "via [$symbol$version]($style) "
+
+# Java / Node / Python / Go / Rust (reuse amber yellow)
+[java]
+symbol = "☕ "
+style = "fg:#ff9966 bold"
+format = "via [$symbol$version]($style) "
+
+[nodejs]
+symbol = "⬢ "
+style = "fg:#66ff66 bold"
+format = "via [$symbol$version]($style) "
+
+[python]
+symbol = "🐍 "
+style = "fg:#66ccff bold"
+format = "via [$symbol$version]($style) "
+
+[golang]
+symbol = " "
+style = "fg:#00ccff bold"
+format = "via [$symbol$version]($style) "
+
+[rust]
+symbol = "🦀 "
+style = "fg:#ff5050 bold"
+format = "via [$symbol$version]($style) "
+
+[docker_context]
+symbol = "🐳 "
+style = "fg:#00aaff bold"
+format = "via [$symbol$context]($style) "
+
+[kubernetes]
+symbol = "⎈ "
+style = "fg:#ff66ff bold"
+format = 'on [$symbol$context ($namespace)]($style) '
+
+[c]
+symbol = " "
+style = "fg:#00aaff bold"
+format = 'via [$symbol$version]($style)'
+
+# Battery
+[battery]
+disabled = false
+full_symbol = "🔋"
+charging_symbol = "⚡"
+discharging_symbol = "🔌"
+unknown_symbol = "❓"
+format = " [$symbol$percentage] "
+
+# Right filler
+[fill]
+symbol = " " # ⦁
+
+# System Info (Lime Green)
+[custom.sysinfo]
+command = "echo   RAM:$(free -m | awk '/Mem:/ {printf \"%.1f/%.1fGB\", $3/1024,$2/1024}')"
+shell = ["bash"]
+when = "true"
+format = "[$output](fg:#66ccff bold) "
+
+# Time (Electric Blue)
+[time]
+disabled = false
+time_format = "%H:%M:%S"
+style = "fg:#66ccff bold"
+format = " 🕒 [$time]($style)"
+

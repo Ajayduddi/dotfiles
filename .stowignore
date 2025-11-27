@@ -1,0 +1,27 @@
+# Paths and files not managed by GNU Stow
+# Ensures accidental `stow` / `stow -R` from repo root won’t include these
+
+# Git and tooling metadata
+.git
+.github
+.zencoder
+.stowignore
+.stow-global-ignore
+.gitignore
+.gitattributes
+
+# Backups / non-stow content
+non_stow
+scripts
+
+# Dev environment backups (ensure never stowed)
+non_stow/dev
+
+# Large/media or assets not intended for $HOME
+wallpapers
+
+# Repo helper scripts and misc files (not dotfiles)
+backup-dotfiles.sh
+restore-dotfiles.sh
+dnf-packages.txt
+gnome-settings.dconf

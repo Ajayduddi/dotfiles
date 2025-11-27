@@ -1,0 +1,28 @@
+[Unit]
+Description=Jetty 12 Web Server (jetty.sh)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+WorkingDirectory=/opt/jetty-base
+
+ExecStart=/opt/jetty/bin/jetty.sh start
+ExecStop=/opt/jetty/bin/jetty.sh stop
+
+User=jetty
+Group=jetty
+
+# Optional tuning
+Environment="JETTY_BASE=/opt/jetty-base"
+Environment="JETTY_HOME=/opt/jetty"
+Environment="JAVA_OPTIONS=-Xms256m -Xmx512m"
+Environment="JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64"
+
+SuccessExitStatus=0
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

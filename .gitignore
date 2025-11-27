@@ -1,0 +1,435 @@
+.config/chromium/
+.config/google-chrome/
+.config/firefox/
+.config/ssh/
+.config/gpg/
+.config/secrets/
+
+.local/share/chromium/
+.local/share/google-chrome/
+.local/share/firefox/
+.local/share/secrets/
+.local/share/keyrings/
+
+# Ignore any private or sensitive app folders you do not want to track
+.local/share/slack/
+.local/share/discord/
+.local/share/rclone/
+
+# Ignore application specific files that store secrets or private data
+.local/share/auth/
+.local/share/login/
+
+# Ignore directories with tokens or password files
+.local/share/credentials/
+.local/share/tokens/
+.local/share/authentication/
+
+# Additional ignores based on your system setup
+.private_config/
+.zencoder
+
+# Additional security patterns - automatically added
+**/*password*
+**/*secret*
+**/*token*
+**/*key*
+**/*credential*
+**/*auth*
+**/Login\ Data*
+**/Cookies*
+**/Web\ Data*
+**/History*
+**/Bookmarks*
+**/*.pem
+**/*.key
+**/*.p12
+**/.ssh/
+**/.gnupg/
+**/.aws/
+**/.docker/config.json
+**/.netrc
+**/.pgpass
+**/.npmrc
+**/github-copilot/
+**/gcloud/
+**/kubectl/
+**/*session*
+**/*cache*
+**/*tmp*
+**/*temp*
+**/logs/
+
+# Comprehensive cache exclusions
+**/cache/
+**/.cache/
+**/Cache/
+**/.Cache/
+**/caches/
+**/.caches/
+**/Caches/
+**/.Caches/
+**/*-cache/
+**/*_cache/
+**/*.cache/
+**/.cache-*/
+**/cache-*/
+**/*cache*/
+**/*Cache*/
+
+# Application-specific cache directories
+**/.npm/
+**/.yarn/cache/
+**/node_modules/.cache/
+**/.pnpm-store/
+**/.next/cache/
+**/.nuxt/
+**/.vuepress/.cache/
+**/.docusaurus/.cache/
+**/.gatsby/cache/
+**/.parcel-cache/
+**/dist/cache/
+**/build/cache/
+
+# Browser cache directories
+**/.mozilla/firefox/*/cache2/
+**/.mozilla/firefox/*/startupCache/
+**/.mozilla/firefox/*/OfflineCache/
+**/.config/chromium/*/Cache/
+**/.config/chromium/*/Code\ Cache/
+**/.config/chromium/*/GPUCache/
+**/.config/chromium/*/Service\ Worker/CacheStorage/
+**/.config/google-chrome/*/Cache/
+**/.config/google-chrome/*/Code\ Cache/
+**/.config/google-chrome/*/GPUCache/
+**/.config/google-chrome/*/Service\ Worker/CacheStorage/
+**/.cache/mozilla/
+**/.cache/chromium/
+**/.cache/google-chrome/
+
+# System and application caches
+**/.cache/fontconfig/
+**/.cache/thumbnails/
+**/.cache/mesa_shader_cache/
+**/.cache/nvidia/
+**/.cache/pip/
+**/.cache/go-build/
+**/.cache/rust/
+**/.cache/cargo/
+**/.cache/composer/
+**/.cache/gem/
+**/.cache/bundler/
+**/.cache/rubygems/
+**/.cache/maven/
+**/.cache/gradle/
+**/.cache/sbt/
+**/.cache/coursier/
+**/.cache/mill/
+**/.cache/bazel/
+**/.cache/buck/
+**/.cache/ccache/
+**/.cache/clangd/
+**/.cache/electron/
+**/.cache/electron-builder/
+**/.cache/puppeteer/
+**/.cache/selenium/
+**/.cache/cypress/
+**/.cache/ms-playwright/
+
+# IDE and editor caches
+**/.vscode/extensions/
+**/.vscode-server/
+**/.idea/caches/
+**/.idea/shelf/
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+**/.idea/usage.statistics.xml
+**/.idea/dictionaries/
+**/.idea/inspectionProfiles/
+**/eclipse/workspace/.metadata/
+**/eclipse/**/.recommenders/
+**/sublime-text*/Cache/
+**/sublime-text*/Index/
+
+# Language-specific caches
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.coverage
+**/.tox/
+**/.nox/
+**/target/
+**/.m2/repository/
+**/.gradle/caches/
+**/.gradle/wrapper/
+**/build/
+**/dist/
+**/out/
+**/.next/
+**/.nuxt/
+**/.output/
+**/node_modules/
+**/bower_components/
+**/.sass-cache/
+**/.postcss-cache/
+
+# Database caches
+**/.sqlite/
+**/*.db-journal
+**/*.sqlite-journal
+**/redis.rdb
+**/dump.rdb
+
+# Media and thumbnail caches
+**/.thumbnails/
+**/Thumbs.db
+**/.DS_Store
+**/Desktop.ini
+**/*.tmp
+**/*.swp
+**/*.swo
+**/*~
+
+# Temp directories for script logs and operations
+**/temp/
+**/tmp/
+**/.temp/
+/tmp/dotfiles-*
+${TMPDIR:-/tmp}/dotfiles-*
+/temp/dotfiles-*
+
+# Browser data that might contain sensitive information
+.config/*/Default/Login\ Data*
+.config/*/Default/Cookies*
+.config/*/Default/Web\ Data*
+.config/*/Default/History*
+.config/*/Default/Bookmarks*
+.config/*/Profile*/Login\ Data*
+.config/*/Profile*/Cookies*
+.config/*/Profile*/Web\ Data*
+.config/*/Profile*/History*
+.config/*/Profile*/Bookmarks*
+
+# Applications with built-in backup/sync - exclude to avoid conflicts
+.config/Code/
+.config/VSCodium/
+.config/JetBrains/
+.config/IntelliJIdea*/
+.config/PyCharm*/
+.config/WebStorm*/
+.config/PhpStorm*/
+.config/CLion*/
+.config/DataGrip*/
+.config/GoLand*/
+.config/RubyMine*/
+.config/Rider*/
+.config/sublime-text*/
+.config/discord/
+.config/slack/
+.config/Slack/
+.config/spotify/
+.config/Spotify/
+.config/steam/
+.config/Steam/
+.config/postman/
+.config/Postman/
+.config/insomnia/
+.config/MongoDB*/
+.config/docker/
+.config/Docker*/
+.config/beekeeper-studio/
+.config/github-copilot/
+.config/gsconnect/
+.config/libvirt/
+.config/kdeconnect/
+.config/keepassxc/
+.local/share/JetBrains/
+.local/share/code-*/
+.local/share/Steam/
+.local/share/discord/
+.local/share/Slack/
+.local/share/spotify/
+.local/share/applications/wine/
+
+# Tmux plugins and nested git directories
+.tmux/plugins/
+**/.git/
+
+# Enhanced security patterns - added by security hardening script
+# Private keys and certificates
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+**/*.crt
+**/*.cer
+**/*.der
+**/*.priv
+**/*.pub
+**/*id_rsa*
+**/*id_dsa*
+**/*id_ecdsa*
+**/*id_ed25519*
+
+# Sensitive configuration files
+**/private.pem
+**/passkey_enclave_state
+**/*password*
+**/*secret*
+**/*token*
+**/*credential*
+**/*apikey*
+**/*api_key*
+**/*access_token*
+**/*refresh_token*
+**/*client_secret*
+**/*client_id*
+**/*oauth*
+**/*auth_token*
+**/*bearer*
+**/*jwt*
+**/*session*
+**/*cookie*
+**/*csrf*
+**/*xsrf*
+**/*private*
+**/*confidential*
+**/*sensitive*
+
+# Browser sensitive data
+**/*Login\ Data*
+**/*Cookies*
+**/*Web\ Data*
+**/*History*
+**/*Bookmarks*
+**/ZxcvbnData/**
+**/TrustTokenKeyCommitments/**
+
+# Application sensitive directories
+**/.config/gsconnect/private.pem
+**/.config/kdeconnect/privateKey.pem
+**/.config/beekeeper-studio/.key
+
+# GitHub Copilot sensitive files (contains OAuth tokens)
+**/.config/github-copilot/
+**/github-copilot.xml
+**/github-copilot.local.xml
+**/github-copilot/**
+
+# Embedded git repositories (ulauncher themes)
+.config/ulauncher/user-themes/eigen-dark/
+.config/ulauncher/user-themes/libadwaita-ulauncher/
+.config/ulauncher/user-themes/orchis-dark/
+
+# Temporary and problematic scripts
+**/[a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9].sh
+**/*temp*.sh
+**/*tmp*.sh
+**/*test*.sh
+
+# Log files with potential sensitive content
+**/renderer-auth.log
+**/auth*.log
+**/login*.log
+
+# General log files - exclude all log files from backup
+**/*.log
+**/logs/
+**/log/
+**/.logs/
+**/var/log/
+**/tmp/*.log
+**/temp/*.log
+**/*debug*.log
+**/*error*.log
+**/*access*.log
+**/*audit*.log
+**/*system*.log
+**/*application*.log
+**/*server*.log
+**/*service*.log
+**/*daemon*.log
+**/*kernel*.log
+**/*boot*.log
+**/*install*.log
+**/*update*.log
+**/*backup*.log
+**/*restore*.log
+**/*security*.log
+**/*firewall*.log
+**/*network*.log
+**/*performance*.log
+**/*monitoring*.log
+**/*trace*.log
+**/*crash*.log
+**/*exception*.log
+**/*warning*.log
+**/*info*.log
+**/*verbose*.log
+
+# Application-specific log directories
+**/apache*/logs/
+**/httpd*/logs/
+**/nginx*/logs/
+**/tomcat*/logs/
+**/jetty*/logs/
+**/mysql*/logs/
+**/postgresql*/logs/
+**/redis*/logs/
+**/mongodb*/logs/
+**/docker*/logs/
+**/kubernetes*/logs/
+**/jenkins*/logs/
+**/gitlab*/logs/
+**/prometheus*/logs/
+**/grafana*/logs/
+**/elasticsearch*/logs/
+**/logstash*/logs/
+**/kibana*/logs/
+
+# System log directories
+/var/log/
+/var/logs/
+/usr/local/var/log/
+/opt/*/logs/
+/opt/*/log/
+
+# Development tool logs
+**/.m2/repository.log
+**/.gradle/daemon/*/daemon-*.log
+**/.npm/_logs/
+**/node_modules/**/*.log
+**/build/**/*.log
+**/dist/**/*.log
+**/target/**/*.log
+**/out/**/*.log
+**/Wave
+
+# IDE and editor logs
+**/.vscode/logs/
+**/.idea/logs/
+**/eclipse/workspace/.metadata/.log
+**/eclipse/**/*.log
+firewall_backups
+
+# Package manager logs
+**/dnf.log
+**/yum.log
+**/apt/history.log
+**/apt/term.log
+**/pacman.log
+**/zypper.log
+
+# Service and daemon logs
+**/systemd/journal/
+**/syslog*
+**/messages*
+**/dmesg*
+**/kern.log*
+**/mail.log*
+**/cron.log*

@@ -1,0 +1,13 @@
+[user]
+	email = ajayprofessional119@gmail.com
+	name = ajay from cloud
+[credential]
+	helper = cache
+[core]
+	autocrlf = false
+[color]
+    ui = auto
+[init]
+    defaultBranch = main 
+[http]
+	postBuffer = 1073741824
