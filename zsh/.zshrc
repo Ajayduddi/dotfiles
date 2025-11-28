@@ -12,6 +12,7 @@ fi
 
 # Modern, customizable shell prompt
 eval "$(starship init zsh)"
+eval "$(ssh-agent -s)"
 
 ############################################
 # Paths
