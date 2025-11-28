@@ -1,70 +1,73 @@
-# Dotfiles (managed with GNU Stow)
+<div align="center">
+<h1>✨ Dotfiles (managed with GNU Stow for cloud)</h1>
 
-This repository is a portable, GNU Stow-managed dotfiles collection with helper scripts to backup and restore both dotfiles and system-level packages & infrastructure. The repo aims to keep config in a stow-friendly layout and a small `non_stow` store for extras (package lists, virtualenv requirements, node lists, infra backups).
+![Managed with GNU Stow](https://img.shields.io/badge/Managed%20with-GNU%20Stow-4D7EA8?logo=gnu&logoColor=white) &nbsp; ![OS: Linux](https://img.shields.io/badge/OS-Linux-FCC624?logo=linux&logoColor=000)
+
+<p>Portable dotfiles using GNU Stow — helper scripts to backup/restore dotfiles, production environments and infrastructure artifacts.</p>
+</div>
 
 ---
 
 ## Quick overview
 
-- Dotfiles are laid out as stow packages — each top-level directory (e.g., `zsh`, `bash`, `git`, `tmux`, `starship`, etc.) is a stow package you can `stow` into your `$HOME`.
-- `non_stow/` contains system or environment artifacts that don't belong in stow packages: package lists, Python venv requirements, npm/global lists, and infra backups.
-- Several helper scripts automate backups and restores:
-	- `backup-dotfiles.sh` — collects current system state into `non_stow/` (packages, venv requirements, node versions).
-	- `restore_packages.sh` — installs packages from `non_stow/packages/*` in a distro-aware manner.
-	- `restore-dotfiles.sh` — re-clones repository, ensures tools (zsh, stow, nvm), stows packages into `$HOME`, installs zsh plugins, restores dev toolchains (python venvs, node via nvm).
-	- `infra-backup.sh` — specialized: backup/restore Nginx, Jetty, Maven, MySQL infrastructure configs under `infra-backup/`.
+- Top-level directories are GNU Stow packages (e.g. `zsh`, `bash`, `git`, `tmux`, `starship`) — stow them into `$HOME`.
+- `non_stow/` stores reproducible artifacts: package lists, Python venv requirements, Node version lists, npm globals, and infrastructure backups.
+
+### Main helper scripts
+- `backup-dotfiles.sh` — collect system state into `non_stow/` (packages, venv requirements, node versions).
+- `restore_packages.sh` — distro-aware installer that reads `non_stow/packages/*` and attempts reinstall (opt-in; prefer dry-run).
+- `restore-dotfiles.sh` — repo restore helper: re-clones repo, ensures tools (stow, zsh, nvm), stows packages into `$HOME`, installs zsh plugins and restores developer environments.
+- `infra-backup.sh` — infra-level helper to snapshot/restore server artifacts (nginx, jetty, maven, mysql) into `infra-backup/`.
 
 ---
 
-## Recommended restore order (new machine)
+## 🔁 Recommended restore order (fresh machine)
 
-When setting up a fresh system, run these in this order to safely replicate both environment packages and dotfiles.
+Follow this simple, safe order to rebuild a machine.
 
-1) Clone the repo into $HOME (or let `restore-dotfiles.sh` do it):
+1) Clone / acquire the repo
 
 ```bash
-# manual clone (optional)
+# Option A — manual
 git clone --branch cloud https://github.com/Ajayduddi/dotfiles.git "$HOME/.dotfiles"
 
-# OR use the helper script which will re-clone the repo cleanly
+# Option B — let the helper re-clone and prepare (safe + idempotent)
 bash "$HOME/.dotfiles/restore-dotfiles.sh"
 ```
 
-2) Restore OS packages (best-run after the repo is present because package lists live in `non_stow/packages`):
+2) Restore OS packages (optional but helpful before tool installation)
 
 ```bash
 cd "$HOME/.dotfiles"
-# Dry-run first if you want to preview
+# Preview only
 DRY_RUN=true bash restore_packages.sh
 
-# Then run for real
+# Apply
 bash restore_packages.sh
 ```
 
-3) Re-apply stow-managed dotfiles
+3) Stow your dotfiles (repo restore will usually do this)
 
 ```bash
-# The restore-dotfiles script auto-stows packages for you when you run it. It also installs zsh plugins and other tooling.
 bash restore-dotfiles.sh
 ```
 
-4) (Optional) Restore infrastructure files
+4) Optional: restore infra artifacts (servers only)
 
 ```bash
-# Used for servers/VMs where nginx/jetty/mysql configs are stored in infra backups
 bash infra-backup.sh restore
 ```
 
-Note: `restore-dotfiles.sh` already performs a re-clone of the repo and executes the stow pass. Running `restore-dotfiles.sh` after you have restored packages is safe and recommended so any required tools (e.g., stow, zsh) are present.
+Note: `restore-dotfiles.sh` re-clones and runs a stow pass so it is safe to run it after packages are installed.
 
 ---
 
-## How stow is used in this repo
+## ⚙️ How stow is used in this repo
 
 - This repo organizes config into top-level directories that are treated as stow packages. Each package typically mirrors the target layout in `$HOME`.
 - The restore script runs stow for every package under `$DOTFILES_DIR` except for: `.git`, `non_stow`, `.github`, `.zencoder`, `infra-backup`, and `scripts`. That means creating a new package is as simple as adding another top-level folder containing the desired relative paths.
 
-Stow examples:
+### Stow examples
 
 ```bash
 # From inside the dotfiles directory
@@ -86,7 +89,7 @@ When adding a new package:
 
 ---
 
-## Backups — how to capture your system & infra state (recommended)
+## 💾 Backups — capture your system & infra state (recommended)
 
 This repo ships two different backup helpers depending on what you want to save:
 
@@ -110,31 +113,30 @@ bash backup-dotfiles.sh
 ```
 
 What it writes (common outputs):
-- `non_stow/packages/${OS_ID}-packages.txt` — OS-specific installed package list (where OS_ID is detected by the script: debian, ubuntu, fedora, arch, opensuse, mac)
+- `non_stow/packages/${OS_ID}-packages.txt` — OS-specific installed package list.
+	The script detects `OS_ID` from the host (examples: debian, ubuntu, fedora, arch, opensuse, mac)
 - `non_stow/packages/universal-packages.txt` — curated universal list (not written automatically — `backup-dotfiles.sh` generates a `.generated/universal-candidate.txt` you can review and promote)
 - `non_stow/dev/python/global-requirements-python3.txt` — frozen system-wide Python3 packages
 - `non_stow/dev/python/venvs/*-requirements.txt` — per-venv requirements listed
 - `non_stow/dev/node/node-current-version.txt` — local/active node version
-- `non_stow/dev/node/node-installed-versions.txt` — installed Node versions across managers (nvm/fnm/asdf)
+- `non_stow/dev/node/node-installed-versions.txt` — installed Node versions across managers (nvm/fnm/asdf).
 - `non_stow/dev/node/npm-global-packages.txt` — global npm packages list
 
 
-#### How to use `infra-backup.sh` (server/infra backups):
+#### 🏗️ infra backups (server / infra)
 
 ```bash
-# Backup infrastructure (nginx/jetty/maven/mysql) into ~/.dotfiles/infra-backup/<timestamp>/
+# Backup infra artifacts to timestamped folders
 bash infra-backup.sh backup
 
-# Dry-run preview
+# Preview
 DRY_RUN=true bash infra-backup.sh backup
 
-# Restore the backed-up artifacts (careful, requires sudo and service restarts)
+# Restore artifacts (use with care; requires sudo/service restarts)
 bash infra-backup.sh restore
-
-# When restoring, the script will try to ensure prerequisites (nginx, java/jetty, maven, mysql) are present and may install or warn as needed.
 ```
 
-### Safety tips
+## 🔒 Safety tips
 
 - Always run backups with `--dry-run` or `DRY_RUN=true` first when you're unsure what will change.
 - Avoid storing secrets in `non_stow` if the repository is public. Keep sensitive data out of the repo or encrypted separately.
