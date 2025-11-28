@@ -24,5 +24,7 @@
 # Repo helper scripts and misc files
 ^backup-dotfiles\.sh$
 ^restore-dotfiles\.sh$
+^infra-backup\.sh$
+^README\.md$
 ^dnf-packages\.txt$
 ^gnome-settings\.dconf$

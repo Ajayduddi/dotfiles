@@ -225,36 +225,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-restore_packages() {
-  local specific="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
-  local universal="$NON_STOW_DIR/packages/universal-packages.txt"
-  local list=""
-
-  if [[ -f "$specific" && -s "$specific" ]]; then
-    list="$specific"
-  elif [[ -f "$universal" && -s "$universal" ]]; then
-    warn "Falling back to universal package list."
-    list="$universal"
-  else
-    warn "No package lists found; skipping package restore"
-    return
-  fi
-
-  log "Installing packages from $list for OS $OS_ID"
-
-  if [[ "$OS_ID" =~ (debian|ubuntu|kali) ]]; then
-    if [[ "$DRY_RUN" == true ]]; then
-      would "sudo apt update && sudo apt install packages from $list"
-    else
-      sudo apt update
-      xargs -a "$list" -r sudo apt install -y || warn "Failed installing some packages"
-    fi
-  else
-    log "Package restore logic for OS $OS_ID not implemented; add as needed."
-  fi
-}
-restore_packages
-
 restore_python() {
   local base="$NON_STOW_DIR/dev/python"
   local req="$base/global-requirements-python3.txt"
@@ -340,4 +310,4 @@ restore_node() {
 }
 restore_node
 
-log "✅ Restore complete. Restart your terminal session to apply all changes."
+log "Restore complete. Restart your terminal session to apply all changes."
