@@ -37,6 +37,7 @@ import { OsdWindowModule } from './lib/osdWindow.js';
 import { OverlayKeyModule } from './lib/overlayKey.js';
 import { OverviewModule } from './lib/overview.js';
 import { OverviewControlsModule } from './lib/overviewControls.js';
+import { OverviewBackgroundModule } from './lib/overviewBackground.js';
 import { PanelModule } from './lib/panel.js';
 import { SearchControllerModule } from './lib/searchController.js';
 import { SearchModule } from './lib/search.js';
@@ -145,6 +146,7 @@ export default class VShell extends Extension.Extension {
         Me.Modules.messageTrayModule = new MessageTrayModule(Me);
         Me.Modules.overviewModule = new OverviewModule(Me);
         Me.Modules.overviewControlsModule = new OverviewControlsModule(Me);
+        Me.Modules.overviewBackgroundModule = new OverviewBackgroundModule(Me);
         Me.Modules.osdWindowModule = new OsdWindowModule(Me);
         Me.Modules.overlayKeyModule = new OverlayKeyModule(Me);
         Me.Modules.panelModule = new PanelModule(Me);
@@ -181,7 +183,8 @@ export default class VShell extends Extension.Extension {
             this._delayedStartup = false;
         }
 
-        this._originalGetNeighbor = Meta.Workspace.prototype.get_neighbor;
+        if (!this._originalGetNeighbor)
+            this._originalGetNeighbor = Meta.Workspace.prototype.get_neighbor;
 
         this._removeTimeouts();
         this._timeouts = {};
@@ -267,6 +270,7 @@ export default class VShell extends Extension.Extension {
         controlsManager._thumbnailsBox.scale_x = 1;
         controlsManager._thumbnailsBox.scale_y = 1;
         controlsManager._thumbnailsBox.opacity = 255;
+        controlsManager._thumbnailsBox.translation_y = 0;
 
         controlsManager._searchEntryBin.visible = true;
         controlsManager._searchController._searchResults.opacity = 255;
@@ -320,6 +324,7 @@ export default class VShell extends Extension.Extension {
                         () => {
                             Me.Modules.panelModule.update();
                             Me.Modules.overviewControlsModule.update();
+                            Me.Modules.messageTrayModule.update();
 
                             this._timeouts.unlock = 0;
                             return GLib.SOURCE_REMOVE;
@@ -448,6 +453,8 @@ export default class VShell extends Extension.Extension {
         Me.Modules.overlayKeyModule.update(reset);
         Me.Modules.searchControllerModule.update(reset);
 
+        Me.Modules.overviewBackgroundModule.update(reset);
+
         if (Main.sessionMode.isLocked)
             this._sessionLockActive = true;
 
@@ -506,6 +513,7 @@ export default class VShell extends Extension.Extension {
 
     // Modules possibly affected by supported but incompatible extensions
     _repairOverrides() {
+        this._updateSettings();
         Me.Modules.overviewModule.update();
         Me.Modules.overviewControlsModule.update();
         Me.Modules.layoutModule.update();
@@ -513,12 +521,11 @@ export default class VShell extends Extension.Extension {
         Me.Modules.windowPreviewModule.update();
         Me.Modules.panelModule.update();
         Me.Modules.dashModule.update();
-        this._updateSettings();
+        Me.Modules.overviewBackgroundModule.update();
     }
 
     _updateSettings(settings, key) {
         const controlsManager = Main.overview._overview.controls;
-        const searchEntry = Main.overview.searchEntry;
         // update settings cache and option variables
         opt._updateSettings();
         this._resetShellProperties();
@@ -560,18 +567,12 @@ export default class VShell extends Extension.Extension {
 
         opt.DASH_VISIBLE = opt.DASH_VISIBLE && !Me.Util.getEnabledExtensions('dash-to-panel@jderose9.github.com').length;
 
-        // adjust search entry style for OM2
-        if (opt.OVERVIEW_MODE2)
-            searchEntry.add_style_class_name('search-entry-om2');
-        else
-            searchEntry.remove_style_class_name('search-entry-om2');
 
         if (opt.OVERVIEW_MODE === 1)
             Me.Modules.workspaceModule.setWindowPreviewMaxScale(0.1);
         else
             Me.Modules.workspaceModule.setWindowPreviewMaxScale(0.95);
 
-        searchEntry.opacity = 255;
         St.Settings.get().slow_down_factor = opt.ANIMATION_TIME_FACTOR;
 
         // Options for workspace switcher, apply custom function only if needed
@@ -585,8 +586,6 @@ export default class VShell extends Extension.Extension {
         // Of course there is some overload for fast keyboard typist
         if (opt.SEARCH_VIEW_ANIMATION)
             opt.SEARCH_DELAY = 150;
-
-        controlsManager._setBackground?.bind(controlsManager)();
 
         if (settings)
             this._applySettings(key);
@@ -604,61 +603,7 @@ export default class VShell extends Extension.Extension {
 
         this._switchPageShortcuts();
 
-        if (key?.includes('panel'))
-            Me.Modules.panelModule.update();
-
-        if (key?.includes('dash') || key?.includes('icon') || key?.includes('dot-style') || key?.includes('provider'))
-            Me.Modules.dashModule.update();
-
-        if (key?.includes('hot-corner') || key?.includes('dash'))
-            Me.Modules.layoutModule.update();
-
-        if (key?.includes('overlay-key'))
-            Me.Modules.overlayKeyModule.update();
-
-        switch (key) {
-        case 'ws-thumbnails-position':
-            this._updateOverrides();
-            break;
-        case 'workspace-switcher-animation':
-        case 'ws-switcher-mode':
-            Me.Modules.workspaceAnimationModule.update();
-            break;
-        case 'search-width-scale':
-            Me.Modules.searchModule.update();
-            break;
-        case 'favorites-notify':
-            Me.Modules.appFavoritesModule.update();
-            break;
-        case 'window-attention-mode':
-            Me.Modules.windowAttentionHandlerModule.update();
-            break;
-        case 'show-ws-preview-bg':
-            Me.Modules.panelModule.update();
-            break;
-        case 'notification-position':
-            Me.Modules.messageTrayModule.update();
-            break;
-        case 'osd-position':
-            Me.Modules.osdWindowModule.update();
-            break;
-        case 'always-activate-selected-window':
-            Me.Modules.windowPreviewModule.update();
-            break;
-        case 'new-window-monitor-fix':
-            this._updateNewWindowConnection();
-            break;
-        case 'click-empty-close':
-            Me.Modules.overviewControlsModule.update();
-        }
-
-        if (key?.includes('app-grid') ||
-            key?.includes('app-folder') ||
-            key?.includes('dot-style') ||
-            key === 'show-search-entry' ||
-            key === 'ws-thumbnail-scale' ||
-            key === 'ws-thumbnail-scale-appgrid')
-            Me.Modules.appDisplayModule.update();
+        this._updateOverrides();
     }
 
     _switchPageShortcuts() {

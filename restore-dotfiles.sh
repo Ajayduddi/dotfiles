@@ -122,6 +122,8 @@ _detect_de() {
   esac
 }
 OS_ID=$(_detect_os)
+# trim whitespace (safety: some environments concat IDs or include extra chars)
+OS_ID=${OS_ID//[[:space:]]/}
 DE_ID=$(_detect_de)
 log "OS: $OS_ID | Desktop: $DE_ID | Dry-run: $DRY_RUN"
 
@@ -130,6 +132,16 @@ if [[ "$DRY_RUN" == true ]]; then
   [[ -d "$DOTFILES_DIR" ]] || would "mkdir -p '$DOTFILES_DIR'"
 else
   mkdir -p "$DOTFILES_DIR"
+fi
+
+# Git is required by this script (used to clone the repo and install plugins)
+if ! command -v git >/dev/null 2>&1; then
+  if [[ "$DRY_RUN" == true ]]; then
+    would "Install git (git is required to clone dotfiles and plugins)"
+  else
+    err "git is required but not found. Please install git and re-run."
+    exit 1
+  fi
 fi
 
 # --- Reclone linux_stow branch (replace .git only) ---
@@ -152,27 +164,48 @@ else
   log "Repository ready at $DOTFILES_DIR"
 fi
 
-# --- Install GNU Stow ---
-install_stow() {
+# --- Install required tools (stow + zsh) ---
+install_tools() {
+  log "Installing stow and zsh on $OS_ID"
   case "$OS_ID" in
-    fedora)   sudo dnf -y install stow || sudo dnf -y groupinstall "Development Tools" && sudo dnf -y install stow ;;
-    debian)   sudo apt-get update && sudo apt-get -y install stow ;;
-    arch)     sudo pacman -Sy --noconfirm stow ;;
-    opensuse) sudo zypper --non-interactive install stow || { sudo zypper refresh && sudo zypper --non-interactive install stow; } ;;
-    mac)      brew install stow || true ;;
-    *)        warn "Unknown OS. Please install GNU Stow manually and re-run." ;;
+    debian|ubuntu|kali)
+      sudo apt-get update
+      sudo apt-get install -y stow zsh
+      ;;
+    fedora)
+      sudo dnf -y install stow zsh
+      ;;
+    arch)
+      sudo pacman -Sy --noconfirm stow zsh
+      ;;
+    opensuse)
+      sudo zypper install -y stow zsh
+      ;;
+    mac)
+      brew install stow zsh || true
+      ;;
+    *)
+      warn "Unknown OS; manual install of stow and zsh required"
+      ;;
   esac
 }
-if ! command -v stow >/dev/null 2>&1; then
+
+# If either stow or zsh is missing, offer to install both (dry-run respects would/skip)
+if ! command -v stow >/dev/null 2>&1 || ! command -v zsh >/dev/null 2>&1; then
   if [[ "$DRY_RUN" == true ]]; then
-    would "Install GNU Stow for OS '$OS_ID'"
-    log "Skipping stow installation in dry-run"
+    would "Install stow and zsh"
   else
-    log "Installing GNU Stow..."; install_stow
-    if ! command -v stow >/dev/null 2>&1; then err "GNU Stow not found after install. Abort."; exit 1; fi
+    install_tools
+    if ! command -v stow >/dev/null 2>&1; then
+      err "stow not installed; please install manually"
+      exit 1
+    fi
+    if ! command -v zsh >/dev/null 2>&1; then
+      warn "zsh not installed; some features may not work"
+    fi
   fi
 fi
-[[ "$DRY_RUN" == true ]] && log "GNU Stow ready (simulated)" || log "GNU Stow ready"
+log "Tools ready"
 
 # --- Stow packages (repo root only) ---
 run_stow_in() { # base_dir
@@ -221,88 +254,60 @@ run_stow_in() { # base_dir
 }
 run_stow_in "$DOTFILES_DIR"
 
-# --- Restore packages from non_stow/packages/<os>-packages.txt with universal fallback ---
-restore_packages() {
-  local specific="$NON_STOW_DIR/packages/${OS_ID}-packages.txt"
-  local universal="$NON_STOW_DIR/packages/universal-packages.txt"
-  local list="$specific"
+install_zsh_plugins() {
+  local ZSH_CUSTOM="${DOTFILES_DIR}/zsh/.oh-my-zsh/custom"
+  local plugins_dir="$ZSH_CUSTOM/plugins"
 
-  if [[ ! -s "$list" ]]; then
-    if [[ -s "$universal" ]]; then
-      warn "Package list missing or empty: $specific; falling back to universal list: $universal"
-      list="$universal"
-    else
-      warn "No package lists found (missing: $specific and $universal); skipping package restore"
-      return 0
-    fi
+  if [[ "$DRY_RUN" == true ]]; then
+    would "git clone zsh-autosuggestions to $plugins_dir/zsh-autosuggestions"
+    would "git clone zsh-syntax-highlighting to $plugins_dir/zsh-syntax-highlighting"
+    return
   fi
 
-  case "$OS_ID" in
-    fedora)
-      # Pick dnf5 if present, else fallback to dnf
-      local DNF_BIN="dnf"
-      command -v dnf5 >/dev/null 2>&1 && DNF_BIN="dnf5"
-      if [[ "$DRY_RUN" == true ]]; then
-        would "sudo $DNF_BIN -y makecache"
-        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if sudo $DNF_BIN info -q \"$pkg\" >/dev/null 2>&1; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo $DNF_BIN install -y"
-      else
-        log "Refreshing Fedora metadata ($DNF_BIN makecache)"
-        sudo "$DNF_BIN" -y makecache || warn "$DNF_BIN makecache failed"
-        log "Installing packages from $list ($DNF_BIN, filtered for availability)"
-        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if sudo "$DNF_BIN" info -q "$pkg" >/dev/null 2>&1; then printf '%s\n' "$pkg"; fi; done) || true
-        if [[ -n "$avail_pkgs" ]]; then
-          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo "$DNF_BIN" install -y || warn "Some packages may have failed to install"
-        else
-          warn "No available packages from list for Fedora"
-        fi
-      fi
-      ;;
-    debian|ubuntu|kali)
-      if [[ "$DRY_RUN" == true ]]; then
-        would "sudo apt-get update"
-        would "awk 'NF && $0 !~ /^#/' '$list' | while read -r pkg; do if apt-cache policy \"$pkg\" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\\n' \"$pkg\"; fi; done | xargs -r -n 50 sudo apt-get install -y"
-      else
-        log "Updating apt cache"
-        sudo apt-get update || warn "apt-get update failed"
-        log "Installing packages from $list (apt-get, filtered for availability)"
-        avail_pkgs=$(awk 'NF && $0 !~ /^#/' "$list" | while read -r pkg; do if apt-cache policy "$pkg" 2>/dev/null | awk '/Candidate:/ {print $2}' | grep -vq '(none)'; then printf '%s\n' "$pkg"; fi; done) || true
-        if [[ -n "$avail_pkgs" ]]; then
-          printf '%s\n' "$avail_pkgs" | xargs -r -n 50 sudo apt-get install -y || warn "Some packages may have failed to install"
-        else
-          warn "No available packages from list for apt-based system"
-        fi
-      fi
-      ;;
-    arch)
-      if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo pacman -S --needed --noconfirm"
-      else
-        log "Installing packages from $list (pacman --needed)"
-        xargs -a "$list" -r -n 50 sudo pacman -S --needed --noconfirm || warn "Some packages may have failed to install"
-      fi
-      ;;
-    opensuse)
-      if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 sudo zypper --non-interactive install"
-      else
-        log "Installing packages from $list (zypper)"
-        xargs -a "$list" -r -n 50 sudo zypper --non-interactive install || warn "Some packages may have failed to install"
-      fi
-      ;;
-    mac)
-      if [[ "$DRY_RUN" == true ]]; then
-        would "xargs -a '$list' -r -n 50 brew install"
-      else
-        log "Installing packages from $list (brew)"
-        xargs -a "$list" -r -n 50 brew install || warn "Some packages may have failed to install"
-      fi
-      ;;
-    *)
-      warn "Unknown OS '$OS_ID'; skipping package restore"
-      ;;
-  esac
+  mkdir -p "$plugins_dir"
+  if [[ ! -d "$plugins_dir/zsh-autosuggestions" ]]; then
+    if ! git clone https://github.com/zsh-users/zsh-autosuggestions "$plugins_dir/zsh-autosuggestions"; then
+      warn "Failed to clone zsh-autosuggestions into $plugins_dir"
+    else
+      log "Installed zsh-autosuggestions into $plugins_dir/zsh-autosuggestions"
+    fi
+  else
+    log "zsh-autosuggestions already present in dotfiles"
+  fi
+
+  if [[ ! -d "$plugins_dir/zsh-syntax-highlighting" ]]; then
+    if ! git clone https://github.com/zsh-users/zsh-syntax-highlighting "$plugins_dir/zsh-syntax-highlighting"; then
+      warn "Failed to clone zsh-syntax-highlighting into $plugins_dir"
+    else
+      log "Installed zsh-syntax-highlighting into $plugins_dir/zsh-syntax-highlighting"
+    fi
+  else
+    log "zsh-syntax-highlighting already present in dotfiles"
+  fi
 }
-restore_packages
+
+install_zsh_plugins
+
+if command -v zsh >/dev/null 2>&1; then
+  CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
+  ZSH_PATH=$(command -v zsh)
+  if [[ "$CURRENT_SHELL" != "$ZSH_PATH" ]]; then
+    if [[ "$DRY_RUN" == true ]]; then
+      would "chsh -s $ZSH_PATH"
+      log "Please log out/in to activate zsh"
+    else
+      chsh -s "$ZSH_PATH" || warn "chsh failed; you may need to run it manually"
+      log "Shell changed to zsh. Log out/login to activate."
+    fi
+  fi
+else
+  warn "Zsh is not installed. Skipping plugin installation and shell change."
+fi
+
+# NOTE: package restoration from non_stow/packages is intentionally omitted
+# from this (production) script. Package installation is potentially destructive
+# and requires elevated privileges — keep package lists in non_stow for manual
+# review or for an alternate automation script that you control.
 
 # --- Restore developer environments ---
 restore_python() {
@@ -358,24 +363,54 @@ restore_node() {
   local versions="$base/node-installed-versions.txt"
   local npmlist="$base/npm-global-packages.txt"
 
-  # Try to load nvm if available but not in PATH
-  if ! command -v nvm >/dev/null 2>&1; then
-    if [[ -s "$HOME/.nvm/nvm.sh" ]]; then . "$HOME/.nvm/nvm.sh" 2>/dev/null || true; fi
-  fi
+  ## nvm installer helper (top-level, safe)
+  install_nvm() {
+    if command -v nvm >/dev/null 2>&1; then
+      log "nvm already installed."
+      return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+      would "Install nvm official script (curl required)"
+      return 0
+    fi
+
+    if ! command -v curl >/dev/null 2>&1; then
+      warn "curl not found; cannot install nvm automatically. Please install curl or nvm manually."
+      return 1
+    fi
+
+    log "Installing nvm..."
+    if ! curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash; then
+      warn "nvm install script failed"
+      return 1
+    fi
+    return 0
+  }
 
   # Restore Node versions via nvm/fnm/asdf if available
   if [[ -f "$versions" ]]; then
-    while read -r ver; do
-      [[ -n "$ver" ]] || continue
+    # ensure we have nvm available (or at least attempt to install it)
+    install_nvm
+
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" 2>/dev/null || true
+    [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion" 2>/dev/null || true
+
+    while IFS= read -r ver || [[ -n "$ver" ]]; do
+      [[ -z "$ver" ]] && continue
       if [[ "$DRY_RUN" == true ]]; then
-        if command -v nvm >/dev/null 2>&1; then would "nvm install '$ver'"; fi
-        if command -v fnm >/dev/null 2>&1; then would "fnm install '$ver'"; fi
-        if command -v asdf >/dev/null 2>&1; then would "asdf plugin add nodejs || true; asdf install nodejs '$ver'"; fi
+        if command -v nvm >/dev/null 2>&1; then would "nvm install $ver"; fi
       else
-        if command -v nvm >/dev/null 2>&1; then nvm install "$ver" || warn "nvm install $ver failed"; 
-        elif command -v fnm >/dev/null 2>&1; then fnm install "$ver" || warn "fnm install $ver failed";
-        elif command -v asdf >/dev/null 2>&1; then asdf plugin add nodejs >/dev/null 2>&1 || true; asdf install nodejs "$ver" || warn "asdf install $ver failed";
-        else warn "No Node version manager (nvm/fnm/asdf) found to install $ver"; fi
+        if command -v nvm >/dev/null 2>&1; then
+          nvm install "$ver" || warn "nvm install $ver failed"
+        elif command -v fnm >/dev/null 2>&1; then
+          fnm install "$ver" || warn "fnm install $ver failed"
+        elif command -v asdf >/dev/null 2>&1; then
+          asdf plugin add nodejs >/dev/null 2>&1 || true; asdf install nodejs "$ver" || warn "asdf install $ver failed"
+        else
+          warn "No Node version manager (nvm/fnm/asdf) found to install $ver"
+        fi
       fi
     done < "$versions"
   fi

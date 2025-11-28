@@ -79,8 +79,7 @@ function get_activationkey(key, defaultValue) {
     val = Settings.gioSetting.get_default_value(key)?.get_strv() ?? [
       String(defaultValue)
     ];
-    if (val.length === 0)
-      val = [String(defaultValue)];
+    if (val.length === 0) val = [String(defaultValue)];
   }
   return Number(val[0]);
 }
@@ -93,6 +92,7 @@ var Settings = class _Settings {
   static KEY_LAST_VERSION_NAME_INSTALLED = "last-version-name-installed";
   static KEY_OVERRIDDEN_SETTINGS = "overridden-settings";
   static KEY_WINDOW_BORDER_COLOR = "window-border-color";
+  static KEY_WINDOW_USE_CUSTOM_BORDER_COLOR = "window-use-custom-border-color";
   static KEY_TILING_SYSTEM = "enable-tiling-system";
   static KEY_SNAP_ASSIST = "enable-snap-assist";
   static KEY_SHOW_INDICATOR = "show-indicator";
@@ -147,8 +147,7 @@ var Settings = class _Settings {
   static SETTING_HIGHLIGHT_CURRENT_WINDOW = "highlight-current-window";
   static SETTING_CYCLE_LAYOUTS = "cycle-layouts";
   static initialize(settings) {
-    if (this._is_initialized)
-      return;
+    if (this._is_initialized) return;
     this._is_initialized = true;
     this._settings = settings;
   }
@@ -335,6 +334,12 @@ var Settings = class _Settings {
   static set WINDOW_BORDER_COLOR(val) {
     set_string(_Settings.KEY_WINDOW_BORDER_COLOR, val);
   }
+  static get WINDOW_USE_CUSTOM_BORDER_COLOR() {
+    return get_boolean(_Settings.KEY_WINDOW_USE_CUSTOM_BORDER_COLOR);
+  }
+  static set WINDOW_USE_CUSTOM_BORDER_COLOR(val) {
+    set_boolean(_Settings.KEY_WINDOW_USE_CUSTOM_BORDER_COLOR, val);
+  }
   static get WINDOW_BORDER_WIDTH() {
     return get_unsigned_number(_Settings.KEY_WINDOW_BORDER_WIDTH);
   }
@@ -429,19 +434,16 @@ var Settings = class _Settings {
     const variant = this._settings?.get_value(
       _Settings.KEY_SETTING_SELECTED_LAYOUTS
     );
-    if (!variant)
-      return [];
+    if (!variant) return [];
     const result = [];
     for (let i = 0; i < variant.n_children(); i++) {
       const monitor_variant = variant.get_child_value(i);
-      if (!monitor_variant)
-        continue;
+      if (!monitor_variant) continue;
       const n_workspaces = monitor_variant.n_children();
       const monitor_result = [];
       for (let j = 0; j < n_workspaces; j++) {
         const layout_variant = monitor_variant.get_child_value(j);
-        if (!layout_variant)
-          continue;
+        if (!layout_variant) continue;
         monitor_result.push(layout_variant.get_string()[0]);
       }
       result.push(monitor_result);
@@ -606,13 +608,11 @@ var SettingsOverride = class _SettingsOverride {
     );
   }
   static get() {
-    if (!this._instance)
-      this._instance = new _SettingsOverride();
+    if (!this._instance) this._instance = new _SettingsOverride();
     return this._instance;
   }
   static destroy() {
-    if (!this._instance)
-      return;
+    if (!this._instance) return;
     this._instance.restoreAll();
     this._instance = null;
   }
@@ -660,8 +660,7 @@ var SettingsOverride = class _SettingsOverride {
       this._overriddenKeys.set(schemaId, schemaMap);
     const oldValue = schemaMap.has(keyToOverride) ? schemaMap.get(keyToOverride) : giosettings.get_value(keyToOverride);
     const res = giosettings.set_value(keyToOverride, newValue);
-    if (!res)
-      return null;
+    if (!res) return null;
     if (!schemaMap.has(keyToOverride)) {
       schemaMap.set(keyToOverride, oldValue);
       Settings.OVERRIDDEN_SETTINGS = this._overriddenKeysToJSON();
@@ -670,11 +669,9 @@ var SettingsOverride = class _SettingsOverride {
   }
   restoreKey(giosettings, keyToOverride) {
     const overridden = this._overriddenKeys.get(giosettings.schemaId);
-    if (!overridden)
-      return null;
+    if (!overridden) return null;
     const oldValue = overridden.get(keyToOverride);
-    if (!oldValue)
-      return null;
+    if (!oldValue) return null;
     const res = giosettings.set_value(keyToOverride, oldValue);
     if (res) {
       overridden.delete(keyToOverride);
@@ -692,24 +689,20 @@ var SettingsOverride = class _SettingsOverride {
         const overridden = this._overriddenKeys.get(
           giosettings.schemaId
         );
-        if (!overridden)
-          return;
+        if (!overridden) return;
         const toDelete = [];
         overridden.forEach((oldValue, key) => {
           const done = giosettings.set_value(key, oldValue);
-          if (done)
-            toDelete.push(key);
+          if (done) toDelete.push(key);
         });
         toDelete.forEach((key) => overridden.delete(key));
-        if (overridden.size === 0)
-          schemaToDelete.push(schemaId);
+        if (overridden.size === 0) schemaToDelete.push(schemaId);
       }
     );
     schemaToDelete.forEach((schemaId) => {
       this._overriddenKeys.delete(schemaId);
     });
-    if (this._overriddenKeys.size === 0)
-      this._overriddenKeys = /* @__PURE__ */ new Map();
+    if (this._overriddenKeys.size === 0) this._overriddenKeys = /* @__PURE__ */ new Map();
     Settings.OVERRIDDEN_SETTINGS = this._overriddenKeysToJSON();
   }
 };
@@ -755,28 +748,22 @@ var SettingsExport = class {
       Gio.SubprocessFlags.STDOUT_PIPE
     );
     const [, dump] = proc.communicate_utf8(null, null);
-    if (proc.get_successful())
-      return dump;
-    else
-      throw new Error("Failed to dump dconf");
+    if (proc.get_successful()) return dump;
+    else throw new Error("Failed to dump dconf");
   }
   _excludeKeys(dconfDump) {
-    if (dconfDump.length === 0)
-      throw new Error("Empty dconf dump");
+    if (dconfDump.length === 0) throw new Error("Empty dconf dump");
     const keyFile = new GLib.KeyFile();
     const length = new TextEncoder().encode(dconfDump).length;
     if (!keyFile.load_from_data(dconfDump, length, GLib.KeyFileFlags.NONE))
       throw new Error("Failed to load from dconf dump");
     const [key_list] = keyFile.get_keys("/");
     key_list.forEach((key) => {
-      if (excludedKeys.includes(key))
-        keyFile.remove_key("/", key);
+      if (excludedKeys.includes(key)) keyFile.remove_key("/", key);
     });
     const [data] = keyFile.to_data();
-    if (data)
-      return data;
-    else
-      throw new Error("Failed to exclude dconf keys");
+    if (data) return data;
+    else throw new Error("Failed to exclude dconf keys");
   }
 };
 
@@ -792,6 +779,7 @@ function buildPrefsWidget() {
   });
 }
 var TilingShellExtensionPreferences = class extends ExtensionPreferences {
+  GNOME_VERSION_MAJOR = Number(Config.PACKAGE_VERSION.split(".")[0]);
   /**
    * This function is called when the preferences window is first created to fill
    * the `Adw.PreferencesWindow`.
@@ -860,26 +848,26 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
         _("Apply blur effect to selected tile preview")
       )
     );
-    const windowBorderRow = new Adw.ExpanderRow({
+    const windowBorderExpanderRow = new Adw.ExpanderRow({
       title: _("Window border"),
       subtitle: _("Show a border around focused window")
     });
-    appearenceGroup.add(windowBorderRow);
-    windowBorderRow.add_row(
+    appearenceGroup.add(windowBorderExpanderRow);
+    windowBorderExpanderRow.add_row(
       this._buildSwitchRow(
         Settings.KEY_ENABLE_WINDOW_BORDER,
         _("Enable"),
         _("Show a border around focused window")
       )
     );
-    windowBorderRow.add_row(
+    windowBorderExpanderRow.add_row(
       this._buildSwitchRow(
         Settings.KEY_ENABLE_SMART_WINDOW_BORDER_RADIUS,
         _("Smart border radius"),
         _("Dynamically adapt to the window\u2019s actual border radius")
       )
     );
-    windowBorderRow.add_row(
+    windowBorderExpanderRow.add_row(
       this._buildSpinButtonRow(
         Settings.KEY_WINDOW_BORDER_WIDTH,
         _("Width"),
@@ -887,14 +875,27 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
         1
       )
     );
-    windowBorderRow.add_row(
-      this._buildColorRow(
-        _("Border color"),
-        _("Choose the color of the border"),
-        this._getRGBAFromString(Settings.WINDOW_BORDER_COLOR),
-        (val) => Settings.WINDOW_BORDER_COLOR = val
-      )
+    const colorButton = this._buildColorButton(
+      this._getRGBAFromString(Settings.WINDOW_BORDER_COLOR),
+      (val) => Settings.WINDOW_BORDER_COLOR = val
     );
+    const windowBorderColorRow = new Adw.ActionRow({
+      title: _("Border color"),
+      subtitle: _("Choose the color of the border")
+    });
+    windowBorderColorRow.add_suffix(colorButton);
+    colorButton.set_visible(Settings.WINDOW_USE_CUSTOM_BORDER_COLOR);
+    if (this.GNOME_VERSION_MAJOR >= 47) {
+      const customColorDropDown = this._buildCustomColorDropDown(
+        Settings.WINDOW_USE_CUSTOM_BORDER_COLOR,
+        (use_custom_color) => {
+          colorButton.set_visible(use_custom_color);
+          Settings.WINDOW_USE_CUSTOM_BORDER_COLOR = use_custom_color;
+        }
+      );
+      windowBorderColorRow.add_suffix(customColorDropDown);
+    }
+    windowBorderExpanderRow.add_row(windowBorderColorRow);
     const animationsRow = new Adw.ExpanderRow({
       title: _("Animations"),
       subtitle: _("Customize animations")
@@ -1118,8 +1119,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
             try {
               if (response_id === Gtk.ResponseType.ACCEPT) {
                 const file = _source.get_file();
-                if (!file)
-                  throw new Error("no file selected");
+                if (!file) throw new Error("no file selected");
                 debug(
                   `Create file with path ${file.get_path()}`
                 );
@@ -1396,8 +1396,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
     }
     keybindings.forEach(
       ([settingsKey, title, subtitle, isSet, isOnMainPage]) => {
-        if (!isSet && !isOnMainPage)
-          return;
+        if (!isSet && !isOnMainPage) return;
         const row = this._buildShortcutButtonRow(
           settingsKey,
           gioSettings,
@@ -1504,8 +1503,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
             try {
               if (response_id === Gtk.ResponseType.ACCEPT) {
                 const file = _source.get_file();
-                if (!file)
-                  throw new Error("no file selected");
+                if (!file) throw new Error("no file selected");
                 debug(
                   `Create file with path ${file.get_path()}`
                 );
@@ -1661,8 +1659,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
       subtitle,
       activatableWidget: gtkSwitch
     });
-    if (suffix)
-      adwRow.add_suffix(suffix);
+    if (suffix) adwRow.add_suffix(suffix);
     adwRow.add_suffix(gtkSwitch);
     Settings.bind(settingsKey, gtkSwitch, "active");
     return adwRow;
@@ -1698,8 +1695,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
   }
   _buildButtonRow(label, title, subtitle, onClick, styleClass) {
     const btn = Gtk.Button.new_with_label(label);
-    if (styleClass)
-      btn.add_css_class(styleClass);
+    if (styleClass) btn.add_css_class(styleClass);
     btn.connect("clicked", onClick);
     btn.set_vexpand(false);
     btn.set_valign(Gtk.Align.CENTER);
@@ -1725,8 +1721,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
         null
       );
     } catch (e) {
-      if (e instanceof Gio.DBusError)
-        Gio.DBusError.strip_remote_error(e);
+      if (e instanceof Gio.DBusError) Gio.DBusError.strip_remote_error(e);
       console.error(e);
     }
   }
@@ -1748,8 +1743,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
       const selected = index < 0 || index >= activationKeys.length ? -1 /* NONE */ : activationKeys[index];
       onChange(selected);
     });
-    if (styleClass)
-      dropdown.add_css_class(styleClass);
+    if (styleClass) dropdown.add_css_class(styleClass);
     dropdown.set_vexpand(false);
     dropdown.set_valign(Gtk.Align.CENTER);
     return dropdown;
@@ -1766,16 +1760,14 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
   }
   _buildShortcutButtonRow(settingsKey, gioSettings, title, subtitle, styleClass) {
     const btn = new ShortcutSettingButton(settingsKey, gioSettings);
-    if (styleClass)
-      btn.add_css_class(styleClass);
+    if (styleClass) btn.add_css_class(styleClass);
     btn.set_vexpand(false);
     btn.set_valign(Gtk.Align.CENTER);
     const adwRow = new Adw.ActionRow({
       title,
       activatableWidget: btn
     });
-    if (subtitle)
-      adwRow.set_subtitle(subtitle);
+    if (subtitle) adwRow.set_subtitle(subtitle);
     adwRow.add_suffix(btn);
     return adwRow;
   }
@@ -1806,7 +1798,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
     rgba.parse(str);
     return rgba;
   }
-  _buildColorRow(title, subtitle, rgba, onChange) {
+  _buildColorButton(rgba, onChange) {
     const colorButton = new Gtk.ColorButton({
       rgba,
       use_alpha: true,
@@ -1815,13 +1807,25 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
     colorButton.connect("color-set", () => {
       onChange(colorButton.get_rgba().to_string());
     });
-    const adwRow = new Adw.ActionRow({
-      title,
-      subtitle,
-      activatableWidget: colorButton
+    return colorButton;
+  }
+  _buildCustomColorDropDown(initialValue, onChange, styleClass) {
+    const options = new Gtk.StringList();
+    options.append(_("Choose custom color"));
+    options.append(_("Use system accent color"));
+    const dropdown = new Gtk.DropDown({
+      model: options,
+      selected: initialValue ? 0 : 1
     });
-    adwRow.add_suffix(colorButton);
-    return adwRow;
+    dropdown.connect("notify::selected-item", (dd) => {
+      const index = dd.get_selected();
+      const selected = index === 0;
+      onChange(selected);
+    });
+    if (styleClass) dropdown.add_css_class(styleClass);
+    dropdown.set_vexpand(false);
+    dropdown.set_valign(Gtk.Align.CENTER);
+    return dropdown;
   }
   _buildFileChooserDialog(title, action, window, accept, cancel, filter, onResponse) {
     const fc = new Gtk.FileChooserNative({
@@ -1835,11 +1839,7 @@ var TilingShellExtensionPreferences = class extends ExtensionPreferences {
     window.connect("map", () => {
       fc.set_transient_for(window);
     });
-    const [major] = Config.PACKAGE_VERSION.split(".").map(
-      (s) => Number(s)
-    );
-    if (major >= 43)
-      fc.set_filter(filter);
+    if (this.GNOME_VERSION_MAJOR >= 43) fc.set_filter(filter);
     fc.set_current_folder(Gio.File.new_for_path(GLib.get_home_dir()));
     fc.connect("response", onResponse);
     return fc;

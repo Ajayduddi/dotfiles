@@ -6,14 +6,10 @@ var __decorateClass = (decorators, target, key, kind) => {
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result)
-    __defProp(target, key, result);
+  if (kind && result) __defProp(target, key, result);
   return result;
 };
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/gi.shared.ts
 import Gio from "gi://Gio";
@@ -96,16 +92,13 @@ var getMonitorScalingFactor = (monitorIndex) => {
 };
 var getScalingFactorOf = (widget) => {
   const [hasReference, scalingReference] = widget.get_theme_node().lookup_length("scaling-reference", true);
-  if (!hasReference)
-    return [true, 1];
+  if (!hasReference) return [true, 1];
   const [hasValue, monitorScalingFactor] = widget.get_theme_node().lookup_length("monitor-scaling-factor", true);
-  if (!hasValue)
-    return [true, 1];
+  if (!hasValue) return [true, 1];
   return [scalingReference !== 1, monitorScalingFactor / scalingReference];
 };
 var enableScalingFactorSupport = (widget, monitorScalingFactor) => {
-  if (!monitorScalingFactor)
-    return;
+  if (!monitorScalingFactor) return;
   widget.set_style(`${getScalingFactorSupportString(monitorScalingFactor)};`);
 };
 var getScalingFactorSupportString = (monitorScalingFactor) => {
@@ -121,14 +114,10 @@ function buildMarginOf(value) {
 }
 function buildMargin(params) {
   const margin = new Clutter.Margin();
-  if (params.top)
-    margin.top = params.top;
-  if (params.bottom)
-    margin.bottom = params.bottom;
-  if (params.left)
-    margin.left = params.left;
-  if (params.right)
-    margin.right = params.right;
+  if (params.top) margin.top = params.top;
+  if (params.bottom) margin.bottom = params.bottom;
+  if (params.left) margin.left = params.left;
+  if (params.right) margin.right = params.right;
   return margin;
 }
 function buildRectangle(params = {}) {
@@ -149,8 +138,7 @@ function filterUnfocusableWindows(windows) {
   });
 }
 function getWindows(workspace) {
-  if (!workspace)
-    workspace = global.workspaceManager.get_active_workspace();
+  if (!workspace) workspace = global.workspaceManager.get_active_workspace();
   return filterUnfocusableWindows(
     global.display.get_tab_list(Meta.TabList.NORMAL_ALL, workspace)
   );
@@ -248,8 +236,7 @@ function get_activationkey(key, defaultValue) {
     val = Settings.gioSetting.get_default_value(key)?.get_strv() ?? [
       String(defaultValue)
     ];
-    if (val.length === 0)
-      val = [String(defaultValue)];
+    if (val.length === 0) val = [String(defaultValue)];
   }
   return Number(val[0]);
 }
@@ -262,6 +249,7 @@ var Settings = class _Settings {
   static KEY_LAST_VERSION_NAME_INSTALLED = "last-version-name-installed";
   static KEY_OVERRIDDEN_SETTINGS = "overridden-settings";
   static KEY_WINDOW_BORDER_COLOR = "window-border-color";
+  static KEY_WINDOW_USE_CUSTOM_BORDER_COLOR = "window-use-custom-border-color";
   static KEY_TILING_SYSTEM = "enable-tiling-system";
   static KEY_SNAP_ASSIST = "enable-snap-assist";
   static KEY_SHOW_INDICATOR = "show-indicator";
@@ -316,8 +304,7 @@ var Settings = class _Settings {
   static SETTING_HIGHLIGHT_CURRENT_WINDOW = "highlight-current-window";
   static SETTING_CYCLE_LAYOUTS = "cycle-layouts";
   static initialize(settings) {
-    if (this._is_initialized)
-      return;
+    if (this._is_initialized) return;
     this._is_initialized = true;
     this._settings = settings;
   }
@@ -504,6 +491,12 @@ var Settings = class _Settings {
   static set WINDOW_BORDER_COLOR(val) {
     set_string(_Settings.KEY_WINDOW_BORDER_COLOR, val);
   }
+  static get WINDOW_USE_CUSTOM_BORDER_COLOR() {
+    return get_boolean(_Settings.KEY_WINDOW_USE_CUSTOM_BORDER_COLOR);
+  }
+  static set WINDOW_USE_CUSTOM_BORDER_COLOR(val) {
+    set_boolean(_Settings.KEY_WINDOW_USE_CUSTOM_BORDER_COLOR, val);
+  }
   static get WINDOW_BORDER_WIDTH() {
     return get_unsigned_number(_Settings.KEY_WINDOW_BORDER_WIDTH);
   }
@@ -598,19 +591,16 @@ var Settings = class _Settings {
     const variant = this._settings?.get_value(
       _Settings.KEY_SETTING_SELECTED_LAYOUTS
     );
-    if (!variant)
-      return [];
+    if (!variant) return [];
     const result = [];
     for (let i = 0; i < variant.n_children(); i++) {
       const monitor_variant = variant.get_child_value(i);
-      if (!monitor_variant)
-        continue;
+      if (!monitor_variant) continue;
       const n_workspaces = monitor_variant.n_children();
       const monitor_result = [];
       for (let j = 0; j < n_workspaces; j++) {
         const layout_variant = monitor_variant.get_child_value(j);
-        if (!layout_variant)
-          continue;
+        if (!layout_variant) continue;
         monitor_result.push(layout_variant.get_string()[0]);
       }
       result.push(monitor_result);
@@ -803,8 +793,7 @@ var GlobalState = class extends GObject.Object {
   _selected_layouts;
   // used to handle reordering of workspaces
   static get() {
-    if (!this._instance)
-      this._instance = new GlobalState();
+    if (!this._instance) this._instance = new GlobalState();
     return this._instance;
   }
   static destroy() {
@@ -849,8 +838,7 @@ var GlobalState = class extends GObject.Object {
         const n_workspaces = global.workspaceManager.get_n_workspaces();
         for (let i = 0; i < n_workspaces; i++) {
           const ws = global.workspaceManager.get_workspace_by_index(i);
-          if (!ws)
-            continue;
+          if (!ws) continue;
           const monitors_layouts = i < selected_layouts.length ? selected_layouts[i] : [defaultLayout.id];
           while (monitors_layouts.length < n_monitors)
             monitors_layouts.push(defaultLayout.id);
@@ -866,8 +854,7 @@ var GlobalState = class extends GObject.Object {
       (_2, index) => {
         const n_workspaces = global.workspaceManager.get_n_workspaces();
         const newWs = global.workspaceManager.get_workspace_by_index(index);
-        if (!newWs)
-          return;
+        if (!newWs) return;
         debug(`added workspace ${index}`);
         const secondLastWs = global.workspaceManager.get_workspace_by_index(
           n_workspaces - 2
@@ -888,11 +875,9 @@ var GlobalState = class extends GObject.Object {
         const to_be_saved = [];
         for (let i = 0; i < n_workspaces; i++) {
           const ws = global.workspaceManager.get_workspace_by_index(i);
-          if (!ws)
-            continue;
+          if (!ws) continue;
           const monitors_layouts = this._selected_layouts.get(ws);
-          if (!monitors_layouts)
-            continue;
+          if (!monitors_layouts) continue;
           to_be_saved.push(monitors_layouts);
         }
         Settings.save_selected_layouts(to_be_saved);
@@ -907,11 +892,9 @@ var GlobalState = class extends GObject.Object {
         const to_be_saved = [];
         for (let i = 0; i < n_workspaces; i++) {
           const ws = global.workspaceManager.get_workspace_by_index(i);
-          if (!ws)
-            continue;
+          if (!ws) continue;
           const monitors_layouts = this._selected_layouts.get(ws);
-          if (!monitors_layouts)
-            continue;
+          if (!monitors_layouts) continue;
           this._selected_layouts.delete(ws);
           newMap.set(ws, monitors_layouts);
           to_be_saved.push(monitors_layouts);
@@ -936,13 +919,11 @@ var GlobalState = class extends GObject.Object {
     const old_selected_layouts = Settings.get_selected_layouts();
     for (let i = 0; i < global.workspaceManager.get_n_workspaces(); i++) {
       const ws = global.workspaceManager.get_workspace_by_index(i);
-      if (!ws)
-        continue;
+      if (!ws) continue;
       const monitors_layouts = i < old_selected_layouts.length ? old_selected_layouts[i] : [];
       while (monitors_layouts.length < n_monitors)
         monitors_layouts.push(this._layouts[0].id);
-      while (monitors_layouts.length > n_monitors)
-        monitors_layouts.pop();
+      while (monitors_layouts.length > n_monitors) monitors_layouts.pop();
       monitors_layouts.forEach((_2, ind) => {
         if (this._layouts.findIndex(
           (lay) => lay.id === monitors_layouts[ind]
@@ -958,11 +939,9 @@ var GlobalState = class extends GObject.Object {
     const n_workspaces = global.workspaceManager.get_n_workspaces();
     for (let i = 0; i < n_workspaces; i++) {
       const ws = global.workspaceManager.get_workspace_by_index(i);
-      if (!ws)
-        continue;
+      if (!ws) continue;
       const monitors_layouts = this._selected_layouts.get(ws);
-      if (!monitors_layouts)
-        continue;
+      if (!monitors_layouts) continue;
       to_be_saved.push(monitors_layouts);
     }
     Settings.save_selected_layouts(to_be_saved);
@@ -978,8 +957,7 @@ var GlobalState = class extends GObject.Object {
     const layFoundIndex = this._layouts.findIndex(
       (lay) => lay.id === layoutToDelete.id
     );
-    if (layFoundIndex === -1)
-      return;
+    if (layFoundIndex === -1) return;
     this._layouts.splice(layFoundIndex, 1);
     this.layouts = this._layouts;
     this._selected_layouts.forEach((monitors_selected) => {
@@ -993,8 +971,7 @@ var GlobalState = class extends GObject.Object {
     const layFoundIndex = this._layouts.findIndex(
       (lay) => lay.id === newLay.id
     );
-    if (layFoundIndex === -1)
-      return;
+    if (layFoundIndex === -1) return;
     this._layouts[layFoundIndex] = newLay;
     this.layouts = this._layouts;
   }
@@ -1028,8 +1005,7 @@ var GlobalState = class extends GObject.Object {
       const lastWs = global.workspaceManager.get_workspace_by_index(
         n_workspaces - 1
       );
-      if (!lastWs)
-        return;
+      if (!lastWs) return;
       const tiledWindows = getWindows(lastWs).find(
         (win) => win.assignedTile && win.get_monitor() === monitorIndex
       );
@@ -1074,8 +1050,7 @@ var TilePreview = class extends St.Widget {
   _gaps;
   constructor(params) {
     super(params);
-    if (params.parent)
-      params.parent.add_child(this);
+    if (params.parent) params.parent.add_child(this);
     this._showing = false;
     this._rect = params.rect || buildRectangle({});
     this._gaps = new Clutter.Margin();
@@ -1099,14 +1074,11 @@ var TilePreview = class extends St.Widget {
     const topRight = hasNeighborTop && hasNeighborRight;
     const bottomRight = hasNeighborBottom && hasNeighborRight;
     const bottomLeft = hasNeighborBottom && hasNeighborLeft;
-    if (topLeft)
-      this.add_style_class_name("top-left-border-radius");
-    if (topRight)
-      this.add_style_class_name("top-right-border-radius");
+    if (topLeft) this.add_style_class_name("top-left-border-radius");
+    if (topRight) this.add_style_class_name("top-right-border-radius");
     if (bottomRight)
       this.add_style_class_name("bottom-right-border-radius");
-    if (bottomLeft)
-      this.add_style_class_name("bottom-left-border-radius");
+    if (bottomLeft) this.add_style_class_name("bottom-left-border-radius");
   }
   get gaps() {
     return this._gaps;
@@ -1138,8 +1110,7 @@ var TilePreview = class extends St.Widget {
     return this._showing;
   }
   open(ease = false, position) {
-    if (position)
-      this._rect = position;
+    if (position) this._rect = position;
     const fadeInMove = this._showing;
     this._showing = true;
     this.show();
@@ -1166,8 +1137,7 @@ var TilePreview = class extends St.Widget {
   openBelow(window, ease = false, position) {
     if (this.get_parent() === global.windowGroup) {
       const windowActor = window.get_compositor_private();
-      if (!windowActor)
-        return;
+      if (!windowActor) return;
       global.windowGroup.set_child_below_sibling(this, windowActor);
     }
     this.open(ease, position);
@@ -1179,8 +1149,7 @@ var TilePreview = class extends St.Widget {
     this.open(ease, position);
   }
   close(ease = false) {
-    if (!this._showing)
-      return;
+    if (!this._showing) return;
     this._showing = false;
     this.ease({
       opacity: 0,
@@ -1234,11 +1203,9 @@ var LayoutWidget = class extends St.Widget {
   _scalingFactor;
   constructor(params) {
     super({ styleClass: params.styleClass || "" });
-    if (params.parent)
-      params.parent.add_child(this);
+    if (params.parent) params.parent.add_child(this);
     this._scalingFactor = 1;
-    if (params.scalingFactor)
-      this.scalingFactor = params.scalingFactor;
+    if (params.scalingFactor) this.scalingFactor = params.scalingFactor;
     this._previews = [];
     this._containerRect = params.containerRect || buildRectangle();
     this._layout = params.layout || new Layout([], "");
@@ -1287,10 +1254,8 @@ var LayoutWidget = class extends St.Widget {
         tileRect.width += this._outerGaps.left;
         tileRect.x -= this._outerGaps.left;
       }
-      if (isRight)
-        tileRect.width += this._outerGaps.right;
-      if (isBottom)
-        tileRect.height += this._outerGaps.bottom;
+      if (isRight) tileRect.width += this._outerGaps.right;
+      if (isBottom) tileRect.height += this._outerGaps.bottom;
       return this.buildTile(this, tileRect, gaps, tile);
     });
   }
@@ -1328,8 +1293,7 @@ var LayoutWidget = class extends St.Widget {
       return false;
     }
     this._previews?.forEach((preview) => {
-      if (preview.get_parent() === this)
-        this.remove_child(preview);
+      if (preview.get_parent() === this) this.remove_child(preview);
       preview.destroy();
     });
     this._previews = [];
@@ -1358,13 +1322,11 @@ var SettingsOverride = class _SettingsOverride {
     );
   }
   static get() {
-    if (!this._instance)
-      this._instance = new _SettingsOverride();
+    if (!this._instance) this._instance = new _SettingsOverride();
     return this._instance;
   }
   static destroy() {
-    if (!this._instance)
-      return;
+    if (!this._instance) return;
     this._instance.restoreAll();
     this._instance = null;
   }
@@ -1412,8 +1374,7 @@ var SettingsOverride = class _SettingsOverride {
       this._overriddenKeys.set(schemaId, schemaMap);
     const oldValue = schemaMap.has(keyToOverride) ? schemaMap.get(keyToOverride) : giosettings.get_value(keyToOverride);
     const res = giosettings.set_value(keyToOverride, newValue);
-    if (!res)
-      return null;
+    if (!res) return null;
     if (!schemaMap.has(keyToOverride)) {
       schemaMap.set(keyToOverride, oldValue);
       Settings.OVERRIDDEN_SETTINGS = this._overriddenKeysToJSON();
@@ -1422,11 +1383,9 @@ var SettingsOverride = class _SettingsOverride {
   }
   restoreKey(giosettings, keyToOverride) {
     const overridden = this._overriddenKeys.get(giosettings.schemaId);
-    if (!overridden)
-      return null;
+    if (!overridden) return null;
     const oldValue = overridden.get(keyToOverride);
-    if (!oldValue)
-      return null;
+    if (!oldValue) return null;
     const res = giosettings.set_value(keyToOverride, oldValue);
     if (res) {
       overridden.delete(keyToOverride);
@@ -1444,24 +1403,20 @@ var SettingsOverride = class _SettingsOverride {
         const overridden = this._overriddenKeys.get(
           giosettings.schemaId
         );
-        if (!overridden)
-          return;
+        if (!overridden) return;
         const toDelete = [];
         overridden.forEach((oldValue, key) => {
           const done = giosettings.set_value(key, oldValue);
-          if (done)
-            toDelete.push(key);
+          if (done) toDelete.push(key);
         });
         toDelete.forEach((key) => overridden.delete(key));
-        if (overridden.size === 0)
-          schemaToDelete.push(schemaId);
+        if (overridden.size === 0) schemaToDelete.push(schemaId);
       }
     );
     schemaToDelete.forEach((schemaId) => {
       this._overriddenKeys.delete(schemaId);
     });
-    if (this._overriddenKeys.size === 0)
-      this._overriddenKeys = /* @__PURE__ */ new Map();
+    if (this._overriddenKeys.size === 0) this._overriddenKeys = /* @__PURE__ */ new Map();
     Settings.OVERRIDDEN_SETTINGS = this._overriddenKeysToJSON();
   }
 };
@@ -1500,8 +1455,7 @@ var KeyBindings = class extends GObject.Object {
   _setupKeyBindings(extensionSettings) {
     if (Settings.ENABLE_MOVE_KEYBINDINGS)
       this._applyKeybindings(extensionSettings);
-    else
-      this._removeKeybindings();
+    else this._removeKeybindings();
   }
   _applyKeybindings(extensionSettings) {
     this._overrideNatives(extensionSettings);
@@ -1648,9 +1602,9 @@ var KeyBindings = class extends GObject.Object {
       extensionSettings,
       Meta.KeyBindingFlags.NONE,
       Shell.ActionMode.NORMAL,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (display, _2, event) => {
-        this.emit("cycle-layouts", display, action, event.get_mask());
+      (display, _2, event, binding) => {
+        const mask = event.get_mask ? event.get_mask() : binding.get_mask();
+        this.emit("cycle-layouts", display, action, mask);
       }
     );
   }
@@ -1826,11 +1780,9 @@ var DynamicTilePreview = class extends TilePreview {
     return this._canRestore;
   }
   restore(ease = false) {
-    if (!this._canRestore)
-      return false;
+    if (!this._canRestore) return false;
     this._rect = this._originalRect.copy();
-    if (this.showing)
-      this.open(ease);
+    if (this.showing) this.open(ease);
     return true;
   }
 };
@@ -1869,23 +1821,19 @@ var TilingLayout = class extends LayoutWidget {
     return this._showing;
   }
   openBelow(window) {
-    if (this._showing)
-      return;
+    if (this._showing) return;
     const windowActor = window.get_compositor_private();
-    if (!windowActor)
-      return;
+    if (!windowActor) return;
     global.windowGroup.set_child_below_sibling(this, windowActor);
     this.open();
   }
   openAbove(window) {
-    if (this._showing)
-      return;
+    if (this._showing) return;
     global.windowGroup.set_child_above_sibling(this, null);
     this.open();
   }
   open(ease = false) {
-    if (this._showing)
-      return;
+    if (this._showing) return;
     this.show();
     this._showing = true;
     this.ease({
@@ -1897,8 +1845,7 @@ var TilingLayout = class extends LayoutWidget {
     });
   }
   close(ease = false) {
-    if (!this._showing)
-      return;
+    if (!this._showing) return;
     this._showing = false;
     this.ease({
       opacity: 0,
@@ -1922,10 +1869,8 @@ var TilingLayout = class extends LayoutWidget {
         (preview) => preview.canRestore && this._isHovered(currPointerPos, preview.originalRect)
       );
     }
-    if (!found)
-      return void 0;
-    if (reset && found.originalRect)
-      return found.originalRect;
+    if (!found) return void 0;
+    if (reset && found.originalRect) return found.originalRect;
     return found.rect;
   }
   unhoverAllTiles() {
@@ -1956,8 +1901,7 @@ var TilingLayout = class extends LayoutWidget {
               maxIndex = i;
           }
           for (let i = 0; i < rectangles.length; i++) {
-            if (i === maxIndex)
-              continue;
+            if (i === maxIndex) continue;
             const currRect = rectangles[i];
             const gaps = buildTileGaps(
               currRect,
@@ -2029,10 +1973,8 @@ var TilingLayout = class extends LayoutWidget {
       */
   _subtractRectangles(sourceRect, holeRect) {
     const [hasIntersection, intersection] = sourceRect.intersect(holeRect);
-    if (!hasIntersection)
-      return [false, [sourceRect]];
-    if (intersection.area() >= sourceRect.area() * 0.98)
-      return [true, []];
+    if (!hasIntersection) return [false, [sourceRect]];
+    if (intersection.area() >= sourceRect.area() * 0.98) return [true, []];
     const results = [];
     const heightA = intersection.y - sourceRect.y;
     if (heightA > 0) {
@@ -2083,8 +2025,7 @@ var TilingLayout = class extends LayoutWidget {
   // enlarge the side of the direction and search a tile that contains that point
   // clamp to ensure we do not go outside of the container area (e.g. the screen)
   findNearestTileDirection(source, direction, clamp, enlarge) {
-    if (direction === 1 /* NODIRECTION */)
-      return void 0;
+    if (direction === 1 /* NODIRECTION */) return void 0;
     const sourceCoords = {
       x: source.x + source.width / 2,
       y: source.y + source.height / 2
@@ -2104,8 +2045,7 @@ var TilingLayout = class extends LayoutWidget {
         break;
     }
     if (sourceCoords.x < this._containerRect.x || sourceCoords.x > this._containerRect.width + this._containerRect.x || sourceCoords.y < this._containerRect.y || sourceCoords.y > this._containerRect.height + this._containerRect.y) {
-      if (!clamp)
-        return void 0;
+      if (!clamp) return void 0;
       sourceCoords.x = Math.clamp(
         sourceCoords.x,
         this._containerRect.x,
@@ -2155,8 +2095,7 @@ var TilingLayout = class extends LayoutWidget {
         bestDistance = euclideanDistance;
       }
     }
-    if (!previewFound)
-      return void 0;
+    if (!previewFound) return void 0;
     return {
       rect: buildRectangle({
         x: previewFound.innerX,
@@ -2197,32 +2136,23 @@ var SnapAssistTile = class extends TilePreview {
       this._gaps.bottom === 0 && this._gaps.right === 0 ? 0 : MIN_RADIUS,
       this._gaps.bottom === 0 && this._gaps.left === 0 ? 0 : MIN_RADIUS
     ];
-    if (isTop && isLeft)
-      radius[St.Corner.TOPLEFT] = radiusValue;
-    if (isTop && isRight)
-      radius[St.Corner.TOPRIGHT] = radiusValue;
-    if (isBottom && isRight)
-      radius[St.Corner.BOTTOMRIGHT] = radiusValue;
-    if (isBottom && isLeft)
-      radius[St.Corner.BOTTOMLEFT] = radiusValue;
+    if (isTop && isLeft) radius[St.Corner.TOPLEFT] = radiusValue;
+    if (isTop && isRight) radius[St.Corner.TOPRIGHT] = radiusValue;
+    if (isBottom && isRight) radius[St.Corner.BOTTOMRIGHT] = radiusValue;
+    if (isBottom && isLeft) radius[St.Corner.BOTTOMLEFT] = radiusValue;
     const borderWidth = [
       borderWidthValue,
       borderWidthValue,
       borderWidthValue,
       borderWidthValue
     ];
-    if (isTop || this._gaps.top > 0)
-      borderWidth[St.Side.TOP] *= 2;
-    else
-      borderWidth[St.Side.TOP] = Math.floor(borderWidth[St.Side.TOP]);
-    if (isRight || this._gaps.right > 0)
-      borderWidth[St.Side.RIGHT] *= 2;
+    if (isTop || this._gaps.top > 0) borderWidth[St.Side.TOP] *= 2;
+    else borderWidth[St.Side.TOP] = Math.floor(borderWidth[St.Side.TOP]);
+    if (isRight || this._gaps.right > 0) borderWidth[St.Side.RIGHT] *= 2;
     else
       borderWidth[St.Side.RIGHT] = Math.floor(borderWidth[St.Side.RIGHT]);
-    if (isBottom || this._gaps.bottom > 0)
-      borderWidth[St.Side.BOTTOM] *= 2;
-    if (isLeft || this._gaps.left > 0)
-      borderWidth[St.Side.LEFT] *= 2;
+    if (isBottom || this._gaps.bottom > 0) borderWidth[St.Side.BOTTOM] *= 2;
+    if (isLeft || this._gaps.left > 0) borderWidth[St.Side.LEFT] *= 2;
     this.set_style(`
             border-radius: ${radius[St.Corner.TOPLEFT]}px ${radius[St.Corner.TOPRIGHT]}px ${radius[St.Corner.BOTTOMRIGHT]}px ${radius[St.Corner.BOTTOMLEFT]}px;
             border-top-width: ${borderWidth[St.Side.TOP]}px;
@@ -2243,8 +2173,7 @@ var SnapAssistTile = class extends TilePreview {
   }
   _applyStyle() {
     const [hasColor, { red, green, blue }] = this.get_theme_node().lookup_color("color", true);
-    if (!hasColor)
-      return;
+    if (!hasColor) return;
     if (red * 0.299 + green * 0.587 + blue * 0.114 > 186) {
       this.remove_style_class_name("dark");
     } else {
@@ -2286,8 +2215,7 @@ var SnapAssistLayout = class extends LayoutWidget {
       const preview = this._previews[i];
       const pos = { x: x + preview.rect.x, y: y + preview.rect.y };
       const isHovering = cursorPos.x >= pos.x && cursorPos.x <= pos.x + preview.rect.width && cursorPos.y >= pos.y && cursorPos.y <= pos.y + preview.rect.height;
-      if (isHovering)
-        return preview;
+      if (isHovering) return preview;
     }
   }
 };
@@ -2400,8 +2328,7 @@ var SnapAssistContent = class extends St.BoxLayout {
     this.close();
   }
   set blur(value) {
-    if (this._blur === value)
-      return;
+    if (this._blur === value) return;
     this._blur = value;
     this.get_effect("blur")?.set_enabled(value);
     this._applyStyle();
@@ -2435,8 +2362,7 @@ var SnapAssistContent = class extends St.BoxLayout {
         `);
   }
   close(ease = false) {
-    if (!this._showing)
-      return;
+    if (!this._showing) return;
     this._showing = false;
     this._isEnlarged = false;
     this.set_x(this._container.width / 2 - this.width / 2);
@@ -2499,8 +2425,7 @@ var SnapAssistContent = class extends St.BoxLayout {
     const wasEnlarged = this._isEnlarged;
     this.handleOpening(window, ease, currPointerPos);
     if (!this._showing || !this._isEnlarged) {
-      if (this._hoveredInfo)
-        this._hoveredInfo[0].set_hover(false);
+      if (this._hoveredInfo) this._hoveredInfo[0].set_hover(false);
       this._hoveredInfo = void 0;
       if (wasEnlarged) {
         this._container.emit(
@@ -2524,8 +2449,7 @@ var SnapAssistContent = class extends St.BoxLayout {
     if (!this._showing) {
       if (this.get_parent() === global.windowGroup) {
         const windowActor = window.get_compositor_private();
-        if (!windowActor)
-          return;
+        if (!windowActor) return;
         global.windowGroup.set_child_above_sibling(this, windowActor);
       }
     }
@@ -2535,16 +2459,14 @@ var SnapAssistContent = class extends St.BoxLayout {
     const minX = this._container.x + this.x - this._snapAssistantThreshold;
     const maxX = this._container.x + this.x + this.width + this._snapAssistantThreshold;
     const isNear = this.isBetween(minX, currPointerPos.x, maxX) && this.isBetween(minY, currPointerPos.y, maxY);
-    if (this._showing && this._isEnlarged === isNear)
-      return;
+    if (this._showing && this._isEnlarged === isNear) return;
     this._isEnlarged = isNear;
     this.open(ease);
   }
   handleTileHovering(cursorPos) {
     if (!this._isEnlarged) {
       const changed = this._hoveredInfo !== void 0;
-      if (this._hoveredInfo)
-        this._hoveredInfo[0].set_hover(false);
+      if (this._hoveredInfo) this._hoveredInfo[0].set_hover(false);
       this._hoveredInfo = void 0;
       return changed;
     }
@@ -2564,11 +2486,9 @@ var SnapAssistContent = class extends St.BoxLayout {
       oldTile?.set_hover(false);
       if (newTileHovered === void 0 || layoutHovered === void 0)
         this._hoveredInfo = void 0;
-      else
-        this._hoveredInfo = [newTileHovered, layoutHovered];
+      else this._hoveredInfo = [newTileHovered, layoutHovered];
     }
-    if (this._hoveredInfo)
-      this._hoveredInfo[0].set_hover(true);
+    if (this._hoveredInfo) this._hoveredInfo[0].set_hover(true);
     return tileChanged;
   }
   isBetween(min, num, max) {
@@ -2615,8 +2535,7 @@ var SnapAssist = class extends St.Widget {
     parent.add_child(this);
     this.workArea = workArea;
     this.set_clip(0, 0, workArea.width, workArea.height);
-    if (scalingFactor)
-      enableScalingFactorSupport(this, scalingFactor);
+    if (scalingFactor) enableScalingFactorSupport(this, scalingFactor);
     this._content = new SnapAssistContent(this, monitorIndex);
   }
   set workArea(newWorkArea) {
@@ -2673,14 +2592,11 @@ var SelectionTilePreview = class extends TilePreview {
     this._rect.height = this.gaps.top + this.gaps.bottom;
   }
   set blur(value) {
-    if (this._blur === value)
-      return;
+    if (this._blur === value) return;
     this._blur = value;
     this.get_effect("blur")?.set_enabled(value);
-    if (this._blur)
-      this.add_style_class_name("blur-tile-preview");
-    else
-      this.remove_style_class_name("blur-tile-preview");
+    if (this._blur) this.add_style_class_name("blur-tile-preview");
+    else this.remove_style_class_name("blur-tile-preview");
     this._recolor();
   }
   _init() {
@@ -2703,8 +2619,7 @@ var SelectionTilePreview = class extends TilePreview {
         `);
   }
   close(ease = false) {
-    if (!this._showing)
-      return;
+    if (!this._showing) return;
     this._rect.width = this.gaps.left + this.gaps.right;
     this._rect.height = this.gaps.top + this.gaps.bottom;
     super.close(ease);
@@ -2833,8 +2748,7 @@ var EdgeTilingManager = class extends GObject.Object {
         rect: previewRect
       };
     }
-    if (!this._activeEdgeTile)
-      this._activeEdgeTile = buildRectangle();
+    if (!this._activeEdgeTile) this._activeEdgeTile = buildRectangle();
     previewRect.width = this._workArea.width * QUARTER_PERCENTAGE;
     previewRect.height = this._workArea.height * QUARTER_PERCENTAGE;
     previewRect.y = this._workArea.y;
@@ -2929,8 +2843,7 @@ var TouchPointer = class _TouchPointer {
     this._windowPos = buildRectangle();
   }
   static get() {
-    if (!this._instance)
-      this._instance = new _TouchPointer();
+    if (!this._instance) this._instance = new _TouchPointer();
     return this._instance;
   }
   isTouchDeviceActive() {
@@ -2983,8 +2896,7 @@ var CachedWindowProperties = class {
 var TilingShellWindowManager = class extends GObject.Object {
   _signals;
   static get() {
-    if (!this._instance)
-      this._instance = new TilingShellWindowManager();
+    if (!this._instance) this._instance = new TilingShellWindowManager();
     return this._instance;
   }
   static destroy() {
@@ -3039,8 +2951,7 @@ var TilingShellWindowManager = class extends GObject.Object {
   }
   static easeMoveWindow(params) {
     const winActor = params.window.get_compositor_private();
-    if (!winActor)
-      return;
+    if (!winActor) return;
     const winRect = params.window.get_frame_rect();
     const xExcludingShadow = winRect.x - winActor.get_x();
     const yExcludingShadow = winRect.y - winActor.get_y();
@@ -3212,8 +3123,7 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
     this._previewContainer.add_child(this._title);
     this._previewContainer.add_child(this._icon);
     this.connect("notify::realized", () => {
-      if (!this.realized)
-        return;
+      if (!this.realized) return;
       this._title.ensure_style();
       this._icon.ensure_style();
     });
@@ -3222,15 +3132,13 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
     return this.windowContainer;
   }
   _getCaption() {
-    if (this._metaWindow.title)
-      return this._metaWindow.title;
+    if (this._metaWindow.title) return this._metaWindow.title;
     const tracker = Shell.WindowTracker.get_default();
     const app = tracker.get_window_app(this._metaWindow);
     return app.get_name();
   }
   showOverlay(animate) {
-    if (this._overlayShown)
-      return;
+    if (this._overlayShown) return;
     this._overlayShown = true;
     const ongoingTransition = this._title.get_transition("opacity");
     if (animate && ongoingTransition && ongoingTransition.get_interval().peek_final_value() === 255)
@@ -3259,8 +3167,7 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
     });
   }
   hideOverlay(animate) {
-    if (!this._overlayShown)
-      return;
+    if (!this._overlayShown) return;
     this._overlayShown = false;
     const ongoingTransition = this._title.get_transition("opacity");
     if (animate && ongoingTransition && ongoingTransition.get_interval().peek_final_value() === 0)
@@ -3300,10 +3207,8 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
   _updateAttachedDialogs() {
     const iter = (win) => {
       const actor = win.get_compositor_private();
-      if (!actor)
-        return false;
-      if (!win.is_attached_dialog())
-        return false;
+      if (!actor) return false;
+      if (!win.is_attached_dialog()) return false;
       this._addWindow(win);
       win.foreach_transient(iter);
       return true;
@@ -3312,18 +3217,15 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
   }
   // Find the actor just below us, respecting reparenting done by DND code
   _getActualStackAbove() {
-    if (this._stackAbove === null)
-      return null;
+    if (this._stackAbove === null) return null;
     return this._stackAbove;
   }
   setStackAbove(actor) {
     this._stackAbove = actor;
     const parent = this.get_parent();
     const actualAbove = this._getActualStackAbove();
-    if (actualAbove === null)
-      parent.set_child_below_sibling(this, null);
-    else
-      parent.set_child_above_sibling(this, actualAbove);
+    if (actualAbove === null) parent.set_child_below_sibling(this, null);
+    else parent.set_child_above_sibling(this, actualAbove);
   }
   _onDestroy() {
     this._destroyed = true;
@@ -3337,10 +3239,8 @@ var SuggestedWindowPreview = class extends Shell.WindowPreview {
     return super.vfunc_enter_event(event);
   }
   vfunc_leave_event(event) {
-    if (this._destroyed)
-      return super.vfunc_leave_event(event);
-    if (!this["has-pointer"])
-      this.hideOverlay(true);
+    if (this._destroyed) return super.vfunc_leave_event(event);
+    if (!this["has-pointer"]) this.hideOverlay(true);
     return super.vfunc_leave_event(event);
   }
   vfunc_key_focus_in() {
@@ -3402,10 +3302,8 @@ var MasonryLayoutManager = class extends Clutter.LayoutManager {
         x: rowWidths[shortestRow],
         rowWidth: 0
       });
-      if (rowWidths[shortestRow] === 0)
-        rowWidths[shortestRow] = width;
-      else
-        rowWidths[shortestRow] += width;
+      if (rowWidths[shortestRow] === 0) rowWidths[shortestRow] = width;
+      else rowWidths[shortestRow] += width;
     }
     for (const placement of placements)
       placement.rowWidth = rowWidths[placement.row];
@@ -3423,8 +3321,7 @@ var MasonryLayoutManager = class extends Clutter.LayoutManager {
     for (const placement of placements)
       placement.row = rowsOrdering.get(placement.row) ?? placement.row;
     const result = Array(rowCount);
-    for (const placement of placements)
-      result[placement.row] = [];
+    for (const placement of placements) result[placement.row] = [];
     for (const placement of placements) {
       result[placement.row].push({
         actor: placement.child,
@@ -3436,8 +3333,7 @@ var MasonryLayoutManager = class extends Clutter.LayoutManager {
   }
   vfunc_allocate(container, box) {
     const children = container.get_children();
-    if (children.length === 0)
-      return;
+    if (children.length === 0) return;
     console.log(
       box.get_width(),
       container.width,
@@ -3484,10 +3380,8 @@ var MasonryLayoutManager = class extends Clutter.LayoutManager {
         x: rowWidths[shortestRow],
         rowWidth: 0
       });
-      if (rowWidths[shortestRow] === 0)
-        rowWidths[shortestRow] = width;
-      else
-        rowWidths[shortestRow] += this._spacing + width;
+      if (rowWidths[shortestRow] === 0) rowWidths[shortestRow] = width;
+      else rowWidths[shortestRow] += this._spacing + width;
     }
     for (const placement of placements)
       placement.rowWidth = rowWidths[placement.row];
@@ -3595,8 +3489,7 @@ var SuggestionsTilePreview = class extends TilePreview {
     });
     if (this._scrollView.add_actor)
       this._scrollView.add_actor(this._container);
-    else
-      this._scrollView.add_child(this._container);
+    else this._scrollView.add_child(this._container);
     this.add_child(this._scrollView);
     if (
       // @ts-expect-error "get_hscroll_bar is valid for GNOME < 48"
@@ -3608,8 +3501,7 @@ var SuggestionsTilePreview = class extends TilePreview {
     }
   }
   set blur(value) {
-    if (this._blur === value)
-      return;
+    if (this._blur === value) return;
     this._blur = value;
   }
   set gaps(newGaps) {
@@ -3774,8 +3666,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
     });
   }
   open(tiledWindows, nontiledWindows, window, windowDesiredRect, monitorIndex) {
-    if (this._showing)
-      return;
+    if (this._showing) return;
     this._showing = true;
     this._lastTiledWindow = global.display.focusWindow;
     this._showVacantPreviewsOnly(tiledWindows, windowDesiredRect, window);
@@ -3791,8 +3682,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
       "key-press-event",
       (_2, event) => {
         const symbol = event.get_key_symbol();
-        if (symbol === Clutter.KEY_Escape)
-          this.close();
+        if (symbol === Clutter.KEY_Escape) this.close();
         return Clutter.EVENT_PROPAGATE;
       }
     );
@@ -3830,8 +3720,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
     }
     let preview = this._previews[0];
     this._previews.forEach((prev) => {
-      if (prev.x < preview.x)
-        preview = prev;
+      if (prev.x < preview.x) preview = prev;
     });
     const clones = nontiledWindows.map((nonTiledWin) => {
       const winClone = new SuggestedWindowPreview(nonTiledWin);
@@ -3855,8 +3744,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
           winActor.set_pivot_point(0, 0);
           return;
         }
-        if (winActor.visible)
-          return;
+        if (winActor.visible) return;
         winActor.set_pivot_point(0.5, 0.5);
         winActor.show();
         winActor.ease({
@@ -3874,8 +3762,7 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
           unmaximizeWindow(nonTiledWin);
         if (nonTiledWin.is_fullscreen())
           nonTiledWin.unmake_fullscreen();
-        if (nonTiledWin.minimized)
-          nonTiledWin.unminimize();
+        if (nonTiledWin.minimized) nonTiledWin.unminimize();
         const winRect = nonTiledWin.get_frame_rect();
         nonTiledWin.originalSize = winRect.copy();
         const cl = winClone.get_window_clone() ?? winClone;
@@ -3942,12 +3829,10 @@ var TilingLayoutWithSuggestions = class extends LayoutWidget {
     this.grab_key_focus();
   }
   close() {
-    if (!this._showing)
-      return;
+    if (!this._showing) return;
     this._showing = false;
     this._signals.disconnect();
-    if (this._lastTiledWindow)
-      Main4.activateWindow(this._lastTiledWindow);
+    if (this._lastTiledWindow) Main4.activateWindow(this._lastTiledWindow);
     this._previews.push(...this._oldPreviews);
     this._oldPreviews = [];
     this._previews.forEach((prev) => prev.removeAllWindows());
@@ -4027,8 +3912,7 @@ var TilingManager = class {
     this._workspaceTilingLayout = /* @__PURE__ */ new Map();
     for (let i = 0; i < global.workspaceManager.get_n_workspaces(); i++) {
       const ws = global.workspaceManager.get_workspace_by_index(i);
-      if (!ws)
-        continue;
+      if (!ws) continue;
       const innerGaps = buildMargin(Settings.get_inner_gaps());
       const outerGaps = buildMargin(Settings.get_outer_gaps());
       const layout = GlobalState.get().getSelectedLayoutOfMonitor(
@@ -4074,8 +3958,7 @@ var TilingManager = class {
       Settings.KEY_SETTING_SELECTED_LAYOUTS,
       () => {
         const ws = global.workspaceManager.get_active_workspace();
-        if (!ws)
-          return;
+        if (!ws) return;
         const layout = GlobalState.get().getSelectedLayoutOfMonitor(
           this._monitor.index,
           ws.index()
@@ -4088,8 +3971,7 @@ var TilingManager = class {
       GlobalState.SIGNAL_LAYOUTS_CHANGED,
       () => {
         const ws = global.workspaceManager.get_active_workspace();
-        if (!ws)
-          return;
+        if (!ws) return;
         const layout = GlobalState.get().getSelectedLayoutOfMonitor(
           this._monitor.index,
           ws.index()
@@ -4114,8 +3996,7 @@ var TilingManager = class {
       "grab-op-begin",
       (_display, window, grabOp) => {
         const moving = (grabOp & ~1024) === 1;
-        if (!moving)
-          return;
+        if (!moving) return;
         this._onWindowGrabBegin(window, grabOp);
       }
     );
@@ -4123,8 +4004,7 @@ var TilingManager = class {
       global.display,
       "grab-op-end",
       (_display, window) => {
-        if (!this._isGrabbingWindow)
-          return;
+        if (!this._isGrabbingWindow) return;
         this._onWindowGrabEnd(window);
       }
     );
@@ -4138,8 +4018,7 @@ var TilingManager = class {
       "active-workspace-changed",
       () => {
         const ws = global.workspaceManager.get_active_workspace();
-        if (this._workspaceTilingLayout.has(ws))
-          return;
+        if (this._workspaceTilingLayout.has(ws)) return;
         const monitorScalingFactor = this._enableScaling ? getMonitorScalingFactor(this._monitor.index) : void 0;
         const layout = GlobalState.get().getSelectedLayoutOfMonitor(
           this._monitor.index,
@@ -4168,11 +4047,9 @@ var TilingManager = class {
         const n_workspaces = global.workspaceManager.get_n_workspaces();
         for (let i = 0; i < n_workspaces; i++) {
           const ws = global.workspaceManager.get_workspace_by_index(i);
-          if (!ws)
-            continue;
+          if (!ws) continue;
           const tl = this._workspaceTilingLayout.get(ws);
-          if (!tl)
-            continue;
+          if (!tl) continue;
           this._workspaceTilingLayout.delete(ws);
           newMap.set(ws, tl);
         }
@@ -4188,16 +4065,14 @@ var TilingManager = class {
       global.display,
       "window-created",
       (_display, window) => {
-        if (Settings.ENABLE_AUTO_TILING)
-          this._autoTile(window, true);
+        if (Settings.ENABLE_AUTO_TILING) this._autoTile(window, true);
       }
     );
     this._signals.connect(
       TilingShellWindowManager.get(),
       "unmaximized",
       (_2, window) => {
-        if (Settings.ENABLE_AUTO_TILING)
-          this._autoTile(window, false);
+        if (Settings.ENABLE_AUTO_TILING) this._autoTile(window, false);
       }
     );
     this._signals.connect(
@@ -4210,20 +4085,17 @@ var TilingManager = class {
   }
   onUntileWindow(window, force) {
     const destination = window.originalSize;
-    if (!destination)
-      return;
+    if (!destination) return;
     this._easeWindowRect(window, destination, false, force);
     window.assignedTile = void 0;
   }
   onKeyboardMoveWindow(window, direction, force, spanFlag, clamp) {
     let destination;
     const isMaximized = window.maximizedHorizontally || window.maximizedVertically;
-    if (spanFlag && isMaximized)
-      return false;
+    if (spanFlag && isMaximized) return false;
     const currentWs = window.get_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (!tilingLayout)
-      return false;
+    if (!tilingLayout) return false;
     const windowRectCopy = window.get_frame_rect().copy();
     const extWin = window;
     if (isMaximized) {
@@ -4275,8 +4147,7 @@ var TilingManager = class {
     if (window.get_monitor() === this._monitor.index && destination && !window.maximizedHorizontally && !window.maximizedVertically && window.assignedTile && window.assignedTile?.x === destination.tile.x && window.assignedTile?.y === destination.tile.y && window.assignedTile?.width === destination.tile.width && window.assignedTile?.height === destination.tile.height)
       return true;
     if (!destination) {
-      if (spanFlag)
-        return false;
+      if (spanFlag) return false;
       if (direction === 2 /* UP */ && window.can_maximize()) {
         maximizeWindow(window);
         return true;
@@ -4292,8 +4163,7 @@ var TilingManager = class {
         this._workArea
       );
     }
-    if (isMaximized)
-      unmaximizeWindow(window);
+    if (isMaximized) unmaximizeWindow(window);
     this._easeWindowRect(window, destination.rect, false, force);
     if (direction !== 1 /* NODIRECTION */) {
       window.assignedTile = new Tile2({
@@ -4321,8 +4191,7 @@ var TilingManager = class {
     this._tilingSuggestionsLayout.destroy();
   }
   set workArea(newWorkArea) {
-    if (newWorkArea.equal(this._workArea))
-      return;
+    if (newWorkArea.equal(this._workArea)) return;
     this._workArea = newWorkArea;
     this._debug(
       `new work area for monitor ${this._monitor.index}: ${newWorkArea.x} ${newWorkArea.y} ${newWorkArea.width}x${newWorkArea.height}`
@@ -4334,8 +4203,7 @@ var TilingManager = class {
     this._edgeTilingManager.workarea = this._workArea;
   }
   _onWindowGrabBegin(window, grabOp) {
-    if (this._isGrabbingWindow)
-      return;
+    if (this._isGrabbingWindow) return;
     TouchPointer.get().updateWindowPosition(window.get_frame_rect());
     this._signals.connect(
       global.stage,
@@ -4364,8 +4232,7 @@ var TilingManager = class {
     this._onMovingWindow(window, grabOp);
   }
   _activationKeyStatus(modifier, key) {
-    if (key === -1 /* NONE */)
-      return true;
+    if (key === -1 /* NONE */) return true;
     let val = 2;
     switch (key) {
       case 0 /* CTRL */:
@@ -4387,8 +4254,7 @@ var TilingManager = class {
     }
     const currentWs = window.get_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (!tilingLayout)
-      return GLib.SOURCE_REMOVE;
+    if (!tilingLayout) return GLib.SOURCE_REMOVE;
     if (!window.allows_resize() || !window.allows_move() || !this._isPointerInsideThisMonitor(window)) {
       tilingLayout.close();
       this._selectedTilesPreview.close(true);
@@ -4506,8 +4372,7 @@ var TilingManager = class {
       currPointerPos,
       changedSpanMultipleTiles && !allowSpanMultipleTiles
     );
-    if (!selectionRect)
-      return GLib.SOURCE_CONTINUE;
+    if (!selectionRect) return GLib.SOURCE_CONTINUE;
     selectionRect = selectionRect.copy();
     if (allowSpanMultipleTiles && this._selectedTilesPreview.showing) {
       selectionRect = selectionRect.union(
@@ -4525,8 +4390,7 @@ var TilingManager = class {
     TouchPointer.get().reset();
     const currentWs = window.get_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (tilingLayout)
-      tilingLayout.close();
+    if (tilingLayout) tilingLayout.close();
     const desiredWindowRect = buildRectangle({
       x: this._selectedTilesPreview.innerX,
       y: this._selectedTilesPreview.innerY,
@@ -4552,19 +4416,16 @@ var TilingManager = class {
     const wasEdgeTiling = this._edgeTilingManager.isPerformingEdgeTiling();
     this._edgeTilingManager.abortEdgeTiling();
     const canShowTilingSuggestions = wasSnapAssistingLayout && Settings.ENABLE_SNAP_ASSISTANT_WINDOWS_SUGGESTIONS || wasEdgeTiling && Settings.ENABLE_SCREEN_EDGES_WINDOWS_SUGGESTIONS || isTilingSystemActivated && Settings.ENABLE_TILING_SYSTEM_WINDOWS_SUGGESTIONS;
-    if (!this._isPointerInsideThisMonitor(window))
-      return;
+    if (!this._isPointerInsideThisMonitor(window)) return;
     if (desiredWindowRect.width <= 0 || desiredWindowRect.height <= 0)
       return;
-    if (window.maximizedHorizontally || window.maximizedVertically)
-      return;
+    if (window.maximizedHorizontally || window.maximizedVertically) return;
     window.originalSize = window.get_frame_rect().copy();
     window.assignedTile = new Tile2({
       ...TileUtils.build_tile(selectedTilesRect, this._workArea)
     });
     this._easeWindowRect(window, desiredWindowRect);
-    if (!tilingLayout || !canShowTilingSuggestions)
-      return;
+    if (!tilingLayout || !canShowTilingSuggestions) return;
     const layout = wasEdgeTiling ? new Layout(
       [
         // top-left
@@ -4621,11 +4482,9 @@ var TilingManager = class {
     getWindows().forEach((extWin) => {
       if (extWin && !extWin.minimized && extWin.assignedTile)
         tiledWindows.push(extWin);
-      else
-        nontiledWindows.push(extWin);
+      else nontiledWindows.push(extWin);
     });
-    if (nontiledWindows.length === 0)
-      return;
+    if (nontiledWindows.length === 0) return;
     this._tilingSuggestionsLayout.destroy();
     this._tilingSuggestionsLayout = new TilingLayoutWithSuggestions(
       innerGaps,
@@ -4655,8 +4514,7 @@ var TilingManager = class {
       Meta.SizeChange.UNMAXIMIZE
     );
     window.move_to_monitor(this._monitor.index);
-    if (force)
-      window.move_frame(user_op, destRect.x, destRect.y);
+    if (force) window.move_frame(user_op, destRect.x, destRect.y);
     window.move_resize_frame(
       user_op,
       destRect.x,
@@ -4680,8 +4538,7 @@ var TilingManager = class {
     }
     const currentWs = global.workspaceManager.get_active_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (!tilingLayout)
-      return;
+    if (!tilingLayout) return;
     this._selectedTilesPreview.get_parent()?.set_child_above_sibling(this._selectedTilesPreview, null);
     this.openSelectionTilePreview(scaledRect, false, true, void 0);
     this._snapAssistingInfo.update(layoutId);
@@ -4689,8 +4546,7 @@ var TilingManager = class {
   openSelectionTilePreview(position, isAboveLayout, ease, window) {
     const currentWs = global.workspaceManager.get_active_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (!tilingLayout)
-      return;
+    if (!tilingLayout) return;
     this._selectedTilesPreview.gaps = buildTileGaps(
       position,
       tilingLayout.innerGaps,
@@ -4726,8 +4582,7 @@ var TilingManager = class {
     }
     if (window)
       this._selectedTilesPreview.openAbove(window, ease, position);
-    else
-      this._selectedTilesPreview.open(ease, position);
+    else this._selectedTilesPreview.open(ease, position);
   }
   /**
    * Checks if pointer is inside the current monitor
@@ -4772,8 +4627,7 @@ var TilingManager = class {
   _easeWindowRectFromTile(tile, window, skipAnimation = false) {
     const currentWs = window.get_workspace();
     const tilingLayout = this._workspaceTilingLayout.get(currentWs);
-    if (!tilingLayout)
-      return;
+    if (!tilingLayout) return;
     const scaledRect = TileUtils.apply_props(tile, this._workArea);
     if (scaledRect.x + scaledRect.width > this._workArea.x + this._workArea.width) {
       scaledRect.width -= scaledRect.x + scaledRect.width - this._workArea.x - this._workArea.width;
@@ -4794,12 +4648,10 @@ var TilingManager = class {
       width: scaledRect.width - gaps.left - gaps.right,
       height: scaledRect.height - gaps.top - gaps.bottom
     });
-    if (destinationRect.width <= 0 || destinationRect.height <= 0)
-      return;
+    if (destinationRect.width <= 0 || destinationRect.height <= 0) return;
     const isMaximized = window.maximizedHorizontally || window.maximizedVertically;
     const rememberOriginalSize = !isMaximized;
-    if (isMaximized)
-      unmaximizeWindow(window);
+    if (isMaximized) unmaximizeWindow(window);
     if (rememberOriginalSize && !window.assignedTile) {
       window.originalSize = window.get_frame_rect().copy();
     }
@@ -4840,14 +4692,12 @@ var TilingManager = class {
     );
   }
   _autoTile(window, windowCreated) {
-    if (window.get_monitor() !== this._monitor.index)
-      return;
+    if (window.get_monitor() !== this._monitor.index) return;
     if (window === null || window.windowType !== Meta.WindowType.NORMAL || window.get_transient_for() !== null || window.is_attached_dialog() || window.minimized || window.maximizedHorizontally || window.maximizedVertically)
       return;
     window.assignedTile = void 0;
     const vacantTile = this._findEmptyTile(window);
-    if (!vacantTile)
-      return;
+    if (!vacantTile) return;
     if (windowCreated) {
       const windowActor = window.get_compositor_private();
       const id = windowActor.connect("first-frame", () => {
@@ -4876,8 +4726,7 @@ var TilingManager = class {
         (win) => tileRect.overlap(win.get_frame_rect())
       );
     });
-    if (vacantTiles.length === 0)
-      return void 0;
+    if (vacantTiles.length === 0) return void 0;
     vacantTiles.sort((a, b) => a.x - b.x);
     let bestTileIndex = 0;
     let bestDistance = Math.abs(
@@ -4942,8 +4791,7 @@ var EditableTilePreview = class extends TilePreview {
   }
   addSlider(slider, side) {
     const sig = this._signals[side];
-    if (sig)
-      this._sliders[side]?.disconnect(sig);
+    if (sig) this._sliders[side]?.disconnect(sig);
     this._sliders[side] = slider;
     this._signals[side] = slider.connect(
       "slide",
@@ -4953,11 +4801,9 @@ var EditableTilePreview = class extends TilePreview {
     this._sliders.forEach((sl) => sl && this._tile.groups.push(sl.groupId));
   }
   removeSlider(side) {
-    if (this._sliders[side] === null)
-      return;
+    if (this._sliders[side] === null) return;
     const sig = this._signals[side];
-    if (sig)
-      this._sliders[side]?.disconnect(sig);
+    if (sig) this._sliders[side]?.disconnect(sig);
     this._sliders[side] = null;
     this._tile.groups = [];
     this._sliders.forEach((sl) => sl && this._tile.groups.push(sl.groupId));
@@ -5001,8 +4847,7 @@ var EditableTilePreview = class extends TilePreview {
   }
   _onSliderMove(side) {
     const slider = this._sliders[side];
-    if (slider === null)
-      return;
+    if (slider === null) return;
     const posHoriz = (slider.x + slider.width / 2 - this._containerRect.x) / this._containerRect.width;
     const posVert = (slider.y + slider.height / 2 - this._containerRect.y) / this._containerRect.height;
     switch (side) {
@@ -5105,10 +4950,8 @@ var Slider2 = class extends St.Button {
   }
   addTile(tile) {
     const isNext = this._horizontalDir ? this.x <= tile.rect.x : this.y <= tile.rect.y;
-    if (isNext)
-      this._nextTiles.push(tile);
-    else
-      this._previousTiles.push(tile);
+    if (isNext) this._nextTiles.push(tile);
+    else this._previousTiles.push(tile);
     const side = this._horizontalDir ? isNext ? St.Side.LEFT : St.Side.RIGHT : isNext ? St.Side.TOP : St.Side.BOTTOM;
     tile.addSlider(this, side);
     this._minTileCoord = Math.min(
@@ -5146,15 +4989,13 @@ var Slider2 = class extends St.Button {
     const newCoord = (this._minTileCoord + this._maxTileCoord) / 2;
     if (this._horizontalDir)
       this.set_y(Math.round(newCoord - this.height / 2));
-    else
-      this.set_x(Math.round(newCoord - this.width / 2));
+    else this.set_x(Math.round(newCoord - this.width / 2));
   }
   _onTileDeleted(tile) {
     const isNext = this._horizontalDir ? this.x <= tile.rect.x : this.y <= tile.rect.y;
     const array = isNext ? this._nextTiles : this._previousTiles;
     const index = array.indexOf(tile, 0);
-    if (index >= 0)
-      array.splice(index, 1);
+    if (index >= 0) array.splice(index, 1);
     const sig = this._signals.get(tile);
     if (sig) {
       sig.forEach((id) => tile.disconnect(id));
@@ -5162,13 +5003,11 @@ var Slider2 = class extends St.Button {
     }
   }
   onTileSplit(tileToRemove, newTiles) {
-    if (newTiles.length === 0)
-      return;
+    if (newTiles.length === 0) return;
     const isNext = this._horizontalDir ? this.x <= tileToRemove.rect.x : this.y <= tileToRemove.rect.y;
     const array = isNext ? this._nextTiles : this._previousTiles;
     const index = array.indexOf(tileToRemove);
-    if (index < 0)
-      return;
+    if (index < 0) return;
     const side = this._horizontalDir ? isNext ? St.Side.LEFT : St.Side.RIGHT : isNext ? St.Side.TOP : St.Side.BOTTOM;
     const sig = this._signals.get(tileToRemove);
     if (sig) {
@@ -5186,8 +5025,7 @@ var Slider2 = class extends St.Button {
     }
   }
   _createTileSignals(tile) {
-    if (this._signals.has(tile))
-      return;
+    if (this._signals.has(tile)) return;
     this._signals.set(tile, []);
     this._signals.get(tile)?.push(
       tile.connect(
@@ -5200,8 +5038,7 @@ var Slider2 = class extends St.Button {
   deleteSlider(tileToDelete, innerGaps, outerGaps) {
     const isNext = this._horizontalDir ? this.x <= tileToDelete.rect.x : this.y <= tileToDelete.rect.y;
     const array = isNext ? this._nextTiles : this._previousTiles;
-    if (array.length > 1 || array[0] !== tileToDelete)
-      return false;
+    if (array.length > 1 || array[0] !== tileToDelete) return false;
     array.pop();
     const oppositeSide = this._horizontalDir ? isNext ? St.Side.RIGHT : St.Side.LEFT : isNext ? St.Side.BOTTOM : St.Side.TOP;
     const extendTilesArray = isNext ? this._previousTiles : this._nextTiles;
@@ -5223,8 +5060,7 @@ var Slider2 = class extends St.Button {
     return this._startDragging(event);
   }
   vfunc_button_release_event() {
-    if (this._dragging)
-      return this._endDragging();
+    if (this._dragging) return this._endDragging();
     return Clutter.EVENT_PROPAGATE;
   }
   vfunc_motion_event(event) {
@@ -5236,8 +5072,7 @@ var Slider2 = class extends St.Button {
     return Clutter.EVENT_PROPAGATE;
   }
   _startDragging(event) {
-    if (this._dragging)
-      return Clutter.EVENT_PROPAGATE;
+    if (this._dragging) return Clutter.EVENT_PROPAGATE;
     this._dragging = true;
     global.display.set_cursor(this.preferredCursor);
     this._grab = global.stage.grab(this);
@@ -5335,8 +5170,7 @@ var HoverLine = class extends St.Widget {
     this._drawLine(splitHorizontally, x, y);
   }
   _handleModifierChange() {
-    if (!this._hoveredTile)
-      return GLib.SOURCE_CONTINUE;
+    if (!this._hoveredTile) return GLib.SOURCE_CONTINUE;
     if (!this._hoveredTile.hover) {
       this.hide();
       return GLib.SOURCE_CONTINUE;
@@ -5351,8 +5185,7 @@ var HoverLine = class extends St.Widget {
     return GLib.SOURCE_CONTINUE;
   }
   _drawLine(splitHorizontally, x, y) {
-    if (!this._hoveredTile)
-      return;
+    if (!this._hoveredTile) return;
     if (splitHorizontally) {
       const newX = x - this._size / 2;
       if (newX < this._hoveredTile.x || newX + this._size > this._hoveredTile.x + this._hoveredTile.width)
@@ -5442,8 +5275,7 @@ var LayoutEditor = class extends St.Widget {
       const rect = TileUtils.apply_props(tile, this._containerRect);
       const prev = this._buildEditableTile(tile, rect);
       tile.groups.forEach((id) => {
-        if (!groups.has(id))
-          groups.set(id, []);
+        if (!groups.has(id)) groups.set(id, []);
         groups.get(id)?.push(prev);
       });
     });
@@ -5518,8 +5350,7 @@ var LayoutEditor = class extends St.Widget {
     editableTile.connect("clicked", (_2, clicked_button) => {
       if (clicked_button === St.ButtonMask.ONE)
         this.splitTile(editableTile);
-      else if (clicked_button === 3)
-        this.deleteTile(editableTile);
+      else if (clicked_button === 3) this.deleteTile(editableTile);
     });
     editableTile.connect("motion-event", (_2, event) => {
       const [stageX, stageY] = getEventCoords(event);
@@ -5545,8 +5376,7 @@ var LayoutEditor = class extends St.Widget {
   splitTile(editableTile) {
     const oldTile = editableTile.tile;
     const index = this._layout.tiles.indexOf(oldTile);
-    if (index < 0)
-      return;
+    if (index < 0) return;
     const [x, y, modifier] = global.get_pointer();
     const splitX = (x - this.x) / this._containerRect.width;
     const splitY = (y - this.y) / this._containerRect.height;
@@ -5608,8 +5438,7 @@ var LayoutEditor = class extends St.Widget {
   }
   deleteTile(editableTile) {
     for (const slider of editableTile.getAllSliders()) {
-      if (slider === null)
-        continue;
+      if (slider === null) continue;
       const success = slider.deleteSlider(
         editableTile,
         this._innerGaps,
@@ -5687,8 +5516,7 @@ var createIconButton = (iconName, path, spacing = 0) => {
   });
   if (path)
     icon.gicon = Gio.icon_new_for_string(`${path}/icons/${iconName}.svg`);
-  else
-    icon.iconName = iconName;
+  else icon.iconName = iconName;
   btn.child.add_child(icon);
   return btn;
 };
@@ -5781,8 +5609,7 @@ var LayoutsRow = class extends St.BoxLayout {
       styleClass: "monitor-layouts-title"
     });
     this.add_child(this._label);
-    if (!showMonitorName)
-      this._label.hide();
+    if (!showMonitorName) this._label.hide();
     this.add_child(this._layoutsBox);
     parent.add_child(this);
     const selectedIndex = layouts.findIndex((lay) => lay.id === selectedId);
@@ -5801,8 +5628,7 @@ var LayoutsRow = class extends St.BoxLayout {
         "clicked",
         () => !btn.checked && this.emit("selected-layout", lay.id)
       );
-      if (ind === selectedIndex)
-        btn.set_checked(true);
+      if (ind === selectedIndex) btn.set_checked(true);
       return btn;
     });
   }
@@ -5815,15 +5641,12 @@ var LayoutsRow = class extends St.BoxLayout {
     );
   }
   updateMonitorName(showMonitorName, monitorsDetails) {
-    if (!showMonitorName)
-      this._label.hide();
-    else
-      this._label.show();
+    if (!showMonitorName) this._label.hide();
+    else this._label.show();
     const details = monitorsDetails.find(
       (m) => m.x === this._monitor.x && m.y === this._monitor.y
     );
-    if (!details)
-      return;
+    if (!details) return;
     this._label.set_text(details.name);
   }
 };
@@ -5915,8 +5738,7 @@ var DefaultMenu = class {
       }
     );
     this._signals.connect(Main7.layoutManager, "monitors-changed", () => {
-      if (!enableScalingFactor)
-        return;
+      if (!enableScalingFactor) return;
       const monitor = Main7.layoutManager.findMonitorForActor(
         this._container
       );
@@ -5951,8 +5773,7 @@ var DefaultMenu = class {
         null,
         null,
         (pr, res) => {
-          if (!pr)
-            return;
+          if (!pr) return;
           const [, stdout, stderr] = pr.communicate_utf8_finish(res);
           if (pr.get_successful()) {
             debug12(stdout);
@@ -5971,8 +5792,7 @@ var DefaultMenu = class {
   }
   _updateScaling() {
     const newScalingFactor = getScalingFactorOf(this._container)[1];
-    if (this._scalingFactor === newScalingFactor)
-      return;
+    if (this._scalingFactor === newScalingFactor) return;
     this._scalingFactor = newScalingFactor;
     this._drawLayouts();
   }
@@ -6427,8 +6247,7 @@ var Indicator3 = class extends PanelMenu.Button {
     return this._path;
   }
   set enableScaling(value) {
-    if (this._enableScaling === value)
-      return;
+    if (this._enableScaling === value) return;
     this._enableScaling = value;
     if (this._currentMenu && this._state === 1 /* DEFAULT */) {
       this._currentMenu.destroy();
@@ -6465,12 +6284,10 @@ var Indicator3 = class extends PanelMenu.Button {
       );
     }
     this._setState(2 /* CREATE_NEW */);
-    if (showLegendOnly)
-      this.openMenu(true);
+    if (showLegendOnly) this.openMenu(true);
   }
   openMenu(showLegend) {
-    if (this._editorDialog)
-      return;
+    if (this._editorDialog) return;
     this._editorDialog = new EditorDialog({
       enableScaling: this._enableScaling,
       onNewLayout: () => {
@@ -6523,8 +6340,7 @@ var Indicator3 = class extends PanelMenu.Button {
     const newLayout = this._layoutEditor.layout;
     if (this._state === 2 /* CREATE_NEW */)
       GlobalState.get().addLayout(newLayout);
-    else
-      GlobalState.get().editLayout(newLayout);
+    else GlobalState.get().editLayout(newLayout);
     this.menu.toggle();
     this._layoutEditor.destroy();
     this._layoutEditor = null;
@@ -6539,15 +6355,13 @@ var Indicator3 = class extends PanelMenu.Button {
     this._setState(1 /* DEFAULT */);
   }
   _setState(newState) {
-    if (this._state === newState)
-      return;
+    if (this._state === newState) return;
     this._state = newState;
     this._currentMenu?.destroy();
     switch (newState) {
       case 1 /* DEFAULT */:
         this._currentMenu = new DefaultMenu(this, this._enableScaling);
-        if (!Settings.SHOW_INDICATOR)
-          this.hide();
+        if (!Settings.SHOW_INDICATOR) this.hide();
         if (this._keyPressEvent) {
           global.stage.disconnect(this._keyPressEvent);
           this._keyPressEvent = null;
@@ -6597,8 +6411,7 @@ var DBus = class {
     this._dbus = null;
   }
   enable(ext) {
-    if (this._dbus)
-      return;
+    if (this._dbus) return;
     this._dbus = Gio.DBusExportedObject.wrapJSObject(node, ext);
     this._dbus.export(
       Gio.DBus.session,
@@ -6619,16 +6432,14 @@ var ResizingManager = class {
     this._signals = null;
   }
   enable() {
-    if (this._signals)
-      this._signals.disconnect();
+    if (this._signals) this._signals.disconnect();
     this._signals = new SignalHandling();
     this._signals.connect(
       global.display,
       "grab-op-begin",
       (_display, window, grabOp) => {
         const moving = grabOp === Meta.GrabOp.KEYBOARD_MOVING || grabOp === Meta.GrabOp.MOVING;
-        if (moving || !Settings.RESIZE_COMPLEMENTING_WINDOWS)
-          return;
+        if (moving || !Settings.RESIZE_COMPLEMENTING_WINDOWS) return;
         this._onWindowResizingBegin(window, grabOp & ~1024);
       }
     );
@@ -6637,15 +6448,13 @@ var ResizingManager = class {
       "grab-op-end",
       (_display, window, grabOp) => {
         const moving = grabOp === Meta.GrabOp.KEYBOARD_MOVING || grabOp === Meta.GrabOp.MOVING;
-        if (moving)
-          return;
+        if (moving) return;
         this._onWindowResizingEnd(window);
       }
     );
   }
   destroy() {
-    if (this._signals)
-      this._signals.disconnect();
+    if (this._signals) this._signals.disconnect();
   }
   _onWindowResizingBegin(window, grabOp) {
     if (!window || !window.assignedTile || !this._signals)
@@ -6692,13 +6501,11 @@ var ResizingManager = class {
         horizontalSide[1] = St.Side.LEFT;
         break;
     }
-    if (!verticalSide[0] && !horizontalSide[0])
-      return;
+    if (!verticalSide[0] && !horizontalSide[0]) return;
     const otherTiledWindows = getWindows().filter(
       (otherWindow) => otherWindow && otherWindow.assignedTile && otherWindow !== window && !otherWindow.minimized
     );
-    if (otherTiledWindows.length === 0)
-      return;
+    if (otherTiledWindows.length === 0) return;
     const verticalAdjacentWindows = verticalSide[0] ? this._findAdjacent(
       window,
       verticalSide[1],
@@ -6767,14 +6574,10 @@ var ResizingManager = class {
     const windowRect = window.get_frame_rect();
     const borderRect = windowRect.copy();
     const innerGaps = Settings.get_inner_gaps();
-    if (innerGaps.top === 0)
-      innerGaps.top = 2;
-    if (innerGaps.bottom === 0)
-      innerGaps.bottom = 2;
-    if (innerGaps.left === 0)
-      innerGaps.left = 2;
-    if (innerGaps.right === 0)
-      innerGaps.right = 2;
+    if (innerGaps.top === 0) innerGaps.top = 2;
+    if (innerGaps.bottom === 0) innerGaps.bottom = 2;
+    if (innerGaps.left === 0) innerGaps.left = 2;
+    if (innerGaps.right === 0) innerGaps.right = 2;
     const errorFactor = innerGaps.right * 4;
     switch (side) {
       case St.Side.TOP:
@@ -6833,8 +6636,7 @@ var ResizingManager = class {
     return result;
   }
   _onWindowResizingEnd(window) {
-    if (this._signals)
-      this._signals.disconnect(window);
+    if (this._signals) this._signals.disconnect(window);
   }
   _onResizingWindow(window, startingRect, resizeVerticalSide, resizeHorizontalSide, windowsToResize) {
     const currentRect = window.get_frame_rect();
@@ -6905,8 +6707,7 @@ var SnapAssistTileButton = class extends SnapAssistTile {
     this._btn.set_checked(newVal);
   }
   connect(signal, callback) {
-    if (signal === "clicked")
-      return this._btn.connect(signal, callback);
+    if (signal === "clicked") return this._btn.connect(signal, callback);
     return super.connect(signal, callback);
   }
 };
@@ -6948,11 +6749,9 @@ var LayoutTileButtons = class extends LayoutWidget {
     this._previews.forEach((prev) => {
       const tile = prev.tile;
       const newX = xMap.get(tile.x);
-      if (!newX)
-        xMap.set(tile.x, prev.rect.x);
+      if (!newX) xMap.set(tile.x, prev.rect.x);
       const newY = yMap.get(tile.y);
-      if (!newY)
-        yMap.set(tile.y, prev.rect.y);
+      if (!newY) yMap.set(tile.y, prev.rect.y);
       if (newX || newY) {
         prev.open(
           false,
@@ -7003,8 +6802,7 @@ var LayoutIcon = class extends LayoutWidget {
       const preview = this._previews.find(
         (snap) => snap.tile.x === t.x && snap.tile.y === t.y
       );
-      if (preview)
-        preview.add_style_class_name("important");
+      if (preview) preview.add_style_class_name("important");
     });
   }
   buildTile(parent, rect, gaps, tile) {
@@ -7048,16 +6846,14 @@ var OverriddenWindowMenu = class extends GObject.Object {
     return this._instance;
   }
   static enable() {
-    if (this._enabled)
-      return;
+    if (this._enabled) return;
     const owm = this.get();
     OverriddenWindowMenu._old_buildMenu = windowMenu.WindowMenu.prototype._buildMenu;
     windowMenu.WindowMenu.prototype._buildMenu = owm.newBuildMenu;
     this._enabled = true;
   }
   static disable() {
-    if (!this._enabled)
-      return;
+    if (!this._enabled) return;
     windowMenu.WindowMenu.prototype._buildMenu = OverriddenWindowMenu._old_buildMenu;
     this._old_buildMenu = null;
     this._enabled = false;
@@ -7069,11 +6865,9 @@ var OverriddenWindowMenu = class extends GObject.Object {
   // the function will be treated as a method of class WindowMenu
   newBuildMenu(window) {
     const oldFunction = OverriddenWindowMenu._old_buildMenu?.bind(this);
-    if (oldFunction)
-      oldFunction(window);
+    if (oldFunction) oldFunction(window);
     const layouts = GlobalState.get().layouts;
-    if (layouts.length === 0)
-      return;
+    if (layouts.length === 0) return;
     const workArea = Main10.layoutManager.getWorkAreaForMonitor(
       window.get_monitor()
     );
@@ -7248,6 +7042,7 @@ var debug13 = logger("WindowBorderManager");
 var WindowBorder = class extends St.Bin {
   _signals;
   _window;
+  _interfaceSettings;
   _windowMonitor;
   _bindings;
   _enableScaling;
@@ -7263,6 +7058,9 @@ var WindowBorder = class extends St.Bin {
     this._bindings = [];
     this._borderWidth = 1;
     this._window = win;
+    this._interfaceSettings = new Gio.Settings({
+      schema_id: "org.gnome.desktop.interface"
+    });
     this._windowMonitor = win.get_monitor();
     this._enableScaling = enableScaling;
     this._delayedSmartBorderRadius = false;
@@ -7280,14 +7078,12 @@ var WindowBorder = class extends St.Bin {
       this._bindings.forEach((b) => b.unbind());
       this._bindings = [];
       this._signals.disconnect();
-      if (this._timeout)
-        clearTimeout(this._timeout);
+      if (this._timeout) clearTimeout(this._timeout);
       this._timeout = void 0;
     });
   }
   trackWindow(win, force = false) {
-    if (!force && this._window === win)
-      return;
+    if (!force && this._window === win) return;
     this._bindings.forEach((b) => b.unbind());
     this._bindings = [];
     this._signals.disconnect();
@@ -7330,8 +7126,7 @@ var WindowBorder = class extends St.Bin {
     const isMaximized = this._window.maximizedVertically && this._window.maximizedHorizontally;
     if (this._window.is_fullscreen() || isMaximized || this._window.minimized || !winActor.visible)
       this.close();
-    else
-      this.open();
+    else this.open();
     this._signals.connect(global.display, "restacked", () => {
       global.windowGroup.set_child_above_sibling(this, null);
     });
@@ -7389,21 +7184,18 @@ var WindowBorder = class extends St.Bin {
     }
   }
   _runComputeBorderRadiusTimeout(winActor) {
-    if (this._timeout)
-      clearTimeout(this._timeout);
+    if (this._timeout) clearTimeout(this._timeout);
     this._timeout = void 0;
     this._timeout = setTimeout(() => {
       this._computeBorderRadius(winActor).then(() => this.updateStyle());
-      if (this._timeout)
-        clearTimeout(this._timeout);
+      if (this._timeout) clearTimeout(this._timeout);
       this._timeout = void 0;
     }, SMART_BORDER_RADIUS_FIRST_FRAME_DELAY);
   }
   async _computeBorderRadius(winActor) {
     const width = 3;
     const height = winActor.metaWindow.get_frame_rect().height;
-    if (height <= 0)
-      return;
+    if (height <= 0) return;
     const content = winActor.paint_to_content(
       buildRectangle({
         x: winActor.metaWindow.get_frame_rect().x,
@@ -7412,8 +7204,7 @@ var WindowBorder = class extends St.Bin {
         width
       })
     );
-    if (!content)
-      return;
+    if (!content) return;
     const texture = content.get_texture();
     const stream = Gio.MemoryOutputStream.new_resizable();
     const x = 0;
@@ -7460,18 +7251,40 @@ var WindowBorder = class extends St.Bin {
     cached_radius[St.Corner.BOTTOMRIGHT] = this._borderRadiusValue[St.Corner.BOTTOMRIGHT];
     this._window.__ts_cached_radius = cached_radius;
   }
+  _getGnomeAccentColor() {
+    try {
+      const accentColorName = this._interfaceSettings.get_string("accent-color");
+      debug13("accentColorName", accentColorName);
+      return accentColorName;
+      const gnomeAccentColorMapping = {
+        blue: "#3584e4",
+        teal: "#2190a4",
+        green: "#3a944a",
+        yellow: "#c88800",
+        orange: "#ed5b00",
+        red: "#e62d42",
+        pink: "#d56199",
+        purple: "#9141ac",
+        slate: "#6f8396"
+      };
+      return gnomeAccentColorMapping[accentColorName];
+    } catch (_unused) {
+      return "#000000";
+    }
+  }
   updateStyle() {
     const monitorScalingFactor = this._enableScaling ? getMonitorScalingFactor(this._window.get_monitor()) : void 0;
     enableScalingFactorSupport(this, monitorScalingFactor);
     const [alreadyScaled, scalingFactor] = getScalingFactorOf(this);
     const borderWidth = (alreadyScaled ? 1 : scalingFactor) * (Settings.WINDOW_BORDER_WIDTH / (alreadyScaled ? scalingFactor : 1));
+    const borderColor = Settings.WINDOW_USE_CUSTOM_BORDER_COLOR ? Settings.WINDOW_BORDER_COLOR : "-st-accent-color";
     const radius = this._borderRadiusValue.map((val) => {
       const valWithBorder = val === 0 ? val : val + borderWidth;
       return (alreadyScaled ? 1 : scalingFactor) * (valWithBorder / (alreadyScaled ? scalingFactor : 1));
     });
     const scalingFactorSupportString = monitorScalingFactor ? `${getScalingFactorSupportString(monitorScalingFactor)};` : "";
     this.set_style(
-      `border-color: ${Settings.WINDOW_BORDER_COLOR}; border-width: ${borderWidth}px; border-radius: ${radius[St.Corner.TOPLEFT]}px ${radius[St.Corner.TOPRIGHT]}px ${radius[St.Corner.BOTTOMRIGHT]}px ${radius[St.Corner.BOTTOMLEFT]}px; ${scalingFactorSupportString}`
+      `border-color: ${borderColor}; border-width: ${borderWidth}px; border-radius: ${radius[St.Corner.TOPLEFT]}px ${radius[St.Corner.TOPRIGHT]}px ${radius[St.Corner.BOTTOMRIGHT]}px ${radius[St.Corner.BOTTOMLEFT]}px; ${scalingFactorSupportString}`
     );
     if (this._borderWidth !== borderWidth) {
       const diff = this._borderWidth - borderWidth;
@@ -7484,8 +7297,7 @@ var WindowBorder = class extends St.Bin {
     }
   }
   open() {
-    if (this.visible)
-      return;
+    if (this.visible) return;
     this.show();
     this.ease({
       opacity: 255,
@@ -7506,22 +7318,23 @@ var WindowBorderManager = class {
   _signals;
   _border;
   _enableScaling;
+  _interfaceSettings;
   constructor(enableScaling) {
     this._signals = new SignalHandling();
     this._border = null;
     this._enableScaling = enableScaling;
+    this._interfaceSettings = new Gio.Settings({
+      schema_id: "org.gnome.desktop.interface"
+    });
   }
   enable() {
-    if (Settings.ENABLE_WINDOW_BORDER)
-      this._turnOn();
+    if (Settings.ENABLE_WINDOW_BORDER) this._turnOn();
     this._signals.connect(
       Settings,
       Settings.KEY_ENABLE_WINDOW_BORDER,
       () => {
-        if (Settings.ENABLE_WINDOW_BORDER)
-          this._turnOn();
-        else
-          this._turnOff();
+        if (Settings.ENABLE_WINDOW_BORDER) this._turnOn();
+        else this._turnOff();
       }
     );
   }
@@ -7535,6 +7348,15 @@ var WindowBorderManager = class {
     this._signals.connect(
       Settings,
       Settings.KEY_WINDOW_BORDER_COLOR,
+      () => this._border?.updateStyle()
+    );
+    this._signals.connect(
+      Settings,
+      Settings.KEY_WINDOW_USE_CUSTOM_BORDER_COLOR,
+      () => this._border?.updateStyle()
+    );
+    this._interfaceSettings.connect(
+      "changed::accent-color",
       () => this._border?.updateStyle()
     );
     this._signals.connect(
@@ -7561,8 +7383,7 @@ var WindowBorderManager = class {
     }
     if (!this._border)
       this._border = new WindowBorder(metaWindow, this._enableScaling);
-    else
-      this._border.trackWindow(metaWindow);
+    else this._border.trackWindow(metaWindow);
   }
 };
 
@@ -7570,8 +7391,7 @@ var WindowBorderManager = class {
 var TilePreviewWithWindow = class extends TilePreview {
   constructor(params) {
     super(params);
-    if (params.parent)
-      params.parent.add_child(this);
+    if (params.parent) params.parent.add_child(this);
     this._showing = false;
     this._rect = params.rect || buildRectangle({});
     this._gaps = new Clutter.Margin();
@@ -7582,8 +7402,7 @@ var TilePreviewWithWindow = class extends TilePreview {
     this._gaps = gaps.copy();
     if (this._gaps.top === 0 && this._gaps.bottom === 0 && this._gaps.right === 0 && this._gaps.left === 0)
       this.remove_style_class_name("custom-tile-preview");
-    else
-      this.add_style_class_name("custom-tile-preview");
+    else this.add_style_class_name("custom-tile-preview");
   }
   _init() {
     super._init();
@@ -7618,8 +7437,7 @@ var MetaWindowGroup = class {
     );
     return new Proxy(this, {
       get: (target, prop, receiver) => {
-        if (prop in target)
-          return Reflect.get(target, prop, receiver);
+        if (prop in target) return Reflect.get(target, prop, receiver);
         if (typeof this._windows[0]?.[prop] === "function") {
           return (...args) => {
             this._windows.forEach(
@@ -7726,21 +7544,18 @@ var OverriddenAltTab = class _OverriddenAltTab {
   _switcherList;
   _items;
   static get() {
-    if (this._instance === null)
-      this._instance = new _OverriddenAltTab();
+    if (this._instance === null) this._instance = new _OverriddenAltTab();
     return this._instance;
   }
   static enable() {
-    if (this._enabled)
-      return;
+    if (this._enabled) return;
     const owm = this.get();
     _OverriddenAltTab._old_show = AltTab.WindowSwitcherPopup.prototype.show;
     AltTab.WindowSwitcherPopup.prototype.show = owm.newShow;
     this._enabled = true;
   }
   static disable() {
-    if (!this._enabled)
-      return;
+    if (!this._enabled) return;
     AltTab.WindowSwitcherPopup.prototype.show = _OverriddenAltTab._old_show;
     this._old_show = null;
     this._enabled = false;
@@ -7756,8 +7571,7 @@ var OverriddenAltTab = class _OverriddenAltTab {
     const oldFunction = _OverriddenAltTab._old_show?.bind(this);
     const res = !oldFunction || oldFunction(backward, binding, mask);
     const tiledWindows = this._getWindowList().filter((win) => win.assignedTile);
-    if (tiledWindows.length <= 1)
-      return res;
+    if (tiledWindows.length <= 1) return res;
     const tiles = tiledWindows.map((win) => win.assignedTile).filter((tile) => tile !== void 0);
     const inner_gaps = Settings.get_inner_gaps();
     const height = this._items[0].height;
@@ -7860,20 +7674,14 @@ var LayoutSwitcherPopup = class extends SwitcherPopup.SwitcherPopup {
     this._selectedIndex = GlobalState.get().layouts.findIndex(
       (lay) => lay.id === selectedLay.id
     );
-    if (backward)
-      this._select(this._previous());
-    else
-      this._select(this._next());
+    if (backward) this._select(this._previous());
+    else this._select(this._next());
   }
   _keyPressHandler(keysym, action) {
-    if (keysym === Clutter.KEY_Left)
-      this._select(this._previous());
-    else if (keysym === Clutter.KEY_Right)
-      this._select(this._next());
-    else if (action !== this._action)
-      return Clutter.EVENT_PROPAGATE;
-    else
-      this._select(this._next());
+    if (keysym === Clutter.KEY_Left) this._select(this._previous());
+    else if (keysym === Clutter.KEY_Right) this._select(this._next());
+    else if (action !== this._action) return Clutter.EVENT_PROPAGATE;
+    else this._select(this._next());
     return Clutter.EVENT_STOP;
   }
   _select(num) {
@@ -7889,8 +7697,7 @@ var LayoutSwitcherPopup = class extends SwitcherPopup.SwitcherPopup {
   }
   _getCurrentMonitorIndex() {
     const focusWindow = global.display.focus_window;
-    if (focusWindow)
-      return focusWindow.get_monitor();
+    if (focusWindow) return focusWindow.get_monitor();
     return Main12.layoutManager.primaryIndex;
   }
 };
@@ -7900,6 +7707,7 @@ LayoutSwitcherPopup = __decorateClass([
 
 // src/extension.ts
 import * as Main13 from "resource:///org/gnome/shell/ui/main.js";
+import * as Config from "resource:///org/gnome/shell/misc/config.js";
 var debug17 = logger("extension");
 var TilingShellExtension = class extends Extension {
   _indicator;
@@ -7927,26 +7735,33 @@ var TilingShellExtension = class extends Extension {
     this._indicator.enable();
   }
   _validateSettings() {
-    if (Settings.LAST_VERSION_NAME_INSTALLED === "14.0") {
+    if (Settings.LAST_VERSION_NAME_INSTALLED === "17.0") {
       debug17("apply compatibility changes");
-      Settings.save_selected_layouts([]);
-    }
-    if (this.metadata["version-name"]) {
-      Settings.LAST_VERSION_NAME_INSTALLED = this.metadata["version-name"] || "0";
+      Settings.WINDOW_USE_CUSTOM_BORDER_COLOR = Settings.ENABLE_WINDOW_BORDER;
     }
   }
+  _onInstall() {
+    const GNOME_VERSION_MAJOR = Number(
+      Config.PACKAGE_VERSION.split(".")[0]
+    );
+    Settings.WINDOW_USE_CUSTOM_BORDER_COLOR = GNOME_VERSION_MAJOR < 47;
+  }
   enable() {
-    if (this._signals)
-      this._signals.disconnect();
+    if (this._signals) this._signals.disconnect();
     this._signals = new SignalHandling();
     Settings.initialize(this.getSettings());
+    if (Settings.LAST_VERSION_NAME_INSTALLED === "0") {
+      this._onInstall();
+      if (this.metadata["version-name"]) {
+        Settings.LAST_VERSION_NAME_INSTALLED = this.metadata["version-name"] || "0";
+      }
+    }
     this._validateSettings();
     TilingShellWindowManager.get();
     this._fractionalScalingEnabled = this._isFractionalScalingEnabled(
       new Gio.Settings({ schema: "org.gnome.mutter" })
     );
-    if (this._keybindings)
-      this._keybindings.destroy();
+    if (this._keybindings) this._keybindings.destroy();
     this._keybindings = new KeyBindings(this.getSettings());
     if (Settings.ACTIVE_SCREEN_EDGES) {
       SettingsOverride.get().override(
@@ -7970,21 +7785,17 @@ var TilingShellExtension = class extends Extension {
     }
     this._resizingManager = new ResizingManager();
     this._resizingManager.enable();
-    if (this._windowBorderManager)
-      this._windowBorderManager.destroy();
+    if (this._windowBorderManager) this._windowBorderManager.destroy();
     this._windowBorderManager = new WindowBorderManager(
       !this._fractionalScalingEnabled
     );
     this._windowBorderManager.enable();
     this.createIndicator();
-    if (this._dbus)
-      this._dbus.disable();
+    if (this._dbus) this._dbus.disable();
     this._dbus = new DBus();
     this._dbus.enable(this);
-    if (Settings.OVERRIDE_WINDOW_MENU)
-      OverriddenWindowMenu.enable();
-    if (Settings.OVERRIDE_ALT_TAB)
-      OverriddenAltTab.enable();
+    if (Settings.OVERRIDE_WINDOW_MENU) OverriddenWindowMenu.enable();
+    if (Settings.OVERRIDE_ALT_TAB) OverriddenAltTab.enable();
     debug17("extension is enabled");
   }
   openLayoutEditor() {
@@ -7999,8 +7810,7 @@ var TilingShellExtension = class extends Extension {
     this._tilingManagers.forEach((tm) => tm.enable());
   }
   _setupSignals() {
-    if (!this._signals)
-      return;
+    if (!this._signals) return;
     this._signals.connect(global.display, "workareas-changed", () => {
       const allMonitors = getMonitors();
       if (this._tilingManagers.length !== allMonitors.length) {
@@ -8016,8 +7826,7 @@ var TilingShellExtension = class extends Extension {
       new Gio.Settings({ schema: "org.gnome.mutter" }),
       "changed::experimental-features",
       (_mutterSettings) => {
-        if (!_mutterSettings)
-          return;
+        if (!_mutterSettings) return;
         const fractionalScalingEnabled = this._isFractionalScalingEnabled(_mutterSettings);
         if (this._fractionalScalingEnabled === fractionalScalingEnabled)
           return;
@@ -8056,8 +7865,7 @@ var TilingShellExtension = class extends Extension {
           const window = dp.focus_window;
           const monitorIndex = window.get_monitor();
           const manager = this._tilingManagers[monitorIndex];
-          if (manager)
-            manager.onSpanAllTiles(window);
+          if (manager) manager.onSpanAllTiles(window);
         }
       );
       this._signals.connect(
@@ -8115,8 +7923,7 @@ var TilingShellExtension = class extends Extension {
             action,
             !this._fractionalScalingEnabled
           );
-          if (!switcher.show(false, "", mask))
-            switcher.destroy();
+          if (!switcher.show(false, "", mask)) switcher.destroy();
         }
       );
     }
@@ -8149,8 +7956,7 @@ var TilingShellExtension = class extends Extension {
       () => {
         if (Settings.OVERRIDE_WINDOW_MENU)
           OverriddenWindowMenu.enable();
-        else
-          OverriddenWindowMenu.disable();
+        else OverriddenWindowMenu.disable();
       }
     );
     this._signals.connect(
@@ -8159,15 +7965,12 @@ var TilingShellExtension = class extends Extension {
       (_2, tile, window) => {
         const monitorIndex = window.get_monitor();
         const manager = this._tilingManagers[monitorIndex];
-        if (manager)
-          manager.onTileFromWindowMenu(tile, window);
+        if (manager) manager.onTileFromWindowMenu(tile, window);
       }
     );
     this._signals.connect(Settings, Settings.KEY_OVERRIDE_ALT_TAB, () => {
-      if (Settings.OVERRIDE_ALT_TAB)
-        OverriddenAltTab.enable();
-      else
-        OverriddenAltTab.disable();
+      if (Settings.OVERRIDE_ALT_TAB) OverriddenAltTab.enable();
+      else OverriddenAltTab.disable();
     });
   }
   /* todo private _moveMaximizedToWorkspace(
@@ -8254,8 +8057,7 @@ var TilingShellExtension = class extends Extension {
       return;
     }
     const monitorTilingManager = this._tilingManagers[focus_window.get_monitor()];
-    if (!monitorTilingManager)
-      return;
+    if (!monitorTilingManager) return;
     if (Settings.ENABLE_AUTO_TILING && (focus_window.maximizedHorizontally || focus_window.maximizedVertically)) {
       unmaximizeWindow(focus_window);
       return;
@@ -8292,8 +8094,7 @@ var TilingShellExtension = class extends Extension {
       focus_window.assignedTile = void 0;
     }
     const neighborTilingManager = this._tilingManagers[neighborMonitorIndex];
-    if (!neighborTilingManager)
-      return;
+    if (!neighborTilingManager) return;
     neighborTilingManager.onKeyboardMoveWindow(
       focus_window,
       direction,
@@ -8318,8 +8119,7 @@ var TilingShellExtension = class extends Extension {
     );
     const onlyTiledWindows = Settings.ENABLE_DIRECTIONAL_FOCUS_TILED_ONLY;
     windowList.filter((win) => {
-      if (win === focus_window || win.minimized)
-        return false;
+      if (win === focus_window || win.minimized) return false;
       if (onlyTiledWindows && win.assignedTile === void 0)
         return false;
       const winRect = win.get_frame_rect();
@@ -8349,8 +8149,7 @@ var TilingShellExtension = class extends Extension {
         bestWindowDistance = euclideanDistance;
       }
     });
-    if (!bestWindow)
-      return;
+    if (!bestWindow) return;
     bestWindow.activate(global.get_current_time());
   }
   _onKeyboardFocusWin(display, direction) {
@@ -8391,8 +8190,7 @@ var TilingShellExtension = class extends Extension {
     if (focus_window.maximizedHorizontally || focus_window.maximizedVertically)
       unmaximizeWindow(focus_window);
     const monitorTilingManager = this._tilingManagers[focus_window.get_monitor()];
-    if (!monitorTilingManager)
-      return;
+    if (!monitorTilingManager) return;
     monitorTilingManager.onUntileWindow(focus_window, true);
   }
   _isFractionalScalingEnabled(_mutterSettings) {

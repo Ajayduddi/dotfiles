@@ -13,6 +13,7 @@
 # Backups / non-stow content
 non_stow
 scripts
+infra-backup
 
 # Dev environment backups (ensure never stowed)
 non_stow/dev
@@ -23,5 +24,8 @@ wallpapers
 # Repo helper scripts and misc files (not dotfiles)
 backup-dotfiles.sh
 restore-dotfiles.sh
+README.md
+infra-backup.sh
+restore_packages.sh
 dnf-packages.txt
 gnome-settings.dconf

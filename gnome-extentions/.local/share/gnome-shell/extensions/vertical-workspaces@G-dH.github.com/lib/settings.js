@@ -308,6 +308,7 @@ export const Options = class Options {
 
         // Basic spacing of the overview elements
         this.SPACING = 12;
+        this.HALF_SPACING = this.SPACING / 2;
 
         this.DASH_BG_ALPHA = this.get('dashBgOpacity') / 100;
         this.DASH_BG_OPACITY = this.get('dashBgOpacity') * 2.5;
@@ -369,6 +370,8 @@ export const Options = class Options {
         this.SEC_WS_TMB_RIGHT = (this.SEC_WS_TMB_POSITION === 1 && this.ORIENTATION) || (this.SEC_WS_TMB_POSITION === 2 && this.WS_TMB_RIGHT);
         this.SEC_WS_TMB_BOTTOM = (this.SEC_WS_TMB_POSITION === 1 && !this.ORIENTATION) || (this.SEC_WS_TMB_POSITION === 2 && this.WS_TMB_BOTTOM);
         this.SEC_WS_TMB_LEFT = (this.SEC_WS_TMB_POSITION === 0 && this.ORIENTATION) || (this.SEC_WS_TMB_POSITION === 2 && this.WS_TMB_LEFT);
+        // Translate position to 0 - 3
+        this.SEC_WS_TMB_POSITION = [this.SEC_WS_TMB_TOP, this.SEC_WS_TMB_RIGHT, this.SEC_WS_TMB_BOTTOM, this.SEC_WS_TMB_LEFT].indexOf(true);
 
         this.SEC_WS_TMB_POSITION_ADJUSTMENT = this.get('secWsTmbPositionAdjust') * -1 / 100; // range 1 to -1
         this.SEC_WS_PREVIEW_SHIFT = this.get('secWsPreviewShift');
@@ -442,6 +445,7 @@ export const Options = class Options {
         this.SEARCH_DELAY = this.SEARCH_VIEW_ANIMATION ? 100 : 0;
         this.SEARCH_APP_GRID_MODE = this.get('searchAppGridMode') && this.get('appDisplayModule') && this.get('searchModule');
         this.SEARCH_INCLUDE_SETTINGS = this.get('searchIncludeSettings');
+        this.RESULTS_BLUR_RADIUS = 32;
 
         this.APP_GRID_ALLOW_INCOMPLETE_PAGES = this.get('appGridIncompletePages');
         this.APP_GRID_ICON_SIZE = this.get('appGridIconSize');
@@ -516,6 +520,9 @@ export const Options = class Options {
         this.WS_SW_POPUP_MODE = this.get('wsSwPopupMode');
 
         this.WS_ANIMATION = this.get('workspaceAnimation');
+        // Animation needs ws thumbnails
+        if (!this.SHOW_WS_TMB)
+            this.WS_ANIMATION = 0;
         this.WS_ANIMATION_SINGLE = this.WS_ANIMATION === 1;
         this.WS_ANIMATION_ALL = this.WS_ANIMATION === 2;
         this.WS_WRAPAROUND = this.get('wsSwitcherWraparound');
@@ -570,7 +577,7 @@ export const Options = class Options {
         this.DELAY_OVERVIEW_ANIMATION = true;
         this.DELAY_PER_WINDOW = 4;
 
-        this.SEARCH_ENTRY_POSITION_TOP = true;
+        this.SEARCH_ENTRY_POSITION_TOP = this.SHOW_SEARCH_ENTRY;
         this.USE_THUMBNAILS_IN_APP_GRID = true;
     }
 

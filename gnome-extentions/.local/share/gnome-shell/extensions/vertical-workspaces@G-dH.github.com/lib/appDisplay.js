@@ -486,7 +486,8 @@ const AppDisplayCommon = {
         };
         DND.addDragMonitor(this._dragMonitor);
 
-        this._appGridLayout.showPageIndicators();
+        if (!opt.APP_GRID_ORDER)
+            this._appGridLayout.showPageIndicators();
         this._dragFocus = null;
         this._swipeTracker.enabled = false;
 
@@ -637,7 +638,9 @@ const BaseAppViewCommon = {
         pageIndicators.y_align = vertical ? Clutter.ActorAlign.CENTER : Clutter.ActorAlign.START;
         pageIndicators.x_align = vertical ? Clutter.ActorAlign.START : Clutter.ActorAlign.CENTER;
 
-        this._grid.layoutManager.allow_incomplete_pages = folder ? false : opt.APP_GRID_ALLOW_INCOMPLETE_PAGES;
+        this._grid.layoutManager.allow_incomplete_pages = folder
+            ? false
+            : opt.APP_GRID_ALLOW_INCOMPLETE_PAGES && !opt.APP_GRID_ORDER;
         const spacing = folder ? opt.APP_GRID_FOLDER_SPACING : opt.APP_GRID_SPACING;
         this._grid.set_style(`column-spacing: ${spacing}px; row-spacing: ${spacing}px;`);
 
@@ -723,7 +726,7 @@ const BaseAppViewCommon = {
         });
 
         // Avoid unwanted updates
-        if (thisIsAppDisplay && !this._readyToRedisplay)
+        if ((thisIsAppDisplay && !this._readyToRedisplay) || (Me.run.appGridFilterActive && !results))
             return;
 
         const oldApps = this._orderedItems.slice();
@@ -747,7 +750,7 @@ const BaseAppViewCommon = {
         });
 
         // For the main app grid only
-        let allowIncompletePages = thisIsAppDisplay && opt.APP_GRID_ALLOW_INCOMPLETE_PAGES;
+        let allowIncompletePages = thisIsAppDisplay && opt.APP_GRID_ALLOW_INCOMPLETE_PAGES && !opt.APP_GRID_ORDER;
 
         const customOrder = !((opt.APP_GRID_ORDER && thisIsAppDisplay) || (opt.APP_FOLDER_ORDER && thisIsFolder));
 
@@ -820,6 +823,26 @@ const BaseAppViewCommon = {
         }
 
         this.emit('view-loaded');
+    
+        this._updateFocusChain();
+    },
+
+    _updateFocusChain() {
+        // Update focus chain by restacking app icons
+        // Focus chain is the order that Tab navigation follows
+        this._orderedItems.forEach(
+            i => this._grid.set_child_above_sibling(i, null)
+        );
+    },
+
+    _moveItem(item, newPage, newPosition) {
+        this._grid.moveItem(item, newPage, newPosition);
+
+        // Update the _orderedItems array
+        this._orderedItems.splice(this._orderedItems.indexOf(item), 1);
+        this._orderedItems.splice(this._getLinearPosition(item), 0, item);
+
+        this._updateFocusChain();
     },
 
     _canAccept(source) {
@@ -1487,43 +1510,43 @@ const AppFolderDialog = {
             });
 
             this._removeButton.connect('clicked', () => {
-                    if (opt.APP_FOLDER_REMOVE_BUTTON === 1 ||
-                    (opt.APP_FOLDER_REMOVE_BUTTON === 2 && Date.now() - this._removeButton._lastClick < Clutter.Settings.get_default().double_click_time)) {
-                    // Close dialog to avoid crashes
-                        this._isOpen = false;
-                        this._grabHelper.ungrab({ actor: this });
-                        this.emit('open-state-changed', false);
-                        this.hide();
-                        this._popdownCallbacks.forEach(func => func());
-                        this._popdownCallbacks = [];
-                        _appDisplay.ease({
-                            opacity: 255,
-                            duration: FOLDER_DIALOG_ANIMATION_TIME,
-                            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                        });
+                if (opt.APP_FOLDER_REMOVE_BUTTON === 1 ||
+                (opt.APP_FOLDER_REMOVE_BUTTON === 2 && Date.now() - this._removeButton._lastClick < Clutter.Settings.get_default().double_click_time)) {
+                // Close dialog to avoid crashes
+                    this._isOpen = false;
+                    this._grabHelper.ungrab({ actor: this });
+                    this.emit('open-state-changed', false);
+                    this.hide();
+                    this._popdownCallbacks.forEach(func => func());
+                    this._popdownCallbacks = [];
+                    _appDisplay.ease({
+                        opacity: 255,
+                        duration: FOLDER_DIALOG_ANIMATION_TIME,
+                        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    });
 
-                        // Reset all keys to delete the relocatable schema
-                        this._view._deletingFolder = true; // Upstream property
-                        let keys = this._folder.settings_schema.list_keys();
-                        for (const key of keys)
-                            this._folder.reset(key);
+                    // Reset all keys to delete the relocatable schema
+                    this._view._deletingFolder = true; // Upstream property
+                    let keys = this._folder.settings_schema.list_keys();
+                    for (const key of keys)
+                        this._folder.reset(key);
 
-                        let settings = new Gio.Settings({ schema_id: 'org.gnome.desktop.app-folders' });
-                        let folders = settings.get_strv('folder-children');
-                        folders.splice(folders.indexOf(this._view._id), 1);
+                    let settings = new Gio.Settings({ schema_id: 'org.gnome.desktop.app-folders' });
+                    let folders = settings.get_strv('folder-children');
+                    folders.splice(folders.indexOf(this._view._id), 1);
 
-                        // remove all abandoned folders (usually my own garbage and unwanted default folders...)
-                        /* const appFolders = _appDisplay._folderIcons.map(icon => icon._id);
+                    // remove all abandoned folders (usually my own garbage and unwanted default folders...)
+                    /* const appFolders = _appDisplay._folderIcons.map(icon => icon._id);
                     folders.forEach(folder => {
                         if (!appFolders.includes(folder)) {
                             folders.splice(folders.indexOf(folder._id), 1);
                         }
                     });*/
-                        settings.set_strv('folder-children', folders);
+                    settings.set_strv('folder-children', folders);
 
-                        this._view._deletingFolder = false;
-                        return;
-                    }
+                    this._view._deletingFolder = false;
+                    return;
+                }
                     this._removeButton._lastClick = Date.now();
             });
 
@@ -1634,10 +1657,14 @@ const AppFolderDialog = {
     _getFolderAreaBox() {
         const appDisplay = this._source._parentView;
         const folderAreaBox = appDisplay.get_allocation_box().copy();
-        const searchEntryHeight = (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) && !(opt.SEARCH_ENTRY_POSITION_TOP && !opt.ORIENTATION)
+        const searchEntryHeight = (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) && !(opt.SEARCH_ENTRY_POSITION_TOP && opt.WS_TMB_TOP)
             ? Main.overview._overview.controls._searchEntryBin.height
             : 0;
         folderAreaBox.y1 -= searchEntryHeight;
+
+        const xPadding = Math.round((folderAreaBox.get_width() * (1 - opt.APP_GRID_PAGE_WIDTH_SCALE)) / 2);
+        folderAreaBox.x1 += xPadding;
+        folderAreaBox.x2 -= xPadding;
 
         // _zoomAndFadeIn() needs an absolute position within a multi-monitor workspace
         const monitorGeometry = global.display.get_monitor_geometry(global.display.get_primary_monitor());
@@ -1866,13 +1893,10 @@ const AppFolderDialog = {
             dialogTargetX = folderAreaX + folderAreaWidth / 2 - folder.width / 2;
             dialogTargetY = folderAreaY + (folderAreaHeight / 2 - folder.height / 2) / 2;
         } else {
-            const { pagePadding } = appDisplay._grid.layoutManager;
-            const hPadding = (pagePadding.left + pagePadding.right) / 2;
-            const vPadding = (pagePadding.top + pagePadding.bottom) / 2;
-            const minX = Math.min(folderAreaX + hPadding, folderAreaX + (folderAreaWidth - folder.width) / 2);
-            const maxX = Math.max(folderAreaX + folderAreaWidth - hPadding - folder.width, folderAreaX + folderAreaWidth / 2 - folder.width / 2);
-            const minY = Math.min(folderAreaY + vPadding, folderAreaY + (folderAreaHeight - folder.height) / 2);
-            const maxY = Math.max(folderAreaY + folderAreaHeight - vPadding - folder.height, folderAreaY + folderAreaHeight / 2 - folder.height / 2);
+            const minX = Math.min(folderAreaX, folderAreaX + (folderAreaWidth - folder.width) / 2);
+            const maxX = Math.max(folderAreaX + folderAreaWidth - folder.width, folderAreaX + folderAreaWidth / 2 - folder.width / 2);
+            const minY = Math.min(folderAreaY, folderAreaY + (folderAreaHeight - folder.height) / 2);
+            const maxY = Math.max(folderAreaY + folderAreaHeight - folder.height, folderAreaY + folderAreaHeight / 2 - folder.height / 2);
 
             dialogTargetX = sourceCenterX - folder.width / 2;
             dialogTargetX = Math.clamp(dialogTargetX, minX, maxX);
@@ -1925,8 +1949,8 @@ const AppFolderDialog = {
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
 
-        if (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) {
-            Main.overview.searchEntry.ease({
+        if ((opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) && !(opt.SEARCH_ENTRY_POSITION_TOP && opt.WS_TMB_TOP)) {
+            Main.overview._overview.controls._searchEntryBin.ease({
                 opacity: 0,
                 duration: FOLDER_DIALOG_ANIMATION_TIME,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
@@ -1994,8 +2018,8 @@ const AppFolderDialog = {
             mode: Clutter.AnimationMode.EASE_IN_QUAD,
         });
 
-        if (opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) {
-            Main.overview.searchEntry.ease({
+        if ((opt.SHOW_SEARCH_ENTRY || opt.SEARCH_APP_GRID_MODE) && !(opt.SEARCH_ENTRY_POSITION_TOP && opt.WS_TMB_TOP)) {
+            Main.overview._overview.controls._searchEntryBin.ease({
                 opacity: 255,
                 duration: FOLDER_DIALOG_ANIMATION_TIME,
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,

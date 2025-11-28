@@ -1,5 +1,7 @@
 7zip
+7zip-reduced
 7zip-standalone
+7zip-standalone-all
 aajohan-comfortaa-fonts
 abrt-cli
 abrt-desktop
@@ -15,7 +17,6 @@ amd-ucode-firmware
 anaconda
 anaconda-install-env-deps
 android-tools
-arattai
 atheros-firmware
 at-spi2-atk
 at-spi2-core
@@ -74,6 +75,7 @@ cups-pdf
 cups-pk-helper
 curl
 cyrus-sasl-plain
+dbeaver-ce
 dconf
 default-editor
 default-fonts-cjk-mono
@@ -95,6 +97,7 @@ deltarpm
 desktop-backgrounds-gnome
 dhcp-client
 diffstat
+distrobox
 dnf4-plugin-notify-PackageKit
 dnf5
 dnf5-plugins
@@ -114,11 +117,12 @@ dracut-network
 e2fsprogs
 efibootmgr
 ethtool
-evince
 evince-djvu
 evolution-ews-core
 evolution-ews-langpacks
 exfatprogs
+f42-backgrounds-base
+f42-backgrounds-gnome
 f43-backgrounds-base
 f43-backgrounds-gnome
 fd-find
@@ -145,7 +149,6 @@ gdm
 gdouros-symbola-fonts
 gettext
 ghostscript
-ghostty
 git
 glibc
 glibc-all-langpacks
@@ -178,7 +181,6 @@ gnome-shell
 gnome-shell-common
 gnome-shell-extension-appindicator
 gnome-shell-extension-background-logo
-gnome-extensions-app
 gnome-shell-extension-gsconnect
 gnome-software
 gnome-system-monitor
@@ -220,6 +222,7 @@ gutenprint
 gutenprint-cups
 gvfs-afp
 gvfs-archive
+gvfs-fuse
 gvfs-goa
 gvfs-gphoto2
 gvfs-mtp
@@ -232,7 +235,6 @@ hostname
 hunspell
 hyperv-daemons
 ibus-anthy
-ibus-chewing
 ibus-gtk3
 ibus-gtk4
 ibus-hangul
@@ -257,6 +259,12 @@ jose
 julietaula-montserrat-fonts
 kbd
 kbd-legacy
+kernel
+kernel-core
+kernel-devel
+kernel-modules
+kernel-modules-core
+kernel-modules-extra
 kexec-tools
 ladspa-rubberband-plugins
 langpacks-en
@@ -357,6 +365,9 @@ NetworkManager-wifi
 NetworkManager-wwan
 nfs-utils
 nftables-services
+nginx-core
+nginx-filesystem
+nginx-mimetypes
 ngtcp2
 ngtcp2-crypto-gnutls
 nmap-ncat
@@ -435,6 +446,7 @@ python3-nftables
 python3-orjson
 python3-pathvalidate
 python3-patool
+python3-patool+argcompletion
 python3-pefile
 python3-pip
 python3-pycurl

@@ -157,9 +157,6 @@ if [ -f /usr/share/fzf/shell/completion.zsh ]; then
     source /usr/share/fzf/shell/completion.zsh
 fi
 
-# Set up fzf key bindings and fuzzy completion
-source <(fzf --zsh)
-
 ############################################
 # Smart FZF Search (Ctrl+F)
 # - If command starts with 'cd' → pick directory
@@ -308,7 +305,7 @@ secure_clear() {
         echo -e "\033c\e[3J"  # Full screen clear
     fi
 }
-alias sclear='secure_clear'
+alias cl='secure_clear'
 . "$HOME/.cargo/env"
 
 

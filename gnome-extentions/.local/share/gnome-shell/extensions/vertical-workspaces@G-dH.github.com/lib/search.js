@@ -283,6 +283,7 @@ const AppSearchProvider = {
 
     _filterAppGrid(results) {
         const appDisplay = Main.overview._overview.controls._appDisplay;
+        appDisplay.goToPage(0, false);
         let icons = appDisplay._orderedItems;
         icons.forEach(icon => {
             icon.visible = true;
@@ -435,9 +436,11 @@ const SearchResultsView = {
         // Remove the "selected" style from the previously selected icon, without knowing which one it is
         appDisplay._orderedItems.forEach(icon => icon.remove_style_pseudo_class('selected'));
 
-        // Ignore System and GNOME Settings results
+        // Ignore System and GNOME Settings panel results
+        // - System action has no app
+        // - Settings panel appInfo.should_show() returns false
         const filteredResults = this._providers[0].display._grid?.get_children().filter(result =>
-            result.app?.app_info.get_executable() !== 'gnome-control-center'
+            result.app?.app_info.should_show()
         );
         const firstResultId = filteredResults[0]?.id;
         // Find icon which should be selected

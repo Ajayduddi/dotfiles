@@ -1,5 +1,7 @@
 7zip
+7zip-reduced
 7zip-standalone
+7zip-standalone-all
 aajohan-comfortaa-fonts
 abrt-cli
 abrt-desktop
@@ -16,7 +18,6 @@ anaconda
 anaconda-install-env-deps
 anaconda-live
 android-tools
-arattai
 atheros-firmware
 at-spi2-atk
 at-spi2-core
@@ -77,6 +78,7 @@ cups-pdf
 cups-pk-helper
 curl
 cyrus-sasl-plain
+dbeaver-ce
 dconf
 default-editor
 default-fonts-cjk-mono
@@ -98,6 +100,7 @@ deltarpm
 desktop-backgrounds-gnome
 dhcp-client
 diffstat
+distrobox
 dnf4-plugin-notify-PackageKit
 dnf5
 dnf5-plugins
@@ -151,7 +154,6 @@ gdm
 gdouros-symbola-fonts
 gettext
 ghostscript
-ghostty
 git
 glibc
 glibc-all-langpacks
@@ -376,6 +378,9 @@ NetworkManager-wifi
 NetworkManager-wwan
 nfs-utils
 nftables-services
+nginx-core
+nginx-filesystem
+nginx-mimetypes
 ngtcp2
 ngtcp2-crypto-gnutls
 nmap-ncat
@@ -456,6 +461,7 @@ python3-nftables
 python3-orjson
 python3-pathvalidate
 python3-patool
+python3-patool+argcompletion
 python3-pefile
 python3-pip
 python3-pycurl

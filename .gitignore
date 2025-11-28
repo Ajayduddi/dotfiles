@@ -255,7 +255,6 @@ ${TMPDIR:-/tmp}/dotfiles-*
 .local/share/applications/wine/
 
 # Tmux plugins and nested git directories
-.tmux/plugins/
 **/.git/
 
 # Enhanced security patterns - added by security hardening script

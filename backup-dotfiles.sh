@@ -65,12 +65,17 @@ mkdir_p() {
 
 copy_tree() { # src dest
   local src="$1" dest="$2"
-  if [[ "$DRY_RUN" == true ]]; then echo "🔍 WOULD copy $src -> $dest"; return 0; fi
-  rsync -a --delete --chmod=Du=rwx,Dg=rx,Do= --chmod=Fu=rw,Fg=r,Fo= \
-    --exclude='*.pem' --exclude='*.key' --exclude='*.p12' \
-    --exclude='*Login Data*' --exclude='*Cookies*' --exclude='*Web Data*' \
-    --exclude='*History*' --exclude='*Bookmarks*' \
-    "$src/" "$dest/" 2>/dev/null || true
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "🔍 WOULD copy $src -> $dest"
+    return 0
+  fi
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete --chmod=Du=rwx,Dg=rx,Do= --chmod=Fu=rw,Fg=r,Fo=       --exclude='*.pem' --exclude='*.key' --exclude='*.p12'       --exclude='*Login Data*' --exclude='*Cookies*' --exclude='*Web Data*'       --exclude='*History*' --exclude='*Bookmarks*'       "$src/" "$dest/" 2>/dev/null || true
+  else
+    mkdir -p "$dest"
+    cp -a "$src/" "$dest/" 2>/dev/null || true
+  fi
 }
 
 copy_file() {
@@ -109,6 +114,8 @@ detect_de() {
 }
 
 OS_ID=$(detect_os)
+# Trim whitespace from OS_ID (some environments add unexpected spaces)
+OS_ID=${OS_ID//[[:space:]]/}
 DE_ID=$(detect_de)
 echo "🖥️ Desktop: $DE_ID  |  🐧 OS: $OS_ID  |  Dry-run: $DRY_RUN"
 

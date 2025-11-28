@@ -117,14 +117,6 @@ const WorkspaceThumbnailCommon = {
             : 'ws-tmb-transparent'
         );
 
-        // Blur the content behind the thumbnail if
-        // - thumbnail is semi-transparent
-        // - content behind thumbnail is not already blurred
-        if (opt.SHOW_WS_TMB && !opt.SHOW_WS_TMB_BG && (opt.OVERVIEW_MODE2 || (!opt.OVERVIEW_BG_BLUR_SIGMA && opt.SHOW_BG_IN_OVERVIEW))) {
-            const effect = new Shell.BlurEffect({ brightness: 1, radius: 15, mode: Shell.BlurMode.BACKGROUND });
-            this.add_effect_with_name('blur', effect);
-        }
-
         // Add workspace thumbnails labels if enabled
         if (opt.SHOW_WST_LABELS)
             this._addLabel();
@@ -207,7 +199,8 @@ const WorkspaceThumbnailCommon = {
             });
 
             // Align thumbnail background with the workspace background
-            if (!opt.PANEL_MODE && opt.PANEL_POSITION_TOP)
+            const primaryMonitor = this.monitorIndex === global.display.get_primary_monitor();
+            if (primaryMonitor && !opt.PANEL_MODE && opt.PANEL_POSITION_TOP)
                 this._bgManager.backgroundActor.translation_y = -Main.panel.height;
 
             // In this case, the background is there for transition to the APP_GRID state
@@ -231,7 +224,26 @@ const WorkspaceThumbnailCommon = {
 
             this._removeLabelTimeout();
             this._bgManager?.destroy();
+            if (this._repaintTimeout) {
+                GLib.source_remove(this._repaintTimeout);
+                this._repaintTimeout = 0;
+            }
         });
+
+        // Blur the content behind the thumbnail if
+        // - thumbnail is semi-transparent
+        // - content behind thumbnail is not already blurred
+        if (opt.SHOW_WS_TMB && !opt.SHOW_WS_TMB_BG && (opt.OVERVIEW_MODE2 || (!opt.OVERVIEW_BG_BLUR_SIGMA && opt.SHOW_BG_IN_OVERVIEW))) {
+            const effect = new Shell.BlurEffect({ brightness: 1, mode: Shell.BlurMode.BACKGROUND });
+            const radius = effect.sigma === undefined ? 'radius' : 'sigma';
+            effect[radius] = 15;
+            this.add_effect_with_name('blur', effect);
+            // Force redraw 15 times in a second to prevent artifacts
+            this._repaintTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 67, () => {
+                this.queue_redraw();
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
     },
 
     _addLabel() {
@@ -850,18 +862,17 @@ const ThumbnailsBoxVertical = {
         const newScale = Math.min(hScale, vScale);
 
         const controlsManager = Main.overview._overview.controls;
-        const { currentState } = controlsManager._stateAdjustment.getStateTransitionParams();
+        let { currentState } = controlsManager._stateAdjustment.getStateTransitionParams();
+        const { searchActive } = controlsManager.searchController;
+        // Treat the search view as a 3. state for this moment
+        currentState = searchActive ? 3 : currentState;
 
         const stateChanged = currentState !== this._previousState;
         this._previousState = currentState;
 
         if (newScale !== this._targetScale) {
-            // Allocate immediately when transitioning between WINDOW_PICKER && APP_GRID states
-            if (this._targetScale <= 0 ||
-                ((currentState > ControlsState.WINDOW_PICKER && currentState < ControlsState.APP_GRID) ||
-                // Prevent delayed allocation at the end of the state transition
-                ((currentState === ControlsState.APP_GRID || currentState === ControlsState.APP_GRID) && stateChanged))
-            ) {
+            // Allocate immediately when transitioning between overview states
+            if (this._targetScale <= 0 || stateChanged) {
                 this._targetScale = this._scale = newScale;
             } else {
                 // We don't ease immediately because we need to observe the
@@ -1131,23 +1142,23 @@ const ThumbnailsBoxHorizontal = {
         /* const totalSpacing = (nWorkspaces - 1) * spacing;
             const availableWidth = (box.get_width() - totalSpacing) / nWorkspaces;
 
-            const hScale = availableWidth / portholeWidth; */
+        const hScale = availableWidth / portholeWidth; */
         const hScale = box.get_width() / portholeWidth;
         const vScale = box.get_height() / portholeHeight;
         const newScale = Math.min(hScale, vScale);
 
         const controlsManager = Main.overview._overview.controls;
-        const { currentState } = controlsManager._stateAdjustment.getStateTransitionParams();
+        let { currentState } = controlsManager._stateAdjustment.getStateTransitionParams();
+        const { searchActive } = controlsManager.searchController;
+        // Treat the search view as a 3. state for this moment
+        currentState = searchActive ? 3 : currentState;
 
         const stateChanged = currentState !== this._previousState;
         this._previousState = currentState;
-        const searchTransition = controlsManager._searchInProgress &&
-                                !(opt.SEARCH_APP_GRID_MODE && Main.overview.dash.showAppsButton.checked);
 
         if (newScale !== this._targetScale) {
             // Allocate immediately when transitioning between overview states
-            if (this._targetScale <= 0 || stateChanged || searchTransition
-            ) {
+            if (this._targetScale <= 0 || stateChanged) {
                 this._targetScale = this._scale = newScale;
             } else {
                 // We don't ease immediately because we need to observe the
