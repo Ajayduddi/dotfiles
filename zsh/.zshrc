@@ -12,7 +12,6 @@ fi
 
 # Modern, customizable shell prompt
 eval "$(starship init zsh)"
-eval "$(ssh-agent -s)"
 
 ############################################
 # Paths
@@ -312,3 +311,10 @@ alias cl='secure_clear'
 
 # Load Angular CLI autocompletion.
 source <(ng completion script)
+
+# bun completions
+[ -s "/home/ajay/.bun/_bun" ] && source "/home/ajay/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

@@ -10,6 +10,8 @@
 
 'use strict';
 
+import Clutter from 'gi://Clutter';
+
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Overview from 'resource:///org/gnome/shell/ui/overview.js';
 import * as OverviewControls from 'resource:///org/gnome/shell/ui/overviewControls.js';
@@ -87,6 +89,35 @@ const OverviewCommon = {
         this._animateVisible(state);
     },
 
+    hide(event) {
+        if (this.isDummy)
+            return;
+
+        if (!this._shown)
+            return;
+
+        const { finalState } = Main.overview._overview.controls._stateAdjustment.getStateTransitionParams();
+        if (finalState === OverviewControls.ControlsState.HIDDEN)
+            return;
+
+        if (!event)
+            event = Clutter.get_current_event();
+        if (event) {
+            let type = event.type();
+            const button =
+                type === Clutter.EventType.BUTTON_PRESS ||
+                type === Clutter.EventType.BUTTON_RELEASE;
+            let ctrl = (event.get_state() & Clutter.ModifierType.CONTROL_MASK) !== 0;
+            if (button && ctrl)
+                return;
+        }
+
+        this._shown = false;
+
+        this._animateNotVisible();
+        this._syncGrab();
+    },
+
     toggle(customOverviewMode) {
         if (this.isDummy)
             return;
@@ -130,6 +161,7 @@ const OverviewCommon = {
     after__hideDone() {
         this.resetOverviewMode();
         Me.run.activeMonitor = undefined;
+        Me.run.overviewShiftAllowed = false;
 
         if (!opt.FIX_NEW_WINDOW_FOCUS)
             return;

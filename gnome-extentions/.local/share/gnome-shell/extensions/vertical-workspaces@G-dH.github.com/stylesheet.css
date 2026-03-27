@@ -120,11 +120,6 @@
 	height: 2px;
 }
 
-/* compensate dot offset by 1px compared to default 2*$base_padding */
-#dash .app-grid-running-dot-offset {
-	offset-y: -13px;
-}
-
 #dash.vertical .dash-background {
 	padding: 12px;
 	margin: 0;
@@ -233,16 +228,15 @@
 
 .page-indicators {
 	spacing: 20px;
-	margin: 0;
 }
 
 .page-indicators-horizontal {
-	margin-top: 0px;
+	margin: 0px;
 	margin-bottom: 10px;
 }
 
 .page-indicators-vertical {
-	margin-left: 0px;
+	margin: 0px;
 	margin-right: 10px;
 }
 
@@ -388,4 +382,15 @@ StButton#vhandle, StWidget .vhandle,
 /* reverse padding */
 .ws-switcher-vertical {
 	padding: 18px 12px
+}
+
+.source-badge-selected-only {
+	width: 0px;
+}
+
+.source-badge,
+.overview-tile:hover .source-badge-selected-only,
+.overview-tile:focus .source-badge-selected-only,
+.overview-tile:selected .source-badge-selected-only {
+	width: 16px;
 }

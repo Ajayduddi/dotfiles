@@ -151,6 +151,9 @@
     <key type="i" name="search-width-scale">
       <default>100</default>
     </key>
+    <key type="i" name="app-grid-orientation">
+      <default>-0</default>
+    </key>
     <key type="i" name="app-grid-icon-size">
       <default>-1</default>
     </key>
@@ -214,8 +217,14 @@
     <key type="b" name="app-grid-show-page-arrows">
       <default>true</default>
     </key>
+    <key type="b" name="app-grid-show-page-indicators">
+      <default>true</default>
+    </key>
     <key type="b" name="app-grid-remember-page">
       <default>false</default>
+    </key>
+    <key type="i" name="app-grid-show-package-type">
+      <default>1</default>
     </key>
     <key type="i" name="dash-show-windows-before-activation">
       <default>0</default>
@@ -418,6 +427,10 @@
       <default>false</default>
     </key>
 
+    <key type="a{ss}" name="profile-data-0">
+      <default>{}</default>
+    </key>
+
     <key type="s" name="profile-name-1">
       <default>""</default>
     </key>
@@ -474,6 +487,7 @@
         'wsSwitcherMode': '0',
         'searchIconSize': '0',
         'searchViewScale': '100',
+        'appGridOrientation': '0',
         'appGridIconSize': '-1',
         'appGridColumns': '0',
         'appGridRows': '0',
@@ -490,12 +504,14 @@
         'appGridFolderCenter': 'false',
         'appGridPageWidthScale': '90',
         'appGridPageHeightScale': '90',
-        'appGridSpacing': '12',
+        'appGridSpacing': '30',
         'appGridFolderSpacing': '12',
         'appGridRememberPage': 'false',
+        'appGridShowPackageType': '1',
         'appFolderRemoveButton': '1',
         'appFolderCloseButton': 'true',
         'appGridShowPageArrows': 'false',
+        'appGridShowPageIndicators': 'true',
         'searchFuzzy': 'false',
         'searchMaxResultsRows': '5',
         'searchAppGridMode': '1',
@@ -616,6 +632,7 @@
         'wsSwitcherMode': '0',
         'searchIconSize': '0',
         'searchViewScale': '100',
+        'appGridOrientation': '0',
         'appGridIconSize': '-1',
         'appGridColumns': '0',
         'appGridRows': '0',
@@ -630,14 +647,16 @@
         'appGridNamesMode': '1',
         'appGridActivePreview': 'false',
         'appGridFolderCenter': 'true',
-        'appGridPageWidthScale': '80',
+        'appGridPageWidthScale': '85',
         'appGridPageHeightScale': '90',
-        'appGridSpacing': '12',
+        'appGridSpacing': '30',
         'appGridFolderSpacing': '12',
         'appGridRememberPage': 'false',
+        'appGridShowPackageType': '1',
         'appFolderRemoveButton': '1',
         'appFolderCloseButton': 'true',
         'appGridShowPageArrows': 'true',
+        'appGridShowPageIndicators': 'true',
         'searchFuzzy': 'false',
         'searchMaxResultsRows': '5',
         'searchAppGridMode': '1',
@@ -758,6 +777,7 @@
         'wsSwitcherMode': '0',
         'searchIconSize': '0',
         'searchViewScale': '100',
+        'appGridOrientation': '0',
         'appGridIconSize': '-1',
         'appGridColumns': '0',
         'appGridRows': '0',
@@ -774,12 +794,14 @@
         'appGridFolderCenter': 'false',
         'appGridPageWidthScale': '90',
         'appGridPageHeightScale': '90',
-        'appGridSpacing': '12',
+        'appGridSpacing': '30',
         'appGridFolderSpacing': '12',
         'appGridRememberPage': 'false',
+        'appGridShowPackageType': '1',
         'appFolderRemoveButton': '1',
         'appFolderCloseButton': 'true',
         'appGridShowPageArrows': 'false',
+        'appGridShowPageIndicators': 'true',
         'searchFuzzy': 'false',
         'searchMaxResultsRows': '5',
         'searchAppGridMode': '1',
@@ -900,6 +922,7 @@
         'wsSwitcherMode': '0',
         'searchIconSize': '0',
         'searchViewScale': '100',
+        'appGridOrientation': '0',
         'appGridIconSize': '-1',
         'appGridColumns': '0',
         'appGridRows': '0',
@@ -914,14 +937,16 @@
         'appGridNamesMode': '1',
         'appGridActivePreview': 'false',
         'appGridFolderCenter': 'false',
-        'appGridPageWidthScale': '80',
+        'appGridPageWidthScale': '85',
         'appGridPageHeightScale': '90',
-        'appGridSpacing': '12',
+        'appGridSpacing': '30',
         'appGridFolderSpacing': '12',
         'appGridRememberPage': 'false',
+        'appGridShowPackageType': '1',
         'appFolderRemoveButton': '1',
         'appFolderCloseButton': 'true',
         'appGridShowPageArrows': 'true',
+        'appGridShowPageIndicators': 'true',
         'searchFuzzy': 'false',
         'searchMaxResultsRows': '5',
         'searchAppGridMode': '1',
@@ -1042,6 +1067,7 @@
         'wsSwitcherMode': '0',
         'searchIconSize': '0',
         'searchViewScale': '100',
+        'appGridOrientation': '0',
         'appGridIconSize': '-1',
         'appGridColumns': '0',
         'appGridRows': '0',
@@ -1056,14 +1082,16 @@
         'appGridNamesMode': '0',
         'appGridActivePreview': 'false',
         'appGridFolderCenter': 'true',
-        'appGridPageWidthScale': '80',
-        'appGridPageHeightScale': '90',
-        'appGridSpacing': '12',
+        'appGridPageWidthScale': '85',
+        'appGridPageHeightScale': '85',
+        'appGridSpacing': '30',
         'appGridFolderSpacing': '12',
         'appGridRememberPage': 'false',
+        'appGridShowPackageType': '0',
         'appFolderRemoveButton': '0',
         'appFolderCloseButton': 'false',
         'appGridShowPageArrows': 'true',
+        'appGridShowPageIndicators': 'true',
         'searchFuzzy': 'false',
         'searchMaxResultsRows': '5',
         'searchAppGridMode': '0',

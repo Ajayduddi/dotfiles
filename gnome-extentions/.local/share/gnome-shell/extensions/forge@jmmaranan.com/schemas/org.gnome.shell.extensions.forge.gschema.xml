@@ -37,7 +37,7 @@
         <key type="u" name="resize-amount">
             <default>15</default>
             <summary>
-                The size of the gap between windows in the workarea
+                The window resize increment/decrement in pixels
             </summary>
         </key>
 
@@ -146,6 +146,11 @@
         <key type="b" name="showtab-decoration-enabled">
             <default>true</default>
             <summary>Whether to show the tab decoration or not</summary>
+        </key>
+
+        <key type="u" name="window-overrides-reload-trigger">
+            <default>0</default>
+            <summary>Timestamp to trigger window overrides reload</summary>
         </key>
 
     </schema>

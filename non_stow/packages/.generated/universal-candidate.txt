@@ -18,6 +18,7 @@ anaconda
 anaconda-install-env-deps
 anaconda-live
 android-tools
+antigravity
 atheros-firmware
 at-spi2-atk
 at-spi2-core
@@ -284,6 +285,9 @@ lcms2-devel
 less
 lhasa
 lhasa-libs
+libayatana-appindicator-gtk3
+libayatana-ido-gtk3
+libayatana-indicator-gtk3
 libblockdev-tools
 libcap-devel
 libdbi-dbd-mysql
@@ -300,6 +304,7 @@ libluksmeta
 libomp20
 libomp20-devel
 libopenjph
+libpfm
 libphodav
 libreoffice-calc
 libreoffice-emailmerge

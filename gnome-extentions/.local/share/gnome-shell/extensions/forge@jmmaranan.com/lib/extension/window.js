@@ -67,8 +67,7 @@ export class WindowManager extends GObject.Object {
     this.prefsTitle = `Forge ${_("Settings")} - ${
       !production ? "DEV" : `${PACKAGE_VERSION}-${ext.metadata.version}`
     }`;
-    this.windowProps = this.ext.configMgr.windowProps;
-    this.windowProps.overrides = this.windowProps.overrides.filter((override) => !override.wmId);
+    this.reloadWindowOverrides();
     this._kbd = this.ext.keybindings;
     this._tree = new Tree(this);
     this.eventQueue = new Queue();
@@ -98,11 +97,12 @@ export class WindowManager extends GObject.Object {
   }
 
   addFloatOverride(metaWindow, withWmId) {
-    let overrides = this.windowProps.overrides;
+    let currentProps = this.ext.configMgr.windowProps;
+    let overrides = currentProps.overrides;
     let wmClass = metaWindow.get_wm_class();
     let wmId = metaWindow.get_id();
 
-    for (let override in overrides) {
+    for (let override of overrides) {
       // if the window is already floating
       if (override.wmClass === wmClass && override.mode === "float" && !override.wmTitle) return;
     }
@@ -111,12 +111,15 @@ export class WindowManager extends GObject.Object {
       wmId: withWmId ? wmId : undefined,
       mode: "float",
     });
-    this.windowProps.overrides = overrides;
-    this.ext.configMgr.windowProps = this.windowProps;
+
+    // Save the updated overrides back to the ConfigManager
+    currentProps.overrides = overrides;
+    this.ext.configMgr.windowProps = currentProps;
   }
 
   removeFloatOverride(metaWindow, withWmId) {
-    let overrides = this.windowProps.overrides;
+    let currentProps = this.ext.configMgr.windowProps;
+    let overrides = currentProps.overrides;
     let wmClass = metaWindow.get_wm_class();
     let wmId = metaWindow.get_id();
     overrides = overrides.filter(
@@ -129,8 +132,9 @@ export class WindowManager extends GObject.Object {
         )
     );
 
-    this.windowProps.overrides = overrides;
-    this.ext.configMgr.windowProps = this.windowProps;
+    // Save the updated overrides back to the ConfigManager
+    currentProps.overrides = overrides;
+    this.ext.configMgr.windowProps = currentProps;
   }
 
   toggleFloatingMode(action, metaWindow) {
@@ -285,6 +289,11 @@ export class WindowManager extends GObject.Object {
 
     settings.connect("changed", (_, settingName) => {
       switch (settingName) {
+        case "window-overrides-reload-trigger":
+          // Reload window overrides when triggered by preferences
+          // This prevents the main extension from overwriting changes made by preferences
+          this.reloadWindowOverrides();
+          break;
         case "focus-border-toggle":
           this.renderTree(settingName);
           break;
@@ -951,9 +960,16 @@ export class WindowManager extends GObject.Object {
   move(metaWindow, rect) {
     if (!metaWindow) return;
     if (metaWindow.grabbed) return;
-    metaWindow.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
-    metaWindow.unmaximize(Meta.MaximizeFlags.VERTICAL);
-    metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+    try {
+      // GNOME 49+
+      metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
+      metaWindow.unmaximize();
+    } catch (e) {
+      // pre-49 fallback
+      metaWindow.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
+      metaWindow.unmaximize(Meta.MaximizeFlags.VERTICAL);
+      metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+    }
 
     let windowActor = metaWindow.get_compositor_private();
     if (!windowActor) return;
@@ -1235,7 +1251,13 @@ export class WindowManager extends GObject.Object {
     let tilingModeEnabled = this.ext.settings.get_boolean("tiling-mode-enabled");
     let gap = this.calculateGaps(nodeWindow);
     let maximized = () => {
-      return metaWindow.get_maximized() === 3 || metaWindow.is_fullscreen() || gap === 0;
+      try {
+        // GNOME 49+
+        return metaWindow.is_maximized() || metaWindow.is_fullscreen() || gap === 0;
+      } catch (e) {
+        // pre-49 fallback
+        return metaWindow.get_maximized() === 3 || metaWindow.is_fullscreen() || gap === 0;
+      }
     };
     let monitorCount = global.display.get_n_monitors();
     let tiledChildren = this.tree.getTiledChildren(nodeWindow.parentNode.childNodes);
@@ -1287,7 +1309,18 @@ export class WindowManager extends GObject.Object {
       }
     }
 
-    if (gap === 0 || metaWindow.get_maximized() === 1 || metaWindow.get_maximized() === 2) {
+    if (
+      gap === 0 ||
+      (() => {
+        try {
+          // GNOME 49+
+          return metaWindow.is_maximized();
+        } catch (e) {
+          // pre-49 fallback
+          return metaWindow.get_maximized() === 1 || metaWindow.get_maximized() === 2;
+        }
+      })()
+    ) {
       inset = 0;
     }
 
@@ -1506,9 +1539,16 @@ export class WindowManager extends GObject.Object {
           {
             name: "window-create-queue",
             callback: () => {
-              metaWindow.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
-              metaWindow.unmaximize(Meta.MaximizeFlags.VERTICAL);
-              metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+              try {
+                // GNOME 49+
+                metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
+                metaWindow.unmaximize();
+              } catch (e) {
+                // pre-49 fallback
+                metaWindow.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
+                metaWindow.unmaximize(Meta.MaximizeFlags.VERTICAL);
+                metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
+              }
               this.renderTree("window-create", true);
             },
           },
@@ -1727,7 +1767,17 @@ export class WindowManager extends GObject.Object {
         this._handleMoving(focusNodeWindow);
       }
     } else {
-      if (focusMetaWindow.get_maximized() === 0) {
+      if (
+        (() => {
+          try {
+            // GNOME 49+
+            return !focusMetaWindow.is_maximized();
+          } catch (e) {
+            // pre-49 fallback
+            return focusMetaWindow.get_maximized() === 0;
+          }
+        })()
+      ) {
         this.renderTree(from);
       }
     }
@@ -1765,9 +1815,18 @@ export class WindowManager extends GObject.Object {
     let monWsNoMaxWindows = activeWsNode.getNodeByType(NODE_TYPES.MONITOR).filter((monitor) => {
       return (
         monitor.getNodeByType(NODE_TYPES.WINDOW).filter((w) => {
-          return (
-            w.nodeValue.get_maximized() === Meta.MaximizeFlags.BOTH || w.nodeValue.is_fullscreen()
-          );
+          return (() => {
+            try {
+              // GNOME 49+
+              return w.nodeValue.is_maximized() || w.nodeValue.is_fullscreen();
+            } catch (e) {
+              // pre-49 fallback
+              return (
+                w.nodeValue.get_maximized() === Meta.MaximizeFlags.BOTH ||
+                w.nodeValue.is_fullscreen()
+              );
+            }
+          })();
         }).length === 0
       );
     });
@@ -1814,9 +1873,10 @@ export class WindowManager extends GObject.Object {
    * This is useful for making sure that Forge calculates the attachNode
    * properly
    */
-  movePointerWith(nodeWindow) {
+  movePointerWith(nodeWindow, { force = false } = {}) {
     if (!nodeWindow || !nodeWindow._data) return;
-    if (this.ext.settings.get_boolean("move-pointer-focus-enabled")) {
+    const shouldWarp = force || this.ext.settings.get_boolean("move-pointer-focus-enabled");
+    if (shouldWarp) {
       this.storePointerLastPosition(this.lastFocusedWindow);
       if (this.canMovePointerInsideNodeWindow(nodeWindow)) {
         this.warpPointerToNodeWindow(nodeWindow);
@@ -2410,7 +2470,17 @@ export class WindowManager extends GObject.Object {
     }
     this._grabCleanup(focusNodeWindow);
 
-    if (focusMetaWindow.get_maximized() === 0) {
+    if (
+      (() => {
+        try {
+          // GNOME 49+
+          return !focusMetaWindow.is_maximized();
+        } catch (e) {
+          // pre-49 fallback
+          return focusMetaWindow.get_maximized() === 0;
+        }
+      })()
+    ) {
       this.renderTree("grab-op-end");
     }
 
@@ -2706,6 +2776,20 @@ export class WindowManager extends GObject.Object {
   get currentMon() {
     const display = global.display;
     return `mo${display.get_current_monitor()}`;
+  }
+
+  /**
+   * Reload window overrides from the configuration file
+   * This is called when the preferences page modifies the overrides
+   */
+  reloadWindowOverrides() {
+    // Get fresh data from the ConfigManager
+    const freshProps = this.ext.configMgr.windowProps;
+    if (freshProps) {
+      this.windowProps = freshProps;
+      this.windowProps.overrides = this.windowProps.overrides.filter((override) => !override.wmId);
+      Logger.info(`Reloaded ${this.windowProps.overrides.length} window overrides from file`);
+    }
   }
 
   floatAllWindows() {

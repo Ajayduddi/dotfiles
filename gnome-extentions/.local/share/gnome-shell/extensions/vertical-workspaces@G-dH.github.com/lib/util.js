@@ -33,6 +33,7 @@ export function init(me) {
 
 export function cleanGlobals() {
     _removeMoveWinPreviewTimeout();
+    _removeWinSpreadTimeout();
 
     Me = null;
     _ = null;
@@ -122,35 +123,43 @@ export class Overrides extends InjectionManager {
 export function openPreferences(metadata) {
     if (!metadata)
         metadata = Me.metadata;
+
+    const name = metadata.name;
+    const wmClass = metadata.wmClass ?? 'org.gnome.Shell.Extensions';
+    const moveToWorkspace = metadata.moveToWorkspace ?? true;
+
     const windows = global.display.get_tab_list(Meta.TabList.NORMAL_ALL, null);
-    let tracker = Shell.WindowTracker.get_default();
     let metaWin, isMe = null;
 
     for (let win of windows) {
-        const app = tracker.get_window_app(win);
-        if (win.get_title()?.includes(metadata.name) && app.get_name() === 'Extensions') {
-            // this is our existing window
+        if (name && win.get_title() === name && win.get_wm_class() === wmClass) {
+            // This is our existing extension Settings window
             metaWin = win;
             isMe = true;
             break;
-        } else if (win.wm_class?.includes('org.gnome.Shell.Extensions')) {
-            // this is prefs window of another extension
+        }  else if (!name && win.wm_class?.includes(wmClass)) {
+            // This is a window that the caller wants to activate
+            metaWin = win;
+            isMe = true;
+        } else if (win.wm_class?.includes(wmClass)) {
+            // This is a Settings window of another extension
             metaWin = win;
             isMe = false;
         }
     }
 
     if (metaWin && !isMe) {
-        // other prefs window blocks opening another prefs window, so close it
+        // Other Settings window blocks opening of our own Settings, so close it
         metaWin.delete(global.get_current_time());
     } else if (metaWin && isMe) {
-        // if prefs window already exist, move it to the current WS and activate it
-        metaWin.change_workspace(global.workspace_manager.get_active_workspace());
+        // If our window already exists, move it to the current workspace if needed
+        if (moveToWorkspace)
+            metaWin.change_workspace(global.workspace_manager.get_active_workspace());
         metaWin.activate(global.get_current_time());
     }
 
     if (!metaWin || (metaWin && !isMe)) {
-        // delay to avoid errors if previous prefs window has been closed
+        // Add a delay so the other window has time to close
         GLib.idle_add(GLib.PRIORITY_LOW, () => {
             try {
                 Main.extensionManager.openExtensionPrefs(metadata.uuid, '', {});
@@ -162,6 +171,9 @@ export function openPreferences(metadata) {
 }
 
 export function activateSearchProvider(prefix = '') {
+    if (Me.opt.SEARCH_APP_GRID_MODE && Main.overview.dash.showAppsButton.checked)
+        return;
+
     const searchEntry = Main.overview.searchEntry;
     const searchEntryText = searchEntry.get_text();
     if (!searchEntryText || (searchEntryText && !searchEntry.get_text().startsWith(prefix))) {
@@ -261,6 +273,12 @@ function _removeMoveWinPreviewTimeout() {
     Me.run.moveWindowPreviewTimeout = 0;
 }
 
+function _removeWinSpreadTimeout() {
+    if (Me.run.winSpreadTimeout)
+        GLib.source_remove(Me.run.winSpreadTimeout);
+    Me.run.winSpreadTimeout = 0;
+}
+
 // Handle common actions for WorkspacesView and WindowPreview
 export function handleOverviewTabKeyPress(event) {
     if (isSuperPressed() && !(isCtrlPressed() || isAltPressed())) {
@@ -305,8 +323,7 @@ export function activateKeyboardForWorkspaceView(monitorIndex = Me.run.activeMon
     // Define function that sets windowActor for the first window of the particular monitor
     const setFirstWindowActorForMonitor = monitor => {
         const windows = getMonitorWindowPreviews(monitor, activeWorkspaceIndex);
-        // The window list is reversed
-        windowActor = windows[windows.length - 1]?._windowActor;
+        windowActor = windows[0]?._windowActor;
     };
 
     // Find actor of the window that should be selected
@@ -339,19 +356,26 @@ export function activateKeyboardForWorkspaceView(monitorIndex = Me.run.activeMon
 
 // Get window previews for the monitor
 export function getMonitorWindowPreviews(monitor, workspaceIndex) {
-    let windows;
     const workspacesView = Main.overview._overview.controls._workspacesDisplay._workspacesViews[monitor];
     if (!workspacesView)
         return [];
 
+    let workspace;
     if (workspacesView._workspaces) // secondary monitor workspaces
-        windows = workspacesView._workspaces[workspaceIndex]._windows;
+        workspace = workspacesView._workspaces[workspaceIndex];
     else if (workspacesView._workspacesView._workspace) // secondary monitor no workspaces
-        windows = workspacesView._workspacesView._workspace._windows;
+        workspace = workspacesView._workspacesView._workspace;
     else // primary monitor workspaces
-        windows = workspacesView._workspacesView._workspaces[workspaceIndex]._windows;
+        workspace = workspacesView._workspacesView._workspaces[workspaceIndex];
 
-    return windows;
+    let windowPreviews = [];
+
+    // Get the order as displayed on the screen
+    const windowSlots = workspace?._container.layoutManager._windowSlots ?? [];
+    // Each slot contains [x, y, width, height, windowPreview]
+    windowSlots.forEach(slot => windowPreviews.push(slot[4]));
+
+    return windowPreviews;
 };
 
 // Find and select window preview on the current workspace overview
@@ -472,6 +496,15 @@ export function exposeWindows() {
             view.exposeWindows();
         }
     );
+    if (Me.run.initialPointerX === global.get_pointer()[0] && Me.opt.OVERVIEW_SELECT_WINDOW) {
+        const slowDownFactor = St.Settings.get().slow_down_factor;
+        Me.run.winSpreadTimeout = GLib.timeout_add(GLib.PRIORITY_LOW, 250 * slowDownFactor,
+            () => {
+                Me.Util.activateKeyboardForWorkspaceView();
+                Me.run.winSpreadTimeout = 0;
+                return GLib.SOURCE_REMOVE;
+            });
+    }
     controlsManager._updateSearchStyle?.bind(controlsManager)();
 }
 

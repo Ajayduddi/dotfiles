@@ -3,7 +3,7 @@
  * settings.js
  *
  * @author     GdH <G-dH@github.com>
- * @copyright  2022 - 2025
+ * @copyright  2022 - 2026
  * @license    GPL-3.0
  */
 
@@ -88,6 +88,7 @@ export const Options = class Options {
             wsSwitcherMode: ['int', 'ws-switcher-mode'],
             searchIconSize: ['int', 'search-icon-size'],
             searchViewScale: ['int', 'search-width-scale'],
+            appGridOrientation: ['int', 'app-grid-orientation'],
             appGridIconSize: ['int', 'app-grid-icon-size'],
             appGridColumns: ['int', 'app-grid-columns'],
             appGridRows: ['int', 'app-grid-rows'],
@@ -110,6 +111,8 @@ export const Options = class Options {
             appFolderRemoveButton: ['int', 'app-folder-remove-button'],
             appFolderCloseButton: ['boolean', 'app-folder-close-button'],
             appGridShowPageArrows: ['boolean', 'app-grid-show-page-arrows'],
+            appGridShowPageIndicators: ['boolean', 'app-grid-show-page-indicators'],
+            appGridShowPackageType: ['int', 'app-grid-show-package-type'],
             searchFuzzy: ['boolean', 'search-fuzzy'],
             searchMaxResultsRows: ['int', 'search-max-results-rows'],
             searchAppGridMode: ['int', 'search-app-grid-mode'],
@@ -188,6 +191,16 @@ export const Options = class Options {
         };
         this.cachedOptions = {};
         this._updateSettings();
+
+        // Return if called from prefs
+        if (typeof global === 'undefined')
+            return;
+
+        // Store the current configuration in dconf
+        // so we can change the default schema values
+        // in the future without affecting existing users
+        this.storeProfile(0);
+        this.loadProfile(0);
     }
 
     connect(name, callback) {
@@ -399,10 +412,12 @@ export const Options = class Options {
         this.SHOW_WST_LABELS_ON_HOVER = this.get('showWsTmbLabelsOnHover');
         this.CLOSE_WS_BUTTON_MODE = this.get('closeWsButtonMode');
 
-        this.MAX_THUMBNAIL_SCALE = this.get('wsThumbnailScale') / 100 + 0.01;
-        this.MAX_THUMBNAIL_SCALE_APPGRID = this.get('wsThumbnailScaleAppGrid') / 100 + 0.01;
+        // thumbnailsBox scale must be above 0 to avoid scale issues
+        this.TMB_ZERO_SCALE = 0.01;
+        this.MAX_THUMBNAIL_SCALE = this.get('wsThumbnailScale') / 100 + this.TMB_ZERO_SCALE;
+        this.MAX_THUMBNAIL_SCALE_APPGRID = this.get('wsThumbnailScaleAppGrid') / 100 + this.TMB_ZERO_SCALE;
         this.MAX_THUMBNAIL_SCALE_STABLE = this.MAX_THUMBNAIL_SCALE === this.MAX_THUMBNAIL_SCALE_APPGRID;
-        this.SEC_MAX_THUMBNAIL_SCALE = this.get('secWsThumbnailScale') / 100 + 0.01;
+        this.SEC_MAX_THUMBNAIL_SCALE = this.get('secWsThumbnailScale') / 100 + this.TMB_ZERO_SCALE;
 
         this.WS_PREVIEW_SCALE = this.get('wsPreviewScale') / 100;
         this.SEC_WS_PREVIEW_SCALE = this.get('secWsPreviewScale') / 100;
@@ -467,6 +482,9 @@ export const Options = class Options {
         this.SEARCH_INCLUDE_SETTINGS = this.get('searchIncludeSettings');
         this.RESULTS_BLUR_RADIUS = 32;
 
+        const option = this.get('appGridOrientation');
+        // Translate the option to Clutter.Orientation - 0 horizontal, 1 vertical
+        this.APP_GRID_ORIENTATION = !option ? this.ORIENTATION : option - 1;
         this.APP_GRID_ALLOW_INCOMPLETE_PAGES = this.get('appGridIncompletePages');
         this.APP_GRID_ICON_SIZE = this.get('appGridIconSize');
         this.APP_GRID_COLUMNS = this.get('appGridColumns');
@@ -497,7 +515,6 @@ export const Options = class Options {
 
         this.APP_GRID_NAMES_MODE = this.get('appGridNamesMode');
         // Estimated space for 3 line title and default font
-        this.APP_GRID_RESERVED_BOTTOM_SPACE = 60;
 
         this.APP_GRID_FOLDER_ICON_SIZE = this.get('appGridFolderIconSize');
         this.APP_GRID_FOLDER_ICON_GRID = this.get('appGridFolderIconGrid');
@@ -516,7 +533,9 @@ export const Options = class Options {
         // Reserve space for the search entry, if needed, to prevent it from being overlapped by the grid icons
         this.spaceReservedForSearchEntry = 0;
         this.APP_GRID_SHOW_PAGE_ARROWS = this.get('appGridShowPageArrows');
+        this.APP_GRID_SHOW_PAGE_INDICATORS = this.get('appGridShowPageIndicators');
         this.APP_GRID_REMEMBER_PAGE = this.get('appGridRememberPage');
+        this.APP_GRID_SHOW_PACKAGE_BADGE = this.get('appGridShowPackageType');
 
         // Default icon sizes updates in the IconGrid._findBestModeForSize()
         this.APP_GRID_ICON_SIZE_DEFAULT = this.APP_GRID_ACTIVE_PREVIEW && !this.APP_GRID_USAGE ? 192 : 96;
@@ -541,7 +560,8 @@ export const Options = class Options {
 
         this.WS_ANIMATION = this.get('workspaceAnimation');
         // Animation needs ws thumbnails
-        if (!this.SHOW_WS_TMB)
+        if (!this.SHOW_WS_TMB || this.MAX_THUMBNAIL_SCALE === this.TMB_ZERO_SCALE ||
+            this.MAX_THUMBNAIL_SCALE_APPGRID === this.TMB_ZERO_SCALE)
             this.WS_ANIMATION = 0;
         this.WS_ANIMATION_SINGLE = this.WS_ANIMATION === 1;
         this.WS_ANIMATION_ALL = this.WS_ANIMATION === 2;

@@ -36,6 +36,7 @@ let _timeouts;
 
 const APP_ICON_TITLE_EXPAND_TIME = 200;
 const APP_ICON_TITLE_COLLAPSE_TIME = 100;
+const PACKAGE_TYPE_BADGE_SIZE = 16;
 
 const shellVersion46 = !Clutter.Container; // Container has been removed in 46
 
@@ -122,15 +123,22 @@ export const AppDisplayModule = class {
     }
 
     _disableModule() {
-        Me.Modules.iconGridModule.update(true);
-        _appDisplay.setGridPageNulling(true);
+        const reset = true;
+        Me.Modules.iconGridModule.update(reset);
+        _appDisplay.setGridPageNulling(reset);
 
         if (this._overrides)
             this._overrides.removeAll();
         this._overrides = null;
 
-        const reset = true;
-        this._updateAppDisplay(reset);
+        // A messed-up app-picker-layout GSettings key can break the default app grid.
+        // Although V-Shell can handle such a situation, the error can occur when disabling the extension.
+        // Therefore, we need to catch the error in order to complete the V-Shell update process.
+        try {
+            this._updateAppDisplay(reset);
+        } catch (error) {
+            log(`[${Me.metadata.name}] appDisplayModule: Error when updating appDisplay\n${error}`);
+        }
         this._restoreOverviewGroup();
 
         console.debug('  AppDisplayModule - Disabled');
@@ -155,7 +163,7 @@ export const AppDisplayModule = class {
         this._overrides.addOverride('AppViewItem', AppDisplay.AppViewItem.prototype, AppViewItemCommon);
         this._overrides.addOverride('AppGridCommon', AppDisplay.AppGrid.prototype, AppGridCommon);
         this._overrides.addOverride('AppIcon', AppDisplay.AppIcon.prototype, AppIcon);
-        if (opt.ORIENTATION) {
+        if (opt.APP_GRID_ORIENTATION) {
             this._overrides.removeOverride('AppGridLayoutHorizontal');
             this._overrides.addOverride('AppGridLayoutVertical', _appDisplay._appGridLayout, BaseAppViewGridLayoutVertical);
         } else {
@@ -174,7 +182,7 @@ export const AppDisplayModule = class {
     }
 
     _updateAppDisplay(reset) {
-        const orientation = reset ? Clutter.Orientation.HORIZONTAL : opt.ORIENTATION;
+        const orientation = reset ? Clutter.Orientation.HORIZONTAL : opt.APP_GRID_ORIENTATION;
         BaseAppViewCommon._adaptForOrientation.bind(_appDisplay)(orientation);
 
         this._updateFavoritesConnection(reset);
@@ -193,6 +201,7 @@ export const AppDisplayModule = class {
                 this._appGridLayoutConId = 0;
             }
             _appDisplay._pageIndicators.set_style('');
+            _appDisplay._pageIndicators.opacity = 255;
             this._repopulateAppDisplay(reset);
         } else {
             _appDisplay._grid._currentMode = -1;
@@ -214,7 +223,7 @@ export const AppDisplayModule = class {
             _appDisplay.setGridPageNulling(!opt.APP_GRID_REMEMBER_PAGE);
             _appDisplay._pageIndicators.set_style(
                 orientation
-                    ? `margin-bottom: ${opt.APP_GRID_RESERVED_BOTTOM_SPACE}px;`
+                    ? `margin-bottom: ${opt.APP_GRID_SPACING}px;`
                     : '');
         }
     }
@@ -576,11 +585,11 @@ const BaseAppViewCommon = {
         // Only folders can run this init
         this._isFolder = true;
 
-        this._adaptForOrientation(opt.ORIENTATION, true);
+        this._adaptForOrientation(opt.APP_GRID_ORIENTATION, true);
 
         // Because the original class prototype is not exported, we need to inject every instance
         const overrides = new Me.Util.Overrides();
-        if (opt.ORIENTATION) {
+        if (opt.APP_GRID_ORIENTATION) {
             overrides.addOverride('FolderGridLayoutVertical', this._appGridLayout, BaseAppViewGridLayoutVertical);
             this._pageIndicators.set_style('margin-right: 22px;');
         } else {
@@ -604,7 +613,10 @@ const BaseAppViewCommon = {
         this._grid.layoutManager.fixedIconSize = folder ? opt.APP_GRID_FOLDER_ICON_SIZE : opt.APP_GRID_ICON_SIZE;
         this._grid.layoutManager._orientation = orientation;
         this._orientation = orientation;
-        this._swipeTracker.orientation = orientation;
+        // Three+-finger gesture follows workspace orientation
+        this._swipeTracker.orientation = opt.ORIENTATION;
+        // Two-finger scroll gesture follows App Grid pages orientation
+        this._swipeTracker._scrollGesture.orientation = orientation;
         this._swipeTracker._reset();
 
         if (this._scrollView.get_vadjustment) {
@@ -642,7 +654,12 @@ const BaseAppViewCommon = {
             ? false
             : opt.APP_GRID_ALLOW_INCOMPLETE_PAGES && !opt.APP_GRID_ORDER;
         const spacing = folder ? opt.APP_GRID_FOLDER_SPACING : opt.APP_GRID_SPACING;
-        this._grid.set_style(`column-spacing: ${spacing}px; row-spacing: ${spacing}px;`);
+        this._grid.set_style(
+            `column-spacing: ${spacing}px;
+            max-column-spacing: ${spacing}px;
+            row-spacing: ${spacing}px;
+            max-row-spacing: ${spacing}px;`
+        );
 
         if (vertical) {
             this._scrollView.set_policy(St.PolicyType.NEVER, St.PolicyType.EXTERNAL);
@@ -823,7 +840,7 @@ const BaseAppViewCommon = {
         }
 
         this.emit('view-loaded');
-    
+
         this._updateFocusChain();
     },
 
@@ -958,13 +975,13 @@ const BaseAppViewGridLayoutHorizontal = {
         const ltr = container.get_text_direction() !== Clutter.TextDirection.RTL;
         const indicatorsWidth = this._getIndicatorsWidth(box);
 
-        const pageIndicatorsHeight = 20; // _appDisplay._pageIndicators.height is unstable, 20 is determined by the style
+        const pageIndicatorsHeight = opt.APP_GRID_SHOW_PAGE_INDICATORS ? 20 : 0; // _appDisplay._pageIndicators.height is unstable, 20 is determined by the style
         const availHeight = box.get_height() - pageIndicatorsHeight;
         const vPadding = Math.round((availHeight - availHeight * opt.APP_GRID_PAGE_HEIGHT_SCALE) / 2);
         this._grid.indicatorsPadding = new Clutter.Margin({
             left: indicatorsWidth,
             right: indicatorsWidth,
-            top: vPadding + pageIndicatorsHeight,
+            top: vPadding,
             bottom: vPadding,
         });
 
@@ -989,7 +1006,7 @@ const BaseAppViewGridLayoutHorizontal = {
         const arrowOffset = Math.round(
             this._grid._isFolder
                 ? -pageIndicatorsHeight
-                : (pageIndicatorsHeight - opt.APP_GRID_RESERVED_BOTTOM_SPACE) / 2
+                : (pageIndicatorsHeight - opt.APP_GRID_SPACING) / 2
         );
         this._previousPageArrow.translationY = arrowOffset;
         this._nextPageArrow.translationY = arrowOffset;
@@ -1103,7 +1120,7 @@ const BaseAppViewGridLayoutVertical = {
     vfunc_allocate(container, box) {
         const indicatorsHeight = this._getIndicatorsHeight(box);
 
-        const pageIndicatorsWidth = 20; // _appDisplay._pageIndicators.width is not stable, 20 is determined by the style
+        const pageIndicatorsWidth = opt.APP_GRID_SHOW_PAGE_INDICATORS ? 20 : 0; // _appDisplay._pageIndicators.width is not stable, 20 is determined by the style
         const availWidth = box.get_width() - pageIndicatorsWidth;
         const hPadding = Math.round((availWidth - availWidth * opt.APP_GRID_PAGE_WIDTH_SCALE) / 2);
 
@@ -1142,16 +1159,7 @@ const BaseAppViewGridLayoutVertical = {
 
 const AppGridCommon = {
     _updatePadding() {
-        const { rowSpacing, columnSpacing } = this.layoutManager;
-
         const padding = this._indicatorsPadding.copy();
-
-        padding.left += rowSpacing;
-        padding.right += rowSpacing;
-        padding.top += columnSpacing;
-        // Reserve space for long app names
-        padding.bottom += columnSpacing + opt.APP_GRID_RESERVED_BOTTOM_SPACE;
-
         this.layoutManager.pagePadding = padding;
     },
 };
@@ -1406,16 +1414,16 @@ const FolderGrid = GObject.registerClass({
         const { scaleFactor } = St.ThemeContext.get_for_stage(global.stage);
         const padding = this._indicatorsPadding.copy();
         let pageIndicatorSize = 0;
-        if (opt.ORIENTATION || this._view._pageIndicators._nPages > 1) {
-            pageIndicatorSize = Math.round(opt.ORIENTATION
+        if (opt.APP_GRID_SHOW_PAGE_INDICATORS && (opt.APP_GRID_ORIENTATION || this._view._pageIndicators._nPages > 1)) {
+            pageIndicatorSize = Math.round(opt.APP_GRID_ORIENTATION
                 ? this._view._pageIndicators.get_preferred_width(1000)[1] / scaleFactor
                 : this._view._pageIndicators.get_preferred_height(1000)[1] / scaleFactor);
         }
 
-        padding.left = opt.ORIENTATION ? pageIndicatorSize : 0;
+        padding.left = opt.APP_GRID_ORIENTATION ? pageIndicatorSize : 0;
         padding.right = 0;
-        padding.top = 0;
-        padding.bottom = pageIndicatorSize;
+        padding.top = opt.APP_GRID_FOLDER_SPACING;
+        padding.bottom = pageIndicatorSize + opt.APP_GRID_FOLDER_SPACING;
         this.layoutManager.pagePadding = padding;
     }
 });
@@ -1547,7 +1555,7 @@ const AppFolderDialog = {
                     this._view._deletingFolder = false;
                     return;
                 }
-                    this._removeButton._lastClick = Date.now();
+                this._removeButton._lastClick = Date.now();
             });
 
             this._entryBox.add_child(this._removeButton);
@@ -1714,13 +1722,13 @@ const AppFolderDialog = {
         const navigationArrowsSize = !opt.APP_GRID_SHOW_PAGE_ARROWS ? 0// padding + one arrow width is sufficient for both arrows
             : Math.round(view._nextPageArrow.get_preferred_width(-1)[1] / scaleFactor);
         let pageIndicatorSize = 0;
-        if (opt.ORIENTATION || view._pageIndicators._nPages > 1) {
-            pageIndicatorSize = opt.ORIENTATION
+        if (opt.APP_GRID_SHOW_PAGE_INDICATORS && (opt.APP_GRID_ORIENTATION || view._pageIndicators._nPages > 1)) {
+            pageIndicatorSize = opt.APP_GRID_ORIENTATION
                 ? view._pageIndicators.get_preferred_width(1000)[1] / scaleFactor
                 : view._pageIndicators.get_preferred_height(1000)[1] / scaleFactor;
         }
-        const horizontalNavigation = opt.ORIENTATION ? pageIndicatorSize : navigationArrowsSize; // either add padding or arrows
-        const verticalNavigation = opt.ORIENTATION ? navigationArrowsSize : pageIndicatorSize;
+        const horizontalNavigation = opt.APP_GRID_ORIENTATION ? pageIndicatorSize : navigationArrowsSize; // either add padding or arrows
+        const verticalNavigation = opt.APP_GRID_ORIENTATION ? navigationArrowsSize : pageIndicatorSize;
 
         // Horizontal size
         const baseWidth = horizontalNavigation + 3 * padding + 2 * margin;
@@ -2064,8 +2072,82 @@ const AppFolderDialog = {
 
 const AppIcon = {
     after__init() {
-        // update the app label behavior
+        // Update the app label behavior
         this._updateMultiline();
+        // Follow the dash dot style
+        if (this._updateRunningDotStyle)
+            this._updateRunningDotStyle();
+
+        // Add a package-type badge for app icons, excluding native apps and dash icons
+        if (!opt.APP_GRID_SHOW_PACKAGE_BADGE || !this.icon.label || !this._getPackageType())
+            return;
+
+        // Add the badge when the final app-icon size is available
+        this._realizeConId = this.connect('realize', () => {
+            this._updatePackageBadge();
+            // Update the badge position when the app-icon size changes
+            this.icon.connect('notify::size', () => {
+                this._updatePackageBadge();
+            });
+
+            if (this._realizeConId)
+                this.disconnect(this._realizeConId);
+            this._realizeConId = 0;
+        });
+    },
+
+    _getPackageType() {
+        const cmd = this.app.get_app_info().get_commandline();
+        let packageType = null;
+        if (cmd?.includes('/snap/') || cmd?.includes('snapd'))
+            packageType = 'snap';
+        else if (cmd?.includes('flatpak'))
+            packageType = 'flatpak';
+        else if (cmd?.toLowerCase().includes('.appimage'))
+            packageType = 'appimage';
+
+        return packageType;
+    },
+
+    _updatePackageBadge() {
+        if (!this._badge) {
+            const packageType = this._getPackageType();
+
+            if (!packageType)
+                return;
+
+            const path = Me.path;
+            const file = Gio.File.new_for_path(`${path}/icons/${packageType}.svg`);
+            const gicon = Gio.FileIcon.new(file);
+
+            const badge = new St.Icon({
+                gicon,
+                icon_size: PACKAGE_TYPE_BADGE_SIZE,
+                x_expand: true,
+                y_expand: true,
+                x_align: Clutter.ActorAlign.END,
+                y_align: Clutter.ActorAlign.START,
+            });
+
+            // Move the badge to the right edge of the app-icon tile
+            badge.translation_x = 8;
+
+            this._iconContainer.add_child(badge);
+            this._badge = badge;
+        }
+
+        // To hide the badge when the app is not selected, we will use a style with the width: 0
+        // The only drawback of this approach is the absence of transition
+        if (opt.APP_GRID_SHOW_PACKAGE_BADGE === 1) {
+            this._badge.remove_style_class_name('source-badge');
+            this._badge.add_style_class_name('source-badge-selected-only');
+        } else {
+            this._badge.add_style_class_name('source-badge-selected-only');
+            this._badge.add_style_class_name('source-badge');
+        }
+
+        // Move the badge to the bottom of the app icon
+        this._badge.translation_y = this.icon.iconSize - PACKAGE_TYPE_BADGE_SIZE;
     },
 
     // avoid accepting by placeholder when dragging active preview
@@ -2093,6 +2175,7 @@ const AppViewItemCommon = {
         const { label } = this.icon;
         if (label)
             label.opacity = 255;
+
         if (!this._expandTitleOnHover || !this.icon.label)
             return;
 
@@ -2155,7 +2238,8 @@ const AppViewItemCommon = {
 
 const PageIndicatorsCommon = {
     after_setNPages() {
-        this.visible = true;
-        this.opacity = this._nPages > 1 ? 255 : 0;
+        // Keep indicators "visible" even if nPages === 1 to preserve grid dimensions
+        this.visible = opt.APP_GRID_SHOW_PAGE_INDICATORS;
+        this.opacity = this._nPages > 1 ? 200 : 0;
     },
 };

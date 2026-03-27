@@ -17,6 +17,7 @@ import { PACKAGE_VERSION } from "resource:///org/gnome/Shell/Extensions/js/misc/
 import { developers } from "./metadata.js";
 
 function showAboutWindow(parent, { version, description: comments }) {
+  version = version ?? "development";
   const abt = new Adw.AboutWindow({
     ...(parent && { transient_for: parent }),
     // TODO: fetch these from github at build time
@@ -136,7 +137,7 @@ export class SettingsPage extends PreferencesPage {
         title: _("Logger"),
         children: [
           new DropDownRow({
-            title: _("Logger Level"),
+            title: _("Log level"),
             settings,
             bind: "log-level",
             items: Object.entries(Logger.LOG_LEVELS).map(([name, id]) => ({ id, name })),

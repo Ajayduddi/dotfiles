@@ -57,6 +57,7 @@ let opt;
 export default class VShell extends Extension.Extension {
     _init() {
         Me = {};
+        Me.path = this.path;
         // Place for runtime variables
         Me.run = {};
 
@@ -397,7 +398,7 @@ export default class VShell extends Extension.Extension {
                     _moveWinToMonitor();
                 }
             });
-        } else if ((nMonitors.length === 1 || !opt.FIX_NEW_WINDOW_MONITOR) && this._newWindowCreatedConId) {
+        } else if ((nMonitors === 1 || !opt.FIX_NEW_WINDOW_MONITOR) && this._newWindowCreatedConId) {
             global.display.disconnect(this._newWindowCreatedConId);
             this._newWindowCreatedConId = 0;
         }
@@ -463,6 +464,10 @@ export default class VShell extends Extension.Extension {
 
         if (this._sessionLockActive)
             Main.layoutManager.panelBox.translation_y = 0;
+
+        // Even if the dash module is disabled, we need to add the top margin for proper spacing
+        if (!reset && !Me.Modules.dashModule.moduleEnabled)
+            Main.overview.dash.add_style_class_name('dash-top-margin');
     }
 
     _onShowingOverview() {

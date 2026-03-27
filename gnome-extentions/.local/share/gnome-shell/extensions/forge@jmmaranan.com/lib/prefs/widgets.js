@@ -22,6 +22,7 @@ export class PreferencesPage extends Adw.PreferencesPage {
     for (const child of children) group.add(child);
     if (header_suffix) group.set_header_suffix(header_suffix);
     this.add(group);
+    return group;
   }
 }
 
@@ -87,7 +88,7 @@ export class SpinButtonRow extends Adw.ActionRow {
   }) {
     super({ title, subtitle });
     const gspin = Gtk.SpinButton.new_with_range(low, high, step);
-    gspin.valign = Gtk.Align.CENTER;
+    gspin.xalign = 1;
     if (bind && settings) {
       settings.bind(bind, gspin, "value", Gio.SettingsBindFlags.DEFAULT);
     } else if (init) {
@@ -97,6 +98,7 @@ export class SpinButtonRow extends Adw.ActionRow {
       });
     }
     this.add_suffix(gspin);
+    this.set_css_classes(["spin"]);
     this.activatable_widget = gspin;
   }
 }
@@ -211,20 +213,54 @@ export class DropDownRow extends Adw.ActionRow {
   }
 }
 
+export class ClearButton extends Gtk.Button {
+  static {
+    GObject.registerClass(this);
+  }
+  constructor({ settings = undefined, bind = undefined, onClear }) {
+    super({
+      icon_name: "edit-clear-symbolic",
+      tooltip_text: _("Clear shortcut"),
+      css_classes: ["flat", "circular"],
+      valign: Gtk.Align.CENTER,
+    });
+    this.connect("clicked", () => {
+      onClear?.();
+    });
+  }
+}
+
 export class ResetButton extends Gtk.Button {
   static {
     GObject.registerClass(this);
   }
-
   constructor({ settings = undefined, bind = undefined, onReset }) {
     super({
       icon_name: "edit-undo-symbolic",
-      tooltip_text: _("Reset"),
+      tooltip_text: _("Reset to default"),
+      css_classes: ["flat", "circular"],
       valign: Gtk.Align.CENTER,
     });
     this.connect("clicked", () => {
       settings?.reset(bind);
       onReset?.();
+    });
+  }
+}
+
+export class RemoveButton extends Gtk.Button {
+  static {
+    GObject.registerClass(this);
+  }
+  constructor({ item, parent, onRemove }) {
+    super({
+      icon_name: "edit-delete-symbolic",
+      tooltip_text: _("Remove Item"),
+      css_classes: ["flat", "circular"],
+      valign: Gtk.Align.CENTER,
+    });
+    this.connect("clicked", () => {
+      onRemove?.(item, parent);
     });
   }
 }
@@ -248,6 +284,15 @@ export class EntryRow extends Adw.EntryRow {
     const current = map ? map.from(settings, bind) : settings.get_string(bind);
     this.set_text(current ?? "");
     this.add_suffix(
+      new ClearButton({
+        settings,
+        bind,
+        onClear: () => {
+          this.set_text("");
+        },
+      })
+    );
+    this.add_suffix(
       new ResetButton({
         settings,
         bind,
@@ -266,7 +311,7 @@ export class RadioRow extends Adw.ActionRow {
 
   static orientation = Gtk.Orientation.HORIZONTAL;
 
-  static spacing = 10;
+  static spacing = 3;
 
   static valign = Gtk.Align.CENTER;
 
@@ -281,6 +326,7 @@ export class RadioRow extends Adw.ActionRow {
       const toggle = new Gtk.ToggleButton({ label, ...(group && { group }) });
       group ||= toggle;
       toggle.active = key === current;
+      toggle.set_css_classes(["flat"]);
       toggle.connect("clicked", () => {
         if (toggle.active) {
           settings.set_string(bind, labels[toggle.label]);
@@ -289,5 +335,22 @@ export class RadioRow extends Adw.ActionRow {
       hbox.append(toggle);
     }
     this.add_suffix(hbox);
+  }
+}
+
+export class RemoveItemRow extends Adw.ActionRow {
+  static {
+    GObject.registerClass(this);
+  }
+
+  constructor({ title, subtitle = "", onRemove = undefined }) {
+    super({ title, subtitle });
+    const rmbutton = new RemoveButton({
+      item: subtitle,
+      parent: this,
+      onRemove: onRemove,
+    });
+
+    this.add_suffix(rmbutton);
   }
 }

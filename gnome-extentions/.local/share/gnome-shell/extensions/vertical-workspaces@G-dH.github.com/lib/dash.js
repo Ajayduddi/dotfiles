@@ -37,8 +37,6 @@ export const BaseIconSizes = [16, 24, 32, 40, 44, 48, 56, 64, 72, 80, 96, 112, 1
 
 const DASH_ITEM_LABEL_SHOW_TIME = 150;
 
-const shellVersion45 = !!Clutter.Container; // Container has been removed since GS 46
-
 export const DashModule = class {
     constructor(me) {
         Me = me;
@@ -133,8 +131,8 @@ export const DashModule = class {
 
         this._overrides.addOverride('DashItemContainer', Dash.DashItemContainer.prototype, DashItemContainerCommon);
         this._overrides.addOverride('DashCommon', Dash.Dash.prototype, DashCommon);
-        this._overrides.addOverride('AppIcon', AppDisplay.AppIcon.prototype, AppIconCommon);
         this._overrides.addOverride('DashIcon', Dash.DashIcon.prototype, DashIconCommon);
+        this._overrides.addOverride('AppIcon', AppDisplay.AppIcon.prototype, AppIconCommon);
         this._overrides.addOverride('AppMenu', AppMenu.AppMenu.prototype, AppMenuCommon);
 
         if (opt.DASH_VERTICAL) {
@@ -837,11 +835,7 @@ const DashCommon = {
 
 const AppIconCommon = {
     after__init() {
-        if (this._updateRunningDotStyle)
-            this._updateRunningDotStyle();
-    },
-
-    _updateRunningDotStyle() {
+        // Override for appDisplay icons so their indicators follow the dash dot style.
         if (opt.RUNNING_DOT_STYLE)
             this._dot.add_style_class_name('app-grid-running-dot-custom');
         else
@@ -856,6 +850,7 @@ const AppIconCommon = {
         const isShiftPressed = Me.Util.isShiftPressed(state);
         const isCtrlPressed = Me.Util.isCtrlPressed(state);
         const appIsRunning = this.app.state === Shell.AppState.RUNNING;
+        const appFocused = this.app.get_windows().length && this.app.get_windows()[0] === global.display.get_tab_list(0, null)[0];
         const appRecentWorkspace = this._getAppRecentWorkspace(this.app);
         const targetWindowOnCurrentWs = this._isTargetWindowOnCurrentWs(appRecentWorkspace);
 
@@ -885,8 +880,11 @@ const AppIconCommon = {
                 this.app.activate();
                 return;
             } else if (staticWorkspace) {
-                // spread windows
-                Me.Util.exposeWindows();
+                if (appFocused)
+                    // spread windows
+                    Me.Util.exposeWindowsWithOverviewTransition();
+                else
+                    this.app.activate();
                 return;
             } else {
                 this.app.activate();
@@ -904,7 +902,12 @@ const AppIconCommon = {
             this.app.activate();
         }
 
-        Main.overview.hide();
+        // Activate GNOME Settings window and move it to the current workspace if needed
+        if (this.app.id.match(/gnome-.+-panel.desktop/))
+            Me.Util.openPreferences({ wmClass: 'org.gnome.Settings' });
+
+        // Delay transition to the desktop so the previous actions have time to complete
+        GLib.idle_add(GLib.PRIORITY_LOW, () => Main.overview.hide(event));
     },
 
     _shouldOpenNewWindow(appIsRunning, isMiddleButton, isShiftPressed, isCtrlPressed, targetWindowOnCurrentWs) {
@@ -1080,6 +1083,20 @@ const DashIconCommon = {
             this._scrollConId = this.connect('scroll-event', DashExtensions.onScrollEvent.bind(this));
             this._leaveConId = this.connect('leave-event', DashExtensions.onLeaveEvent.bind(this));
         }
+
+        this._dot.translation_x = 0;
+        // _updateDotStyle() has been added in GS 46.2 to apply translation_y value from the CSS on style change
+        if (Me.shellVersion < 46.2 && !opt.DASH_VERTICAL)
+            this._dot.translation_y = 8;
+
+        // GS 46.0 (Ubuntu) only
+        if (opt.DASH_VERTICAL)
+            this._dot.translationY = 0;
+
+        if (opt.RUNNING_DOT_STYLE)
+            this._dot.add_style_class_name('app-grid-running-dot-custom');
+        else
+            this._dot.remove_style_class_name('app-grid-running-dot-custom');
     },
 
     popupMenu() {
@@ -1087,25 +1104,11 @@ const DashIconCommon = {
         AppIconCommon.popupMenu.bind(this)(side);
     },
 
-    _updateRunningDotStyle() {
-        if (opt.RUNNING_DOT_STYLE)
-            this._dot.add_style_class_name('app-grid-running-dot-custom');
-        else
-            this._dot.remove_style_class_name('app-grid-running-dot-custom');
-
-        if (opt.DASH_BG_COLOR)
-            this._dot.add_style_class_name('app-grid-running-dot-offset');
-        else
-            this._dot.remove_style_class_name('app-grid-running-dot-offset');
-
-        this._dot.translation_x = 0;
-        // _updateDotStyle() has been added in GS 46.2 to apply translation_y value from the CSS on style change
-        if (!shellVersion45 && !this._updateDotStyle && !opt.DASH_VERTICAL)
-            this._dot.translation_y = 8;
-
-        // GS 46.0 (Ubuntu) only
-        if (opt.DASH_VERTICAL)
-            this._dot.translationY = 0;
+    _updateDotStyle() {
+        let offsetY = this._dot.get_theme_node().get_length('offset-y');
+        const borderWidth = Main.overview.dash._background.get_theme_node().get_border_width(false);
+        offsetY += offsetY < 0 ? -borderWidth : 0;
+        this._dot.translationY = offsetY;
     },
 
     _updateRunningStyle() {
