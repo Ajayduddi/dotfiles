@@ -1,14 +1,9 @@
 #!/bin/bash
-#
-# AUTOMATED FIREWALL RULES UPDATE SCRIPT
-# Automatically updates firewall rules based on suspicious and malware data
-# Supports multiple operating systems and firewall systems
-# Version: 1.1.0
-# Last Updated: $(date +%Y-%m-%d)
-#
+# Automated firewall update script for multi-OS threat-intelligence-driven IP blocking.
+# Primary stages: parse options, preflight dependencies/sources, process feeds, apply firewall rules, report.
+# Safety model: default non-strict execution tracks errors and continues where safe; dry-run previews actions.
 # Author: Ajay Duddi
 # Repository: https://github.com/Ajayduddi/dotfiles
-#
 
 # Remove set -e for robust execution - handle errors gracefully instead
 # set -e  # Commented out to prevent script from exiting on non-critical errors
@@ -31,7 +26,6 @@ CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/firewall-update.conf"
 
 # Default global variables (can be overridden by config file)
 DOTFILES_DIR="$HOME/.dotfiles"
-SCRIPTS_DIR="$DOTFILES_DIR/scripts"
 FIREWALL_DATA_DIR=$(mktemp -d)  # Safer temporary directory creation
 BACKUP_DIR="$DOTFILES_DIR/firewall_backups"
 CACHE_DIR="$DOTFILES_DIR/.firewall_cache"  # Persistent cache directory
@@ -39,6 +33,7 @@ DRY_RUN=false
 VERBOSE=false
 FORCE=false
 AUTO_UPDATE=false
+STRICT_EXIT="${STRICT_EXIT:-false}"
 CUSTOM_SOURCES=""
 MIN_IPS_THRESHOLD=10  # Minimum number of IPs required for validation
 MAX_BACKUPS_TO_KEEP=10  # Maximum number of backup files to keep
@@ -71,6 +66,9 @@ MALWARE_SOURCES=(
     "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"                    # Emerging Threats - Compromised IPs
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cybercrime.ipset"  # FireHOL Cybercrime tracker
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset" # FireHOL Level 1 - High confidence threats
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/feodo_badips.ipset" # Abuse.ch Feodo bad IPs
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/et_block.netset"    # Emerging Threats blocklist
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/spamhaus_edrop.netset" # Spamhaus EDROP
 )
 
 # Suspicious activity and threat indicators
@@ -78,6 +76,7 @@ SUSPICIOUS_SOURCES=(
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level2.netset"  # FireHOL Level 2 - Medium confidence
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"        # Tor exit nodes
     "https://www.dshield.org/block.txt"                                                        # DShield Top Attackers
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/dshield_30d.netset"     # DShield rolling 30-day netset
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/botscout.ipset"         # BotScout - Known bots
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cleantalk_new_1d.ipset" # CleanTalk - Recent spammers (1 day)
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/greensnow.ipset"        # GreenSnow - Suspicious IPs
@@ -90,8 +89,9 @@ SUSPICIOUS_SOURCES=(
 
 # Additional specialized sources (can be enabled via config)
 SPECIALIZED_SOURCES=(
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_hosts.ipset"     # CoinBlocker - Cryptocurrency miners (working URL)
-    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxy_list.ipset"      # Open proxy servers (working URL)
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cta_cryptowall.ipset"   # Cryptowall/C2 related IPs (IP/CIDR format)
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/sslproxies.ipset"       # SSL proxy servers (IP/CIDR format)
+    "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level3.netset" # FireHOL Level 3 - Broader threat coverage
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"       # Tor exit nodes
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/botscout.ipset"        # BotScout - Known bots
     "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/stopforumspam.ipset"   # Stop Forum Spam
@@ -125,9 +125,18 @@ parse_arguments() {
                 shift
                 ;;
             --sources|-s)
+                if [[ $# -lt 2 || "$2" == -* ]]; then
+                    echo -e "${RED}❌ --sources requires a file path argument${NC}"
+                    return 1
+                fi
                 CUSTOM_SOURCES="$2"
                 echo -e "${CYAN}📋 CUSTOM SOURCES: Using custom threat sources${NC}"
                 shift 2
+                ;;
+            --strict-exit)
+                STRICT_EXIT=true
+                echo -e "${CYAN}🚦 STRICT EXIT MODE: Non-zero exit when errors/warnings occur${NC}"
+                shift
                 ;;
             --enable-specialized)
                 ENABLE_SPECIALIZED_SOURCES=true
@@ -164,6 +173,7 @@ parse_arguments() {
     done
 }
 
+# Print script usage, behavior notes, and environment configuration help.
 show_help() {
     cat << EOF
 🛡️ AUTOMATED FIREWALL RULES UPDATE SCRIPT
@@ -183,6 +193,7 @@ OPTIONS:
   --force, -f                Apply changes without confirmation
   --auto-update, -a          Enable automatic updates without prompts
   --sources, -s FILE         Use custom threat sources from file
+  --strict-exit              Exit non-zero when the run has any errors/warnings
   --enable-specialized       Enable additional specialized threat sources
   --enable-proxy-blocking    Enable blocking of proxy servers and anonymizers
   --enable-crypto-blocking   Enable blocking of cryptocurrency mining IPs
@@ -247,28 +258,33 @@ log_info() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
+# Emit a structured log line for this severity level.
 log_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
     ((SCRIPT_ERRORS++))
 }
 
+# Emit a structured log line for this severity level.
 log_error() {
     echo -e "${RED}❌ $1${NC}"
     ((SCRIPT_ERRORS++))
 }
 
+# Emit a structured log line for this severity level.
 log_critical_error() {
     echo -e "${RED}💥 CRITICAL ERROR: $1${NC}"
     CRITICAL_ERROR=true
     ((SCRIPT_ERRORS++))
 }
 
+# Emit a structured log line for this severity level.
 log_debug() {
     if [ "$VERBOSE" = true ]; then
         echo -e "${CYAN}🔍 $1${NC}"
     fi
 }
 
+# Emit a structured log line for this severity level.
 log_section() {
     echo -e "\n${BLUE}🔷 $1${NC}"
     echo "======================================"
@@ -307,7 +323,7 @@ confirm_action() {
         return 1  # Don't proceed with action in dry run mode
     fi
     
-    read -p "$message [y/N] " response
+    read -r -p "$message [y/N] " response
     case "$response" in
         [yY][eE][sS]|[yY]) 
             return 0
@@ -468,6 +484,125 @@ detect_package_manager() {
     log_debug "Package manager: $PACKAGE_MANAGER"
 }
 
+# Cross-platform file helpers
+get_file_mtime() {
+    local file="$1"
+    if stat -c %Y "$file" >/dev/null 2>&1; then
+        stat -c %Y "$file" 2>/dev/null || echo 0
+        return 0
+    fi
+    if stat -f %m "$file" >/dev/null 2>&1; then
+        stat -f %m "$file" 2>/dev/null || echo 0
+        return 0
+    fi
+    echo 0
+}
+
+# Compute a cross-platform content hash used by cache-change detection.
+compute_file_hash() {
+    local file="$1"
+    if command -v md5sum >/dev/null 2>&1; then
+        md5sum "$file" 2>/dev/null | awk '{print $1}'
+        return 0
+    fi
+    if command -v md5 >/dev/null 2>&1; then
+        md5 -q "$file" 2>/dev/null
+        return 0
+    fi
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" 2>/dev/null | awk '{print $1}'
+        return 0
+    fi
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$file" 2>/dev/null | awk '{print $1}'
+        return 0
+    fi
+    if command -v cksum >/dev/null 2>&1; then
+        cksum "$file" 2>/dev/null | awk '{print $1 "-" $2}'
+        return 0
+    fi
+    echo ""
+}
+
+# Download remote source data and stage it for local processing.
+download_to_file() {
+    local source="$1"
+    local out_file="$2"
+    case "$DOWNLOAD_CMD" in
+        curl)
+            curl -s -L --connect-timeout 30 --max-time "$DOWNLOAD_TIMEOUT" "$source" -o "$out_file" 2>/dev/null
+            ;;
+        wget)
+            wget -q -T "$DOWNLOAD_TIMEOUT" -t "$DOWNLOAD_RETRIES" -O "$out_file" "$source" 2>/dev/null
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Return success when the requested condition is true.
+is_source_url_format_valid() {
+    local source="$1"
+    [[ "$source" =~ ^https?://[^[:space:]]+$ ]]
+}
+
+# Check whether a downloaded source includes at least one IP/CIDR-like entry.
+source_has_ip_data() {
+    local file="$1"
+    grep -qE '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?' "$file" 2>/dev/null
+}
+
+# Run preflight checks before making system or firewall changes.
+preflight_download_source() {
+    local source="$1"
+    local out_file="$2"
+    local retry_count=0
+
+    while [ "$retry_count" -lt "$DOWNLOAD_RETRIES" ]; do
+        if download_to_file "$source" "$out_file"; then
+            return 0
+        fi
+        ((retry_count++))
+        [ "$retry_count" -lt "$DOWNLOAD_RETRIES" ] && sleep 1
+    done
+    return 1
+}
+
+# Deduplicate source URLs while preserving deterministic processing order.
+dedupe_sources() {
+    local deduped=()
+    local source existing
+
+    for source in "$@"; do
+        local found=false
+        for existing in "${deduped[@]}"; do
+            if [ "$existing" = "$source" ]; then
+                found=true
+                break
+            fi
+        done
+        if [ "$found" = false ]; then
+            deduped+=("$source")
+        fi
+    done
+
+    printf '%s\n' "${deduped[@]}"
+}
+
+# Run preflight checks before making system or firewall changes.
+preflight_failure_exists() {
+    local source="$1"
+    local reason="$2"
+    local i
+    for i in "${!preflight_failed_sources[@]}"; do
+        if [ "${preflight_failed_sources[$i]}" = "$source" ] && [ "${preflight_failed_reasons[$i]}" = "$reason" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Cache management functions
 setup_cache_directory() {
     if [ ! -d "$CACHE_DIR" ]; then
@@ -482,14 +617,16 @@ setup_cache_directory() {
 # Function to get cache file path for a source
 get_cache_file() {
     local source="$1"
-    local cache_name=$(echo "$source" | sed 's|[^a-zA-Z0-9]|_|g')
+    local cache_name
+    cache_name=$(printf '%s' "$source" | sed 's|[^a-zA-Z0-9]|_|g')
     echo "$CACHE_DIR/${cache_name}.cache"
 }
 
 # Function to get hash file path for a source
 get_hash_file() {
     local source="$1"
-    local cache_name=$(echo "$source" | sed 's|[^a-zA-Z0-9]|_|g')
+    local cache_name
+    cache_name=$(printf '%s' "$source" | sed 's|[^a-zA-Z0-9]|_|g')
     echo "$CACHE_DIR/${cache_name}.hash"
 }
 
@@ -502,7 +639,9 @@ is_cache_valid() {
         return 1  # Cache doesn't exist
     fi
     
-    local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0)))
+    local cache_mtime
+    cache_mtime=$(get_file_mtime "$cache_file")
+    local cache_age=$(( $(date +%s) - cache_mtime ))
     if [ "$cache_age" -gt "$max_age_seconds" ]; then
         log_debug "Cache expired for: $(basename "$cache_file")"
         return 1  # Cache expired
@@ -515,10 +654,17 @@ is_cache_valid() {
 has_source_changed() {
     local source="$1"
     local temp_file="$2"
-    local hash_file=$(get_hash_file "$source")
+    local hash_file
+    hash_file=$(get_hash_file "$source")
     
-    local new_hash=$(md5sum "$temp_file" 2>/dev/null | cut -d' ' -f1)
+    local new_hash
+    new_hash=$(compute_file_hash "$temp_file")
     local old_hash=""
+
+    if [ -z "$new_hash" ]; then
+        log_warning "Unable to compute hash for $(basename "$temp_file"); treating source as changed"
+        return 0
+    fi
     
     if [ -f "$hash_file" ]; then
         old_hash=$(cat "$hash_file" 2>/dev/null)
@@ -557,7 +703,8 @@ get_existing_ips() {
     # For firewalld ipsets, always use firewall-cmd
     $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null > "$output_file" || touch "$output_file"
     
-    local count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local count
+    count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
     log_debug "Found $count existing IPs in ipset: $ipset_name"
     return 0
 }
@@ -583,8 +730,10 @@ update_ipset_incremental() {
         touch "$remove_ips_file"  # Empty file if not doing cleanup
     fi
     
-    local add_count=$(wc -l < "$add_ips_file" 2>/dev/null || echo 0)
-    local remove_count=$(wc -l < "$remove_ips_file" 2>/dev/null || echo 0)
+    local add_count
+    add_count=$(wc -l < "$add_ips_file" 2>/dev/null || echo 0)
+    local remove_count
+    remove_count=$(wc -l < "$remove_ips_file" 2>/dev/null || echo 0)
     
     log_debug "Incremental update for $ipset_name: +$add_count IPs, -$remove_count IPs"
     
@@ -618,13 +767,9 @@ update_ipset_incremental() {
 
 # Advanced Dynamic Progress Bar System with Timing and Performance Optimization
 PROGRESS_ACTIVE=false
-LAST_PROGRESS_UPDATE=0
 LAST_PERCENTAGE=0
-PROGRESS_TOTAL=0
-PROGRESS_CURRENT=0
 PROGRESS_START_TIME=0
 PROGRESS_LAST_UPDATE_TIME=0
-PROGRESS_UPDATE_INTERVAL=0.1  # Minimum seconds between updates
 
 # Advanced dynamic progress bar with timing and performance optimization
 show_progress() {
@@ -638,7 +783,8 @@ show_progress() {
     if ! [[ "$total" =~ ^[0-9]+$ ]] || [ "$total" -eq 0 ]; then total=100; fi
     
     # Simple time-based throttling for performance (using integer seconds)
-    local current_time=$(date +%s)
+    local current_time
+    current_time=$(date +%s)
     if [ "$current" -ne "$total" ] && [ -n "$PROGRESS_LAST_UPDATE_TIME" ] && [ "$PROGRESS_LAST_UPDATE_TIME" -gt 0 ]; then
         local time_diff=$((current_time - PROGRESS_LAST_UPDATE_TIME))
         if [ "$time_diff" -eq 0 ] && [ "$current" -ne "$total" ]; then
@@ -646,10 +792,6 @@ show_progress() {
         fi
     fi
     PROGRESS_LAST_UPDATE_TIME="$current_time"
-    
-    # Update global progress tracking
-    PROGRESS_CURRENT="$current"
-    PROGRESS_TOTAL="$total"
     
     local percentage=$((current * 100 / total))
     
@@ -731,8 +873,6 @@ start_progress_bar() {
     PROGRESS_START_TIME=$(date +%s)
     PROGRESS_LAST_UPDATE_TIME=0
     LAST_PERCENTAGE=0
-    PROGRESS_TOTAL="$estimated_total"
-    PROGRESS_CURRENT=0
     show_progress 0 "$estimated_total" "$operation_name"
 }
 
@@ -755,7 +895,8 @@ stop_progress_bar() {
         # Calculate final timing information (using integer arithmetic)
         local timing_suffix=""
         if [ "$PROGRESS_START_TIME" -gt 0 ]; then
-            local end_time=$(date +%s)
+            local end_time
+            end_time=$(date +%s)
             local total_time=$((end_time - PROGRESS_START_TIME))
             if [ "$total_time" -gt 0 ]; then
                 if [ "$total_time" -lt 60 ]; then
@@ -777,8 +918,6 @@ stop_progress_bar() {
         fi
         PROGRESS_ACTIVE=false
         LAST_PERCENTAGE=0
-        PROGRESS_TOTAL=0
-        PROGRESS_CURRENT=0
         PROGRESS_START_TIME=0
         PROGRESS_LAST_UPDATE_TIME=0
     fi
@@ -796,7 +935,8 @@ deduplicate_ips_advanced() {
         return 0
     fi
     
-    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    local total_input
+    total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
     local temp_file="$FIREWALL_DATA_DIR/temp_dedup_$$"
     
     # Step 1: Clean and validate IPs (fast processing)
@@ -818,7 +958,8 @@ deduplicate_ips_advanced() {
     fi
     
     # Step 4: Final validation
-    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local final_count
+    final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
     local excluded=$((total_input - final_count))
     
     # Clean up
@@ -840,7 +981,8 @@ resolve_cidr_overlaps() {
         return 0
     fi
     
-    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    local total_input
+    total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
     local temp_file="$FIREWALL_DATA_DIR/temp_cidr_$$"
     
     # Step 1: Separate individual IPs from CIDR ranges
@@ -894,7 +1036,8 @@ resolve_cidr_overlaps() {
         touch "$output_file"
     fi
     
-    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local final_count
+    final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
     local removed=$((total_input - final_count))
     
     # Cleanup
@@ -920,18 +1063,19 @@ process_ips_ultra_fast() {
     local temp_dir="$FIREWALL_DATA_DIR/ultra_fast_$$"
     mkdir -p "$temp_dir"
     
-    local total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
+    local total_input
+    total_input=$(wc -l < "$input_file" 2>/dev/null || echo 0)
     
     # Step 1: Parallel preprocessing with chunks
     local chunk_size=50000
-    local num_chunks=$(( (total_input + chunk_size - 1) / chunk_size ))
     local processed_chunks=0
     
     # Create chunks for parallel processing
     split -l "$chunk_size" "$input_file" "$temp_dir/chunk_" 2>/dev/null
     
     # Process chunks in parallel (limited to CPU cores)
-    local max_parallel=$(nproc 2>/dev/null || echo 4)
+    local max_parallel
+    max_parallel=$(nproc 2>/dev/null || echo 4)
     local active_jobs=0
     
     for chunk_file in "$temp_dir"/chunk_*; do
@@ -1006,7 +1150,8 @@ process_ips_ultra_fast() {
     fi
     
     # Calculate final statistics
-    local final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
+    local final_count
+    final_count=$(wc -l < "$output_file" 2>/dev/null || echo 0)
     local total_valid=0
     for count_file in "$temp_dir"/*.count; do
         [ -f "$count_file" ] && total_valid=$((total_valid + $(cat "$count_file")))
@@ -1033,7 +1178,8 @@ add_ips_to_ipset_bulk() {
         return 0  # No IPs to add
     fi
     
-    local total_ips=$(wc -l < "$ips_file")
+    local total_ips
+    total_ips=$(wc -l < "$ips_file")
     
     if [ "$DRY_RUN" = true ]; then
         log_debug "Would add $total_ips IPs to ipset: $ipset_name"
@@ -1041,7 +1187,8 @@ add_ips_to_ipset_bulk() {
     fi
     
     echo "📥 Adding $total_ips IPs to ipset: $ipset_name"
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     # Skip Python helper - use native methods directly for reliability
     
@@ -1064,10 +1211,11 @@ add_ips_to_ipset_bulk() {
                 if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $total_ips ]; then
                     if [ -s "$temp_batch" ]; then
                         if $SUDO_CMD ipset restore -exist < "$temp_batch" 2>/dev/null; then
-                            local batch_count=$(wc -l < "$temp_batch")
+                            local batch_count
+                            batch_count=$(wc -l < "$temp_batch")
                             ((successful += batch_count))
                         fi
-                        > "$temp_batch"  # Clear the batch file
+                        : > "$temp_batch"  # Clear the batch file
                     fi
                     
                     # Show progress every 25k IPs
@@ -1081,7 +1229,8 @@ add_ips_to_ipset_bulk() {
         rm -f "$temp_batch"
         
         if [ $successful -gt 0 ]; then
-            local end_time=$(date +%s)
+            local end_time
+            end_time=$(date +%s)
             local duration=$((end_time - start_time))
             local rate=$((successful / (duration + 1)))
             echo "✅ Added $successful IPs using native ipset restore ($rate IPs/sec)"
@@ -1106,10 +1255,11 @@ add_ips_to_ipset_bulk() {
             if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $total_ips ]; then
                 if [ -s "$temp_batch" ]; then
                     if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entries-from-file="$temp_batch" >/dev/null 2>&1; then
-                        local batch_count=$(wc -l < "$temp_batch")
+                        local batch_count
+                        batch_count=$(wc -l < "$temp_batch")
                         ((successful += batch_count))
                     fi
-                    > "$temp_batch"  # Clear the batch file
+                    : > "$temp_batch"  # Clear the batch file
                 fi
                 
                 # Show progress every 20k IPs
@@ -1123,7 +1273,8 @@ add_ips_to_ipset_bulk() {
     rm -f "$temp_batch"
     
     if [ $successful -gt 0 ]; then
-        local end_time=$(date +%s)
+        local end_time
+        end_time=$(date +%s)
         local duration=$((end_time - start_time))
         local rate=$((successful / (duration + 1)))
         echo "✅ Added $total_ips IPs using firewall-cmd bulk ($rate IPs/sec)"
@@ -1150,7 +1301,8 @@ add_ips_to_ipset_bulk() {
     for batch_file in "${batch_files[@]}"; do
         if [ -f "$batch_file" ]; then
             ((processed_batches++))
-            local batch_size_actual=$(wc -l < "$batch_file")
+            local batch_size_actual
+            batch_size_actual=$(wc -l < "$batch_file")
             
             update_progress "$total_added" "$total_ips" "Processing batch $processed_batches/$total_batches"
             
@@ -1184,7 +1336,8 @@ add_ips_to_ipset_bulk() {
     rm -rf "$temp_batch_dir"
     
     # Performance summary
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     local rate=$((total_added / (duration + 1)))  # +1 to avoid division by zero
     stop_progress_bar "✅ Added $total_added/$total_ips IPs using batch processing ($rate IPs/sec)"
@@ -1202,7 +1355,8 @@ remove_ips_from_ipset_bulk() {
     fi
     
     if [ "$DRY_RUN" = true ]; then
-        local count=$(wc -l < "$ips_file")
+        local count
+        count=$(wc -l < "$ips_file")
         log_debug "Would remove $count IPs from ipset: $ipset_name"
         return 0
     fi
@@ -1249,6 +1403,26 @@ check_prerequisites() {
     # Setup cache directory
     setup_cache_directory
     
+    # Check for download tools
+    if command -v curl &> /dev/null; then
+        DOWNLOAD_CMD="curl"
+        log_debug "Using curl for downloads"
+    elif command -v wget &> /dev/null; then
+        DOWNLOAD_CMD="wget"
+        log_debug "Using wget for downloads"
+    else
+        handle_error "Neither curl nor wget is available. Please install one of them:" false
+        suggest_package_install "curl"
+        if [ "$FORCE" = false ]; then
+            return 1
+        fi
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "Dry-run mode: skipping sudo/firewall state checks; source preflight will still run"
+        return 0
+    fi
+
     # Check native ipset support
     check_native_ipset_support
     
@@ -1274,21 +1448,6 @@ check_prerequisites() {
     if ! check_firewall_system; then
         handle_error "Firewall system check failed" true
         return 1
-    fi
-    
-    # Check for download tools
-    if command -v curl &> /dev/null; then
-        DOWNLOAD_CMD="curl -s -L --connect-timeout 30 --max-time 300"
-        log_debug "Using curl for downloads"
-    elif command -v wget &> /dev/null; then
-        DOWNLOAD_CMD="wget -q -T 30 -t 3 -O -"
-        log_debug "Using wget for downloads"
-    else
-        handle_error "Neither curl nor wget is available. Please install one of them:" false
-        suggest_package_install "curl"
-        if [ "$FORCE" = false ]; then
-            return 1
-        fi
     fi
     
     log_info "All prerequisites satisfied"
@@ -1419,20 +1578,22 @@ backup_firewall_rules() {
     # Clean up old backups (keep only last 5 backup sets)
     if [ -d "$BACKUP_DIR" ]; then
         # Count backup sets (not individual files)
-        local backup_sets=$(find "$BACKUP_DIR" -name "firewall_backup_*.zones" -type f | wc -l)
+        local backup_sets
+        backup_sets=$(find "$BACKUP_DIR" -name "firewall_backup_*.zones" -type f | wc -l)
         if [ "$backup_sets" -gt 5 ]; then
             log_info "🧹 Cleaning up old backups (found $backup_sets sets, keeping latest 5)..."
             # Get the timestamps of old backup sets to remove
             find "$BACKUP_DIR" -name "firewall_backup_*.zones" -type f -printf '%T@ %f\n' | \
             sort -n | head -n -5 | cut -d' ' -f2 | sed 's/\.zones$//' | \
-            while read backup_base; do
+            while read -r backup_base; do
                 rm -f "$BACKUP_DIR/${backup_base}".* 2>/dev/null || true
                 log_debug "Removed old backup set: ${backup_base}"
             done
         fi
     fi
     
-    local backup_file="$BACKUP_DIR/firewall_backup_$(date +%Y%m%d_%H%M%S)"
+    local backup_file
+    backup_file="$BACKUP_DIR/firewall_backup_$(date +%Y%m%d_%H%M%S)"
     
     if [ "$DRY_RUN" = false ]; then
         case "$FIREWALL_TYPE" in
@@ -1524,10 +1685,12 @@ download_single_source() {
     log_debug "Downloading from source $source_index/$total_sources: $source"
     
     # Check cache first
-    local cache_file=$(get_cache_file "$source")
+    local cache_file
+    cache_file=$(get_cache_file "$source")
     if is_cache_valid "$cache_file" && [ "$FORCE" = false ]; then
         log_debug "Using cached data for: $(basename "$source")"
-        local processed_count=$(wc -l < "$cache_file" 2>/dev/null || echo 0)
+        local processed_count
+        processed_count=$(wc -l < "$cache_file" 2>/dev/null || echo 0)
         echo "$processed_count:$cache_file" > "$result_file"
         return 0
     fi
@@ -1538,7 +1701,7 @@ download_single_source() {
     
     # Download with retries
     while [ $retry_count -lt $DOWNLOAD_RETRIES ] && [ "$download_success" = false ]; do
-        if curl -s -L --max-time $DOWNLOAD_TIMEOUT "$source" -o "$temp_file" 2>/dev/null; then
+        if download_to_file "$source" "$temp_file"; then
             if [ -s "$temp_file" ]; then
                 download_success=true
             fi
@@ -1560,7 +1723,8 @@ download_single_source() {
     if ! has_source_changed "$source" "$temp_file"; then
         # Use cached data if available
         if [ -f "$cache_file" ]; then
-            local processed_count=$(wc -l < "$cache_file" 2>/dev/null || echo 0)
+            local processed_count
+            processed_count=$(wc -l < "$cache_file" 2>/dev/null || echo 0)
             echo "$processed_count:$cache_file" > "$result_file"
             rm -f "$temp_file"
             return 0
@@ -1614,7 +1778,7 @@ process_threat_data_optimized() {
     local output_file="$3"
     
     # Clear output file
-    > "$output_file"
+    : > "$output_file"
     
     # First, normalize line endings and remove comments
     tr -d '\r' < "$temp_file" | grep -v '^#' | grep -v '^;' | grep -v '^$' > "${temp_file}.clean" 2>/dev/null || true
@@ -1654,64 +1818,126 @@ process_threat_data_optimized() {
 download_threat_data() {
     log_section "DOWNLOADING THREAT INTELLIGENCE DATA"
     
+    SOURCE_PREFLIGHT_FAILED=false
+    local candidate_sources=()
     local sources_to_use=()
+    local preflight_validated_sources=()
+    local preflight_failed_sources=()
+    local preflight_failed_reasons=()
     # Make these global for report generation
     SUCCESSFUL_DOWNLOADS=0
     FAILED_DOWNLOADS=0
     
     # Use custom sources if provided
-    if [ -n "$CUSTOM_SOURCES" ] && [ -f "$CUSTOM_SOURCES" ]; then
+    if [ -n "$CUSTOM_SOURCES" ]; then
+        if [ ! -f "$CUSTOM_SOURCES" ]; then
+            log_error "Custom sources file not found: $CUSTOM_SOURCES"
+            SOURCE_PREFLIGHT_FAILED=true
+            return 1
+        fi
+
         log_info "Using custom threat sources from: $CUSTOM_SOURCES"
         while IFS= read -r line; do
             [[ "$line" =~ ^#.*$ ]] && continue  # Skip comments
             [[ -z "$line" ]] && continue        # Skip empty lines
-            
-            # Validate URL format
-            if [[ "$line" =~ ^https?:// ]]; then
-                sources_to_use+=("$line")
-                log_debug "Added custom source: $line"
-            else
-                log_warning "Skipping invalid URL in custom sources: $line"
-            fi
+            candidate_sources+=("$line")
+            log_debug "Queued custom source: $line"
         done < "$CUSTOM_SOURCES"
-        
-        if [ ${#sources_to_use[@]} -eq 0 ]; then
-            log_warning "No valid URLs found in custom sources file. Using default sources."
-            sources_to_use=("${MALWARE_SOURCES[@]}" "${SUSPICIOUS_SOURCES[@]}")
+
+        if [ ${#candidate_sources[@]} -eq 0 ]; then
+            log_error "No source URLs found in custom sources file: $CUSTOM_SOURCES"
+            SOURCE_PREFLIGHT_FAILED=true
+            return 1
         fi
     else
         # Use default sources
-        sources_to_use=("${MALWARE_SOURCES[@]}" "${SUSPICIOUS_SOURCES[@]}")
+        candidate_sources=("${MALWARE_SOURCES[@]}" "${SUSPICIOUS_SOURCES[@]}")
         
         # Add specialized sources if enabled
         if [ "$ENABLE_SPECIALIZED_SOURCES" = true ]; then
             log_info "Including specialized threat intelligence sources"
-            sources_to_use+=("${SPECIALIZED_SOURCES[@]}")
+            candidate_sources+=("${SPECIALIZED_SOURCES[@]}")
         fi
         
         # Add specific categories if enabled
         if [ "$ENABLE_PROXY_BLOCKING" = true ]; then
             log_info "Including proxy server blocking sources"
-            sources_to_use+=(
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/proxy_list.ipset"
+            candidate_sources+=(
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_proxies.netset"
                 "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/tor_exits.ipset"
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/sslproxies.ipset"
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/socks_proxy.ipset"
             )
         fi
         
         if [ "$ENABLE_CRYPTO_MINING_BLOCKING" = true ]; then
             log_info "Including cryptocurrency mining blocking sources"
-            sources_to_use+=(
-                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/coinbl_hosts.ipset"
+            candidate_sources+=(
+                "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/cta_cryptowall.ipset"
             )
         fi
+    fi
+
+    local total_preflight_sources=${#candidate_sources[@]}
+    local source tmp_preflight_file source_fail_reason
+    for source in "${candidate_sources[@]}"; do
+        source_fail_reason=""
+
+        if ! is_source_url_format_valid "$source"; then
+            source_fail_reason="INVALID_URL_FORMAT"
+        else
+            tmp_preflight_file=$(mktemp 2>/dev/null || mktemp -t fw_source_preflight)
+            if ! preflight_download_source "$source" "$tmp_preflight_file"; then
+                source_fail_reason="DOWNLOAD_FAILED"
+            elif [ ! -s "$tmp_preflight_file" ]; then
+                source_fail_reason="EMPTY_RESPONSE"
+            elif ! source_has_ip_data "$tmp_preflight_file"; then
+                source_fail_reason="NO_IP_PATTERN"
+            fi
+            rm -f "$tmp_preflight_file" 2>/dev/null || true
+        fi
+
+        if [ -n "$source_fail_reason" ]; then
+            if ! preflight_failure_exists "$source" "$source_fail_reason"; then
+                preflight_failed_sources+=("$source")
+                preflight_failed_reasons+=("$source_fail_reason")
+            fi
+        else
+            preflight_validated_sources+=("$source")
+        fi
+    done
+
+    # Deduplicate sources after successful validation and before download processing.
+    while IFS= read -r source; do
+        [ -n "$source" ] && sources_to_use+=("$source")
+    done < <(dedupe_sources "${preflight_validated_sources[@]}")
+
+    local preflight_validated_count=${#sources_to_use[@]}
+    local preflight_failed_count=${#preflight_failed_sources[@]}
+    log_info "SOURCE_PREFLIGHT_SUMMARY validated=$preflight_validated_count failed=$preflight_failed_count total=$total_preflight_sources"
+
+    if [ "$preflight_failed_count" -gt 0 ]; then
+        log_error "Source preflight validation failed. Aborting before firewall updates."
+        local i
+        for i in "${!preflight_failed_sources[@]}"; do
+            log_error "SOURCE_PREFLIGHT_FAILED url=${preflight_failed_sources[$i]} reason=${preflight_failed_reasons[$i]}"
+        done
+        SOURCE_PREFLIGHT_FAILED=true
+        return 1
+    fi
+
+    if [ "$preflight_validated_count" -eq 0 ]; then
+        log_error "No validated threat intelligence sources available after preflight checks."
+        SOURCE_PREFLIGHT_FAILED=true
+        return 1
     fi
     
     local malware_ips="$FIREWALL_DATA_DIR/malware_ips.txt"
     local suspicious_ips="$FIREWALL_DATA_DIR/suspicious_ips.txt"
     
     # Clear previous data
-    > "$malware_ips"
-    > "$suspicious_ips"
+    : > "$malware_ips"
+    : > "$suspicious_ips"
     
     local total_sources=${#sources_to_use[@]}
     # Make this global for report generation
@@ -1719,7 +1945,7 @@ download_threat_data() {
     log_info "Downloading from $total_sources threat intelligence sources..."
     
     if [ "$DRY_RUN" = true ]; then
-        log_debug "Would download and process threat intelligence data"
+        log_debug "Dry-run mode: source preflight completed; skipping threat data download and processing."
         return 0
     fi
     
@@ -1776,9 +2002,12 @@ download_threat_data() {
         # Process source without progress updates
         
         if [ -f "$result_file" ]; then
-            local result=$(cat "$result_file")
-            local count=$(echo "$result" | cut -d':' -f1)
-            local data_file=$(echo "$result" | cut -d':' -f2)
+            local result
+            result=$(cat "$result_file")
+            local count
+            count=$(echo "$result" | cut -d':' -f1)
+            local data_file
+            data_file=$(echo "$result" | cut -d':' -f2)
             
             if [ "$count" -gt 0 ] && [ -f "$data_file" ]; then
                 # Determine if this is a malware or suspicious source
@@ -1819,8 +2048,10 @@ download_threat_data() {
     # Advanced processing and cross-deduplication
     echo ""
     
-    local malware_count=$(wc -l < "$malware_ips" 2>/dev/null || echo 0)
-    local suspicious_count=$(wc -l < "$suspicious_ips" 2>/dev/null || echo 0)
+    local malware_count
+    malware_count=$(wc -l < "$malware_ips" 2>/dev/null || echo 0)
+    local suspicious_count
+    suspicious_count=$(wc -l < "$suspicious_ips" 2>/dev/null || echo 0)
     
     log_info "📊 Downloaded data summary: $malware_count malware, $suspicious_count suspicious IPs"
     log_debug "🔄 Starting IP processing and deduplication..."
@@ -1853,8 +2084,10 @@ download_threat_data() {
         touch "$existing_malware" "$existing_suspicious"
     fi
     
-    local existing_malware_count=$(wc -l < "$existing_malware" 2>/dev/null || echo 0)
-    local existing_suspicious_count=$(wc -l < "$existing_suspicious" 2>/dev/null || echo 0)
+    local existing_malware_count
+    existing_malware_count=$(wc -l < "$existing_malware" 2>/dev/null || echo 0)
+    local existing_suspicious_count
+    existing_suspicious_count=$(wc -l < "$existing_suspicious" 2>/dev/null || echo 0)
     
     if [ "$existing_malware_count" -gt 0 ] || [ "$existing_suspicious_count" -gt 0 ]; then
         echo "📊 Found existing IPs: $existing_malware_count malware, $existing_suspicious_count suspicious"
@@ -2032,7 +2265,8 @@ create_firewalld_ipset() {
         fi
         
         # Get IP count
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         
         # Check if ipset exists (more robust check)
         local ipset_exists=false
@@ -2076,7 +2310,8 @@ create_firewalld_ipset() {
         # Use incremental updates if enabled and ipset exists and has entries
         if [ "$INCREMENTAL_UPDATE" = true ] && [ "$ipset_exists" = true ]; then
             # Check if ipset has any entries
-            local existing_count=$($SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
+            local existing_count
+            existing_count=$($SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
             if [ "$existing_count" -gt 0 ]; then
                 log_debug "Using incremental update for ipset: $ipset_name (has $existing_count existing entries)"
                 if update_ipset_incremental "$ipset_name" "$ip_file"; then
@@ -2145,11 +2380,12 @@ create_firewalld_ipset() {
             # Process batch when it reaches batch_size or at end of file
             if [ $((processed % batch_size)) -eq 0 ] || [ $processed -eq $ip_count ]; then
                 if [ -s "$temp_batch" ]; then
-                    local batch_count=$(wc -l < "$temp_batch")
+                    local batch_count
+                    batch_count=$(wc -l < "$temp_batch")
                     if $SUDO_CMD firewall-cmd --permanent --ipset="$ipset_name" --add-entries-from-file="$temp_batch" >/dev/null 2>&1; then
                         ((successful += batch_count))
                     fi
-                    > "$temp_batch"  # Clear the batch file
+                    : > "$temp_batch"  # Clear the batch file
                 fi
                 
                 # Show progress every 10k IPs
@@ -2165,11 +2401,13 @@ create_firewalld_ipset() {
         $SUDO_CMD firewall-cmd --reload >/dev/null 2>&1 || true
         
         # Verify the IPs were actually added
-        local actual_count=$($SUDO_CMD firewall-cmd --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
+        local actual_count
+        actual_count=$($SUDO_CMD firewall-cmd --ipset="$ipset_name" --get-entries 2>/dev/null | wc -l || echo 0)
         log_info "Added $ip_count IPs to firewalld ipset: $ipset_name (verified: $actual_count IPs in ipset)"
         return 0
     else
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_debug "Would create firewalld ipset '$ipset_name' with $ip_count IPs"
     fi
     
@@ -2214,7 +2452,8 @@ create_firewalld_ipset_fallback() {
         
         # Execute the script with sudo
         if $SUDO_CMD "$script_file" > /dev/null 2>&1; then
-            local batch_size=$(wc -l < "$batch_file")
+            local batch_size
+            batch_size=$(wc -l < "$batch_file")
             entries_added=$((entries_added + batch_size))
             log_debug "Added batch $batch_count: $batch_size entries"
         else
@@ -2252,7 +2491,8 @@ create_ufw_rules() {
         fi
         
         # Get IP count
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_info "Processing $ip_count IPs for UFW rules ($rule_type)"
         
         # Use batch processing with a temporary script
@@ -2324,7 +2564,8 @@ create_ufw_rules() {
         # Reload UFW to ensure all rules are applied
         $SUDO_CMD ufw reload > /dev/null 2>&1 || log_warning "Failed to reload UFW after adding rules"
     else
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_debug "Would create $ip_count ufw deny rules for $rule_type IPs"
     fi
     
@@ -2351,7 +2592,8 @@ create_iptables_rules() {
         fi
         
         # Get IP count
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_info "Processing $ip_count IPs for iptables rules ($rule_type)"
         
         local chain_name="THREAT_BLOCK_${rule_type^^}"
@@ -2366,7 +2608,6 @@ create_iptables_rules() {
             if ! $SUDO_CMD ipset list "$ipset_name" &>/dev/null; then
                 $SUDO_CMD ipset create "$ipset_name" hash:net hashsize 4096 maxelem 200000 2>/dev/null || {
                     log_warning "Failed to create ipset: $ipset_name"
-                    use_ipset=false
                 }
                 log_debug "Created ipset: $ipset_name"
             else
@@ -2402,7 +2643,8 @@ create_iptables_rules() {
                 # Use ipset restore for batch addition
                 if [ -s "$restore_file" ]; then
                     if $SUDO_CMD ipset restore -f "$restore_file" 2>/dev/null; then
-                        local batch_size=$(wc -l < "$restore_file")
+                        local batch_size
+                        batch_size=$(wc -l < "$restore_file")
                         entries_added=$((entries_added + batch_size))
                         log_debug "Added batch $batch_count: $batch_size entries to ipset"
                     else
@@ -2512,7 +2754,8 @@ create_iptables_rules() {
             fi
         fi
     else
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_debug "Would create $ip_count iptables rules for $rule_type IPs"
     fi
     
@@ -2550,16 +2793,19 @@ create_pfctl_rules() {
             $SUDO_CMD cp "$temp_conf" "$pf_conf"
             $SUDO_CMD pfctl -f "$pf_conf" 2>/dev/null || log_warning "Failed to reload pfctl configuration"
             
-            local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+            local ip_count
+            ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
             log_info "Added pfctl table '$table_name' with $ip_count IPs"
         else
             # Reload the table
             $SUDO_CMD pfctl -t "$table_name" -T replace -f "$table_file" 2>/dev/null || log_warning "Failed to reload pfctl table"
-            local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+            local ip_count
+            ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
             log_info "Updated pfctl table '$table_name' with $ip_count IPs"
         fi
     else
-        local ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
+        local ip_count
+        ip_count=$(wc -l < "$ip_file" 2>/dev/null || echo 0)
         log_debug "Would create pfctl table for $rule_type with $ip_count IPs"
     fi
 }
@@ -2681,7 +2927,8 @@ apply_pfctl_rules() {
 generate_report() {
     log_section "GENERATING REPORT"
     
-    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
     local report_file="$BACKUP_DIR/firewall_update_report_$timestamp.txt"
     local html_report="$BACKUP_DIR/firewall_update_report_$timestamp.html"
     
@@ -2838,15 +3085,15 @@ EOF
     <table>
         <tr><th>Metric</th><th>Value</th></tr>
         <tr><td>Total sources processed</td><td>${#sources_to_use[@]:-0}</td></tr>
-        <tr><td>Successful downloads</td><td>$successful_downloads</td></tr>
-        <tr><td>Failed downloads</td><td>$failed_downloads</td></tr>
+        <tr><td>Successful downloads</td><td>$SUCCESSFUL_DOWNLOADS</td></tr>
+        <tr><td>Failed downloads</td><td>$FAILED_DOWNLOADS</td></tr>
         <tr><td>Total IPs processed</td><td>$total_ips</td></tr>
         <tr><td>Malware IPs</td><td>$malware_count</td></tr>
         <tr><td>Suspicious IPs</td><td>$suspicious_count</td></tr>
     </table>
     
     <h2>Firewall Configuration</h2>
-    <pre>$(cat "$report_file" | grep -A 100 "FIREWALL CONFIGURATION:" | grep -v "FIREWALL CONFIGURATION:")</pre>
+    <pre>$(grep -A 100 "FIREWALL CONFIGURATION:" "$report_file" | grep -v "FIREWALL CONFIGURATION:")</pre>
     
     <h2>Recommendations</h2>
     <ul>
@@ -2897,8 +3144,10 @@ cleanup_old_data() {
             log_debug "Cleaning up old backups (keeping newest $MAX_BACKUPS_TO_KEEP, removing older than $MAX_BACKUP_AGE_DAYS days)"
             
             # Count existing backups
-            local backup_count=$(find "$BACKUP_DIR" -name "firewall_backup_*.xml*" -type f 2>/dev/null | wc -l)
-            local report_count=$(find "$BACKUP_DIR" -name "firewall_update_report_*.txt" -type f 2>/dev/null | wc -l)
+            local backup_count
+            backup_count=$(find "$BACKUP_DIR" -name "firewall_backup_*.xml*" -type f 2>/dev/null | wc -l)
+            local report_count
+            report_count=$(find "$BACKUP_DIR" -name "firewall_update_report_*.txt" -type f 2>/dev/null | wc -l)
             local total_before=$((backup_count + report_count))
             
             log_debug "Found $backup_count backup files and $report_count report files"
@@ -2917,14 +3166,16 @@ cleanup_old_data() {
             
             # Remove files older than X days
             log_debug "Removing files older than $MAX_BACKUP_AGE_DAYS days"
-            local old_files_count=$(find "$BACKUP_DIR" -type f -mtime +$MAX_BACKUP_AGE_DAYS 2>/dev/null | wc -l)
+            local old_files_count
+            old_files_count=$(find "$BACKUP_DIR" -type f -mtime +$MAX_BACKUP_AGE_DAYS 2>/dev/null | wc -l)
             if [ "$old_files_count" -gt 0 ]; then
                 find "$BACKUP_DIR" -type f -mtime +$MAX_BACKUP_AGE_DAYS -delete 2>/dev/null || log_warning "Failed to remove some old files by date"
                 log_debug "Removed $old_files_count files older than $MAX_BACKUP_AGE_DAYS days"
             fi
             
             # Count remaining files
-            local remaining_files=$(find "$BACKUP_DIR" -type f 2>/dev/null | wc -l)
+            local remaining_files
+            remaining_files=$(find "$BACKUP_DIR" -type f 2>/dev/null | wc -l)
             local removed_files=$((total_before - remaining_files))
             
             if [ "$removed_files" -gt 0 ]; then
@@ -2935,7 +3186,8 @@ cleanup_old_data() {
             
             # Check backup directory size
             if command -v du &> /dev/null; then
-                local dir_size=$(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)
+                local dir_size
+                dir_size=$(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)
                 log_debug "Current backup directory size: $dir_size"
             fi
         else
@@ -2943,7 +3195,8 @@ cleanup_old_data() {
         fi
         
         # Clean up any leftover temporary files in /tmp that might have been created by previous runs
-        local tmp_files_count=$(find /tmp -maxdepth 1 -name "firewall_data*" -type d -mtime +1 2>/dev/null | wc -l)
+        local tmp_files_count
+        tmp_files_count=$(find /tmp -maxdepth 1 -name "firewall_data*" -type d -mtime +1 2>/dev/null | wc -l)
         if [ "$tmp_files_count" -gt 0 ]; then
             log_debug "Cleaning up $tmp_files_count leftover temporary directories in /tmp"
             find /tmp -maxdepth 1 -name "firewall_data*" -type d -mtime +1 -exec rm -rf {} \; 2>/dev/null || true
@@ -3062,14 +3315,15 @@ main() {
     # Set up trap to ensure cleanup on exit
     trap cleanup_on_exit EXIT INT TERM
     
-    # Parse command line arguments first
-    parse_arguments "$@"
-    
-    # Load configuration file (after parsing arguments so CLI options take precedence)
+    # Load configuration first, then apply CLI overrides
     load_config
+    if ! parse_arguments "$@"; then
+        return 1
+    fi
     
     # Record start time for performance measurement
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     # Detect OS and firewall system first
     if ! detect_os_and_firewall; then
@@ -3093,6 +3347,10 @@ main() {
     
     # Download threat data without progress bar (detailed progress shown internally)
     if ! download_threat_data; then
+        if [ "${SOURCE_PREFLIGHT_FAILED:-false}" = true ]; then
+            log_critical_error "Source preflight failed; aborting before firewall changes."
+            return 1
+        fi
         log_warning "Threat data download had issues, but continuing..."
         workflow_success=false
     fi
@@ -3113,7 +3371,8 @@ main() {
     cleanup_old_data || log_warning "Cleanup had issues, but continuing..."
     
     # Calculate execution time
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local execution_time=$((end_time - start_time))
     
     # Show completion status based on success/failure
@@ -3154,9 +3413,23 @@ main() {
 }
 
 # Execute main function with all arguments and ensure robust execution
+MAIN_RC=0
 if ! main "$@"; then
     echo -e "\n${YELLOW}⚠️  Script encountered issues but completed execution${NC}"
+    MAIN_RC=1
 fi
 
-# Always exit successfully to ensure robust behavior
+# Source-integrity guard: this is always fatal regardless of STRICT_EXIT.
+if [ "${SOURCE_PREFLIGHT_FAILED:-false}" = true ]; then
+    exit 1
+fi
+
+# Optional strict exit mode for CI/automation
+if [ "$STRICT_EXIT" = true ]; then
+    if [ "$MAIN_RC" -ne 0 ] || [ "$CRITICAL_ERROR" = true ] || [ "$SCRIPT_ERRORS" -gt 0 ]; then
+        exit 1
+    fi
+fi
+
+# Default behavior: always exit successfully for robust unattended runs
 exit 0

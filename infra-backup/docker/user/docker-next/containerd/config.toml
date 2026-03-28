@@ -1,0 +1,40 @@
+version = 4
+root = '/home/ajay/.docker/docker-next/containerd/root'
+state = '/home/ajay/.docker/docker-next/containerd/state'
+disabled_plugins = [
+  'io.containerd.cri.v1.images',
+  'io.containerd.cri.v1.runtime',
+  'io.containerd.grpc.v1.cri',
+  'io.containerd.podsandbox.controller.v1.podsandbox',
+]
+
+[plugins]
+  [plugins.'io.containerd.server.v1.grpc']
+    address = '/home/ajay/.docker/docker-next/containerd/containerd.sock'
+
+  [plugins.'io.containerd.server.v1.ttrpc']
+    address = '/home/ajay/.docker/docker-next/containerd/containerd.sock.ttrpc'
+
+  [plugins.'io.containerd.server.v1.debug']
+    address = '127.0.0.1:6061'
+
+  [plugins.'io.containerd.server.v1.docker']
+    # Docker API socket path.
+    # Default for non-root: ~/.docker/docker-next/docker.sock
+    # Uncomment to customize:
+    # address = '/home/ajay/.docker/docker-next/docker.sock'
+
+  [plugins.'io.containerd.differ.v1.erofs']
+    mkfs_options = ['-b4096']
+
+  [plugins.'io.containerd.snapshotter.v1.erofs']
+    default_size = "64M"
+
+  [plugins.'io.containerd.transfer.v1.local']
+    [[plugins."io.containerd.transfer.v1.local".unpack_config]]
+      platform = "linux/arm64"
+      snapshotter = "erofs"
+      differ = "erofs"
+
+  [plugins.'io.containerd.runtime.v2.task']
+    platforms = ['linux/arm64']

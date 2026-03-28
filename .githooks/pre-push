@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SCAN_SCRIPT="$ROOT_DIR/scripts/pre-push-safety-scan.sh"
+
+if [[ ! -x "$SCAN_SCRIPT" ]]; then
+  if [[ -f "$SCAN_SCRIPT" ]]; then
+    chmod +x "$SCAN_SCRIPT" 2>/dev/null || true
+  fi
+fi
+
+if [[ ! -x "$SCAN_SCRIPT" ]]; then
+  printf '[WARN] Pre-push scan script is missing or not executable: %s\n' "$SCAN_SCRIPT"
+  printf '[WARN] Continuing push without scan.\n'
+  exit 0
+fi
+
+"$SCAN_SCRIPT"

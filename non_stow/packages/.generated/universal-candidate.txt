@@ -509,6 +509,7 @@ setup
 setxkbmap
 shadow-utils
 sharutils
+ShellCheck
 shim-ia32
 shim-x64
 simdutf

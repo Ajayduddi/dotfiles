@@ -1,0 +1,6 @@
+git:
+  paths: []
+filesystem:
+  paths: []
+n8n:
+  api_url: https://n8n.ajayduddi.site

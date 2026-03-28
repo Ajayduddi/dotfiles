@@ -268,6 +268,7 @@ kernel-modules-core
 kernel-modules-extra
 kexec-tools
 ladspa-rubberband-plugins
+langpacks-en
 lbzip2
 lcms2-devel
 less
@@ -493,6 +494,7 @@ setup
 setxkbmap
 shadow-utils
 sharutils
+ShellCheck
 shim-ia32
 shim-x64
 simdutf

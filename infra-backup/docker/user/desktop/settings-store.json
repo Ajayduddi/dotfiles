@@ -1,0 +1,16 @@
+{
+  "AutoStart": false,
+  "Cpus": 3,
+  "DesktopTerminalEnabled": true,
+  "DisplayedOnboarding": true,
+  "EnableDockerAI": true,
+  "HostNetworkingEnabled": true,
+  "LastContainerdSnapshotterEnable": 1757769737,
+  "LicenseTermsVersion": 2,
+  "MemoryMiB": 1536,
+  "NetworkType": "gvisor",
+  "ScoutOsNotificationsEnabled": true,
+  "SettingsVersion": 43,
+  "SwapMiB": 1536,
+  "UseContainerdSnapshotter": true
+}

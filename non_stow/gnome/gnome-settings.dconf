@@ -854,7 +854,7 @@ height-fraction=0.90000000000000002
 hide-tooltip=false
 icon-size-fixed=true
 intellihide=true
-intellihide-mode='ALL_WINDOWS'
+intellihide-mode='MAXIMIZED_WINDOWS'
 isolate-locations=true
 isolate-monitors=false
 isolate-workspaces=false
@@ -1304,7 +1304,7 @@ wine-behavior=false
 name='MacTahoe-Dark-solid'
 
 [org/gnome/shell/extensions/vertical-workspaces]
-aaa-loading-profile=false
+aaa-loading-profile=true
 always-activate-selected-window=false
 animation-speed-factor=49
 app-display-module=true
@@ -1485,9 +1485,9 @@ locations=[<(uint32 2, <('Hyderabad', 'VOHY', true, [(0.30455995447301049, 1.369
 locations=@av []
 
 [org/gnome/software]
-check-timestamp=int64 1774598602
+check-timestamp=int64 1774668920
 first-run=false
-flatpak-purge-timestamp=int64 1774586388
+flatpak-purge-timestamp=int64 1774675959
 install-timestamp=int64 1772255097
 packagekit-historical-updates-timestamp=uint64 1774330529
 show-only-verified-apps=true

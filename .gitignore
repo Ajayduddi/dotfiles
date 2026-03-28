@@ -256,6 +256,7 @@ ${TMPDIR:-/tmp}/dotfiles-*
 
 # Tmux plugins and nested git directories
 **/.git/
+.codex
 
 # Enhanced security patterns - added by security hardening script
 # Private keys and certificates
