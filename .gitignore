@@ -5,6 +5,12 @@
 .config/gpg/
 .config/secrets/
 
+# Repo runtime artifacts (generated locally, not source-managed)
+.firewall_cache/
+firewall_backups/
+infra-backup/backup-*.log
+infra-backup/restore-pre-snapshot-*/
+
 .local/share/chromium/
 .local/share/google-chrome/
 .local/share/firefox/

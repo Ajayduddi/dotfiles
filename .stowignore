@@ -1,31 +1,36 @@
-# Paths and files not managed by GNU Stow
-# Ensures accidental `stow` / `stow -R` from repo root won’t include these
+# Compatibility ignore list for this repo.
+# Canonical Stow behavior is controlled by .stow-local-ignore.
+# Keep this file in sync so tooling/users expecting .stowignore still see intent.
 
-# Git and tooling metadata
+# Repo metadata and tooling
 .git
 .github
+.githooks
+.codex
 .zencoder
-.stowignore
-.stow-global-ignore
 .gitignore
 .gitattributes
+.stowignore
+.stow-global-ignore
+.stow-local-ignore
 
-# Backups / non-stow content
+# Generated/runtime/backup content (not for $HOME symlinking)
+.firewall_cache
+firewall_backups
+infra-backup
 non_stow
 scripts
-infra-backup
 
-# Dev environment backups (ensure never stowed)
-non_stow/dev
-
-# Large/media or assets not intended for $HOME
-wallpapers
-
-# Repo helper scripts and misc files (not dotfiles)
+# Helper files and docs (repo-only)
+README.md
+SECURITY.md
+LICENSE
 backup-dotfiles.sh
 restore-dotfiles.sh
-README.md
-infra-backup.sh
 restore_packages.sh
+infra-backup.sh
 dnf-packages.txt
 gnome-settings.dconf
+
+# Assets not intended as dotfile symlinks
+wallpapers

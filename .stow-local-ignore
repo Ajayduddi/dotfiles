@@ -1,6 +1,6 @@
-# Template for user-level ~/.stow-global-ignore.
-# This repo's canonical ignore behavior is in .stow-local-ignore.
-# Copy these patterns to ~/.stow-global-ignore only if you want global defaults.
+# Canonical GNU Stow ignore file for this repo/package.
+# These patterns are Perl-compatible regex and are matched against paths
+# inside the package when stowing from repo root.
 
 # Repo metadata and tooling
 ^\.git$
